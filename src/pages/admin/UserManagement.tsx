@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, RoleName } from '../../types';
 import { Plus, Search, Shield, ToggleLeft, ToggleRight, UserCheck, Mail, Phone, Building2 } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { getUserAvatar } from '../../lib/stitchAssets';
 
 interface UserManagementProps {
   users: User[];
@@ -25,7 +26,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     email: '',
     full_name: '',
     phone: '',
-    address: 'Banjarmasin, Kalsel',
+    address: 'Banjarmasin, Kalimantan Selatan',
     company_name: '',
     status: 'ACTIVE' as User['status']
   });
@@ -52,12 +53,12 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
             Manajemen Pengguna Sistem (Multi-Role RBAC)
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--color-secondary-light)', margin: '4px 0 0 0' }}>
+          <p style={{ fontSize: '13px', color: 'var(--color-secondary)', margin: '4px 0 0 0' }}>
             Akses kontrol pengguna: Administrator, Staf Operasional, dan Akun Korporasi Pelanggan PT. SBS.
           </p>
         </div>
@@ -94,80 +95,76 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         </select>
       </div>
 
-      {/* Users Table */}
+      {/* Users Table with Avatars */}
       <div className="table-container">
         <table className="data-table">
           <thead>
             <tr>
-              <th>ID & Username</th>
-              <th>Nama Lengkap & Jabatan</th>
-              <th>Peran (Role)</th>
-              <th>Kontak (Email & HP)</th>
-              <th>Entitas Perusahaan</th>
-              <th>Status Akun</th>
-              <th>Kontrol Status</th>
+              <th>Pengguna & Profil</th>
+              <th>Username</th>
+              <th>Peran / Role</th>
+              <th>Kontak & Perusahaan</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
+              <th style={{ textAlign: 'center' }}>Aksi Status</th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((u) => (
-              <tr key={u.id}>
-                <td style={{ fontSize: '13px' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--color-primary)' }}>@{u.username}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>ID: #{u.id}</div>
-                </td>
-                <td>
-                  <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#1E293B' }}>{u.full_name}</div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--color-secondary-light)' }}>{u.address}</div>
-                </td>
-                <td>
-                  <span className={`badge badge-${u.role_name === 'ADMIN' ? 'available' : u.role_name === 'STAFF' ? 'approved' : 'maintenance'}`} style={{ fontSize: '11px' }}>
-                    <Shield size={11} />
-                    {u.role_name}
-                  </span>
-                </td>
-                <td style={{ fontSize: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Mail size={12} color="var(--color-secondary-light)" />
-                    <span>{u.email}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                    <Phone size={12} color="var(--color-secondary-light)" />
-                    <span>{u.phone}</span>
-                  </div>
-                </td>
-                <td style={{ fontSize: '12.5px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <Building2 size={13} color="var(--color-primary)" />
-                    <strong>{u.company_name || 'Personal/Individu'}</strong>
-                  </div>
-                </td>
-                <td>
-                  <span className={`badge badge-${u.status.toLowerCase()}`}>
-                    {u.status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    onClick={() => onToggleStatus(u.id)}
-                    className="btn-secondary"
-                    style={{ padding: '6px 10px', fontSize: '11.5px' }}
-                    title={u.status === 'ACTIVE' ? 'Suspend Akun' : 'Aktifkan Akun'}
-                  >
-                    {u.status === 'ACTIVE' ? (
-                      <>
-                        <ToggleRight size={15} color="#10B981" />
-                        <span>Aktif</span>
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft size={15} color="#EF4444" />
-                        <span style={{ color: '#EF4444' }}>Ditangguhkan</span>
-                      </>
-                    )}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {filteredUsers.map((u) => {
+              const avatar = getUserAvatar(u.role_name);
+              return (
+                <tr key={u.id}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <img
+                        src={avatar}
+                        alt={u.full_name}
+                        style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-border)' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#1E293B' }}>{u.full_name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{u.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '12.5px' }}>
+                    {u.username}
+                  </td>
+                  <td>
+                    <span className="badge badge-info" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Shield size={11} />
+                      {u.role_name}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: '12px' }}>
+                    <div>{u.company_name || 'Pelanggan Perorangan'}</div>
+                    <div style={{ color: 'var(--color-secondary)', fontSize: '11px' }}>{u.phone || '-'}</div>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span className={u.status === 'ACTIVE' ? 'badge badge-available' : 'badge badge-unavailable'}>
+                      {u.status}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button
+                      onClick={() => onToggleStatus(u.id)}
+                      className="btn-secondary"
+                      style={{ padding: '5px 10px', fontSize: '12px' }}
+                      title={u.status === 'ACTIVE' ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
+                    >
+                      {u.status === 'ACTIVE' ? (
+                        <span style={{ color: '#EF4444', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <ToggleRight size={16} /> Nonaktifkan
+                        </span>
+                      ) : (
+                        <span style={{ color: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <ToggleLeft size={16} /> Aktifkan
+                        </span>
+                      )}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -176,10 +173,37 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Daftarkan Pengguna Sistem Baru"
+        title="Pendaftaran Pengguna Baru"
       >
         <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Nama Lengkap
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="Contoh: Budi Santoso"
+              className="input-premium"
+              value={formData.full_name}
+              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+            />
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+                Username Login
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="budisantoso"
+                className="input-premium"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              />
+            </div>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
                 Hak Akses (Role)
@@ -189,50 +213,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 value={formData.role_id}
                 onChange={(e) => setFormData({ ...formData, role_id: Number(e.target.value) })}
               >
-                <option value={1}>ADMIN (Administrator Penuh)</option>
-                <option value={2}>STAFF (Staf Operasional / Mekanik)</option>
-                <option value={3}>CUSTOMER (Pelanggan / Klien)</option>
+                <option value={1}>ADMIN (Administrator Superuser)</option>
+                <option value={2}>STAFF (Staf Operasional Lapangan)</option>
+                <option value={3}>CUSTOMER (Pelanggan / Perusahaan)</option>
               </select>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Username Akses
-              </label>
-              <input
-                type="text"
-                className="input-premium"
-                required
-                placeholder="misal: ahmad_sbs"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Nama Lengkap Pengguna
-            </label>
-            <input
-              type="text"
-              className="input-premium"
-              required
-              placeholder="Contoh: H. M. Yusuf Amin, S.T."
-              value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-            />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Alamat Email
+                Alamat Email Resmi
               </label>
               <input
                 type="email"
-                className="input-premium"
                 required
-                placeholder="nama@email.com"
+                placeholder="budi@antang.co.id"
+                className="input-premium"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
@@ -243,9 +240,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               </label>
               <input
                 type="tel"
+                placeholder="08115009876"
                 className="input-premium"
-                required
-                placeholder="0812xxxxxxxx"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
@@ -254,26 +250,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 
           <div>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Nama Perusahaan / Instansi (Opsional untuk Customer)
+              Nama Instansi / Perusahaan (Opsional untuk Pelanggan)
             </label>
             <input
               type="text"
+              placeholder="PT. Aneka Tambang Kalimantan"
               className="input-premium"
-              placeholder="PT. / CV. / Instansi"
               value={formData.company_name}
               onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Alamat Domisili / Kantor
-            </label>
-            <textarea
-              className="input-premium"
-              rows={2}
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
             />
           </div>
 
@@ -289,7 +273,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               type="submit"
               className="btn-primary"
             >
-              Simpan Data Akun
+              Simpan & Daftarkan Pengguna
             </button>
           </div>
         </form>

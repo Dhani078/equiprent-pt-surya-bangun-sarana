@@ -15,8 +15,15 @@ import { StaffDashboard } from './pages/staff/StaffDashboard';
 import { CustomerPortal } from './pages/customer/CustomerPortal';
 
 export const App: React.FC = () => {
-  // Default session to Admin for smooth presentation, or null if logged out
-  const [currentUser, setCurrentUser] = useState<User | null>(stateStore.users[0]);
+  // Default to null so the user always enters via the authentic Login Screen
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('sbs_active_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   // Reactive State
@@ -43,17 +50,26 @@ export const App: React.FC = () => {
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
+    try {
+      sessionStorage.setItem('sbs_active_user', JSON.stringify(user));
+    } catch {}
     setActiveTab('dashboard');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    try {
+      sessionStorage.removeItem('sbs_active_user');
+    } catch {}
   };
 
   const handleSwitchRole = (role: RoleName) => {
     const targetUser = stateStore.users.find(u => u.role_name === role);
     if (targetUser) {
       setCurrentUser(targetUser);
+      try {
+        sessionStorage.setItem('sbs_active_user', JSON.stringify(targetUser));
+      } catch {}
       setActiveTab('dashboard');
     }
   };
