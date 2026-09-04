@@ -340,4 +340,25 @@ Dalam bab pembahasan skripsi, jelaskan algoritma pencatatan jam operasional alat
 
 ---
 
-> **Kepatuhan Desain 100%:** Seluruh tata warna utama (Deep Blue `#003366` & Slate Gray `#475569`) serta tipografi wajib didefinisikan ke dalam variabel CSS (`root`) di berkas global CSS Anda untuk menjamin keselarasan visual dengan rancangan prototipe Stitch.
+## 5. MODERN EDGE & CLOUD ARCHITECTURE (VERSI PRODUKSI CLOUDFLARE & TIDB)
+
+Untuk memenuhi standar implementasi industri mutakhir (*industry-ready*), sistem juga diimplementasikan dalam arsitektur **Serverless Edge Computing**:
+
+```
+c:\xampp\htdocs\PT. SURYA BANGUN SARANA BANJARMASIN\
+├── src/
+│   ├── components/            <-- Navbar, Sidebar, StatCard, LeafletMap, Modal
+│   ├── lib/                   <-- stitchAssets.ts, db.ts, mockData.ts
+│   ├── pages/                 <-- Login, Admin, Staff, Customer
+│   ├── server/                <-- index.ts (Edge Worker Hono Router)
+│   ├── App.tsx
+│   └── main.tsx
+├── wrangler.jsonc             <-- Konfigurasi Deployment Cloudflare Workers
+├── DATABASE_TIDB.md           <-- Dokumentasi Basis Data TiDB Cloud
+├── PANDUAN_SIDANG_SKRIPSI.md  <-- Panduan Presentasi & Sidang Skripsi
+├── API_DOCUMENTATION.md       <-- Spesifikasi RESTful API Edge
+├── DEPLOYMENT_GUIDE.md        <-- Panduan CI/CD GitHub & Cloudflare
+└── SECURITY_AND_RBAC.md       <-- Matriks RBAC & Kepatuhan E-Sign UU ITE
+```
+
+> **Kepatuhan Desain 100%:** Seluruh tata warna utama (Deep Blue `#003366` & Slate Gray `#475569`), tipografi `Hanken Grotesk` dan `JetBrains Mono`, sudut `8px` (`ROUND_EIGHT`), serta animasi transisi mulus diterapkan secara konsisten pada seluruh antarmuka sistem.
