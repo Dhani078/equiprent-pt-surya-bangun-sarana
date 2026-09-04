@@ -1,0 +1,291 @@
+/**
+ * PT. SURYA BANGUN SARANA BANJARMASIN — GLOBAL BRAND STYLESHEET
+ * Strict UI Target: 100% identical styling, layout alignment, & animations
+ */
+
+:root {
+  /* Brand Colors */
+  --color-primary: #003366;          /* Deep Industrial Blue */
+  --color-primary-dark: #002244;     /* Darker shade */
+  --color-primary-light: #004488;    /* Lighter shade */
+  --color-secondary: #475569;        /* Slate Gray */
+  --color-secondary-light: #64748B;  /* Muted secondary text */
+  
+  /* System Status Colors */
+  --color-success: #10B981;          /* Hijau Sukses (Available / Paid) */
+  --color-warning: #F59E0B;          /* Kuning Peringatan (Maintenance / Pending) */
+  --color-error: #EF4444;            /* Merah Galat (Rejected / Suspended) */
+  --color-info: #3B82F6;             /* Biru Info (On Going / Rented) */
+  
+  /* Backgrounds & Surfaces */
+  --color-background: #f1f5f9;       /* Slate Grey */
+  --color-surface: #FFFFFF;          /* Pure White */
+  --color-border: #E2E8F0;           /* Clean Border */
+  
+  /* Typography */
+  --font-primary: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  
+  /* Layout & Rounding */
+  --radius-eight: 8px;
+  --transition-base: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-premium: all 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-primary-glow: 0 0 0 3px rgba(0, 51, 102, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-primary);
+  background-color: var(--color-background);
+  color: #1E293B;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+/* Custom Industrial Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Keyframes & Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.45s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+/* Micro-interactions */
+.hover-lift {
+  transition: var(--transition-base);
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.active-press:active {
+  transform: translateY(0.5px) scale(0.98);
+}
+
+.card-premium {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-eight);
+  transition: var(--transition-premium);
+}
+.card-premium:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.input-premium {
+  width: 100%;
+  padding: 10px 14px;
+  font-family: var(--font-primary);
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-eight);
+  background-color: var(--color-surface);
+  color: #1E293B;
+  transition: var(--transition-base);
+}
+.input-premium:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-primary-glow);
+  outline: none;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-family: var(--font-primary);
+  font-size: 14px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-eight);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2);
+}
+.btn-primary:active {
+  transform: translateY(0.5px) scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-family: var(--font-primary);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-secondary);
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-eight);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+.btn-secondary:hover {
+  background-color: #F8FAFC;
+  color: var(--color-primary);
+  border-color: #CBD5E1;
+  transform: translateY(-1.5px);
+}
+
+/* Badge Styles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-available, .badge-paid, .badge-active, .badge-completed {
+  background-color: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+.badge-rented, .badge-ongoing, .badge-approved {
+  background-color: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #BFDBFE;
+}
+.badge-maintenance, .badge-pending, .badge-scheduled, .badge-in_progress {
+  background-color: #FFFBEB;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+.badge-unavailable, .badge-rejected, .badge-suspended, .badge-failed {
+  background-color: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+/* Telemetry & Code Typography */
+.telemetry-data,
+.hour-meter,
+.gps-coordinates,
+.serial-code {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+/* Table Utilities */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-eight);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+table.data-table th {
+  background-color: #F8FAFC;
+  color: var(--color-secondary);
+  font-weight: 600;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+table.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: #334155;
+  vertical-align: middle;
+}
+table.data-table tbody tr {
+  transition: var(--transition-base);
+}
+table.data-table tbody tr:hover {
+  background-color: #F8FAFC;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.modal-box {
+  background: #FFFFFF;
+  border-radius: var(--radius-eight);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: fadeInUp 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Leaflet Map Styling */
+.map-container {
+  width: 100%;
+  height: 480px;
+  border-radius: var(--radius-eight);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
