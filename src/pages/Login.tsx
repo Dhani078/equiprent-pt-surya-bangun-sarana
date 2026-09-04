@@ -281,64 +281,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               ))}
             </div>
 
-            {/* Quick 1-Click Login Helper Chips */}
-            <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px dashed #CBD5E1' }}>
-              <div style={{ fontSize: '11px', color: 'var(--color-secondary)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                <Sparkles size={12} color="var(--color-primary)" />
-                <span>Klik Cepat Kredensial Sidang / Demo:</span>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('ADMIN', 'admin', 'admin')}
-                  style={{
-                    fontSize: '11px',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    border: '1px solid #CBD5E1',
-                    background: selectedRole === 'ADMIN' ? '#EFF6FF' : '#FFFFFF',
-                    color: 'var(--color-primary)',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Admin (admin / admin)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('STAFF', 'staff', 'staff')}
-                  style={{
-                    fontSize: '11px',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    border: '1px solid #CBD5E1',
-                    background: selectedRole === 'STAFF' ? '#EFF6FF' : '#FFFFFF',
-                    color: 'var(--color-primary)',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Staff (staff / staff)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('CUSTOMER', 'user', 'user')}
-                  style={{
-                    fontSize: '11px',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    border: '1px solid #CBD5E1',
-                    background: selectedRole === 'CUSTOMER' ? '#EFF6FF' : '#FFFFFF',
-                    color: 'var(--color-primary)',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  User (user / user)
-                </button>
-              </div>
-            </div>
-
             {/* Form Login */}
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
@@ -369,10 +311,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   </label>
                   <a
                     href="#"
-                    onClick={(e) => { e.preventDefault(); alert(`Password akun demonstrasi:\n• admin: admin\n• staff: staff\n• user: user`); }}
+                    onClick={(e) => { e.preventDefault(); alert('Silakan hubungi IT Helpdesk PT. Surya Bangun Sarana Banjarmasin di nomor hotline (0511) 325-SBS atau email support@suryaequipment.co.id untuk pemulihan akses akun.'); }}
                     style={{ fontSize: '11.5px', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
                   >
-                    Bantuan?
+                    Lupa Password?
                   </a>
                 </div>
                 <div style={{ position: 'relative' }}>
