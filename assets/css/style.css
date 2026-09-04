@@ -1,0 +1,214 @@
+/**
+ * ============================================================================
+ * PT. SURYA BANGUN SARANA BANJARMASIN — GLOBAL BRAND STYLESHEET
+ * ============================================================================
+ * 
+ * Berkas CSS ini berfungsi sebagai wadah utama (Central Token Registry) untuk
+ * mendefinisikan identitas brand, struktur tipografi, dan kelengkungan sudut
+ * yang disepakati untuk proyek skripsi monitoring & rental alat berat.
+ * 
+ * Berkas ini terintegrasi 100% dengan rancangan UI Stitch:
+ * - Warna Utama (Primary): #003366 (Deep Industrial Blue)
+ * - Warna Sekunder (Secondary): #475569 (Slate Gray)
+ * - Radius Sudut (Rounding): 8px (ROUND_EIGHT)
+ * - Font Keluarga: Hanken Grotesk (Gaya Modern) & JetBrains Mono (Data Log)
+ */
+
+/* ============================================================================
+   1. REGISTRASI VARIABEL UTAMA (DESIGN TOKENS)
+   ============================================================================ */
+:root {
+    /* Palet Warna Primer & Sekunder */
+    --color-primary: #003366;          /* Deep Industrial Blue */
+    --color-primary-dark: #002244;     /* Darker shade untuk Hover active */
+    --color-primary-light: #004488;    /* Lighter shade */
+    --color-secondary: #475569;        /* Slate Gray */
+    --color-secondary-light: #64748B;  /* Muted secondary text */
+    
+    /* Warna Status Sistem */
+    --color-success: #10B981;          /* Hijau Sukses (Aktif/Tersedia) */
+    --color-warning: #F59E0B;          /* Kuning Peringatan (Perawatan) */
+    --color-error: #EF4444;            /* Merah Galat (Rusak/Terlambat) */
+    --color-info: #3B82F6;             /* Biru Info */
+    
+    /* Latar Belakang & Permukaan Kartu */
+    --color-background: #f1f5f9;       /* Slate Grey tegas sesuai petunjuk Stitch */
+    --color-surface: #FFFFFF;          /* Putih Bersih (Kartu/Panel) */
+    --color-border: #E2E8F0;           /* Slate Borders halus */
+    
+    /* Tipografi */
+    --font-primary: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+    
+    /* Struktur Layout & Elemen */
+    --radius-eight: 8px;               /* ROUND_EIGHT sesuai agents.md */
+    --transition-base: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-premium: all 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+    
+    /* Elevasi & Bayangan Premium */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-primary-glow: 0 0 0 3px rgba(0, 51, 102, 0.1);
+}
+
+/* ============================================================================
+   2. ATURAN GLOBAL & RESET BASE
+   ============================================================================ */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-primary);
+    background-color: var(--color-background);
+    color: #1E293B;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar Kustom Bertema Industrial */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+/* ============================================================================
+   3. ANIMASI FADE-IN & TRANSISI PREMIUM (agents.md)
+   ============================================================================ */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeInUp 0.45s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+.animate-delay-1 {
+    animation-delay: 0.1s;
+}
+
+.animate-delay-2 {
+    animation-delay: 0.2s;
+}
+
+/* ============================================================================
+   4. EFEK INTERAKTIF & MICRO-INTERACTIONS
+   ============================================================================ */
+
+/* Tombol dan Elemen Interaktif */
+.btn-premium {
+    font-family: var(--font-primary);
+    font-weight: 600;
+    border-radius: var(--radius-eight);
+    transition: var(--transition-base);
+    cursor: pointer;
+}
+
+/* Efek Hover: Mengangkat Elemen Sedikit */
+.hover-lift {
+    transition: var(--transition-base);
+}
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Efek Klik Aktif: Menekan Tombol */
+.active-press:active {
+    transform: translateY(0.5px) scale(0.98);
+}
+
+/* Input Focus Ring State */
+.input-premium {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-eight);
+    transition: var(--transition-base);
+}
+.input-premium:focus {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-primary-glow);
+    outline: none;
+}
+
+/* Elevasi Kartu (Card Lift Hover) */
+.card-premium {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-eight);
+    transition: var(--transition-premium);
+}
+.card-premium:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ============================================================================
+   5. TAMPILAN KHUSUS DATA TELEMETRI & LOG (JetBrains Mono)
+   ============================================================================ */
+.telemetry-data,
+.hour-meter,
+.gps-coordinates,
+.serial-code {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+}
+
+/* ============================================================================
+   6. HIGH-DENSITY INDUSTRIAL UI UTILITIES (STITCH ALIGNMENT)
+   ============================================================================ */
+.card-industrial {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-eight);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-base);
+}
+
+.card-industrial:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 12px rgba(0, 51, 102, 0.05);
+    border-color: var(--color-primary);
+}
+
+.breadcrumbs {
+    font-size: 12px;
+    color: var(--color-secondary-light);
+    margin-bottom: 6px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.breadcrumbs a {
+    color: var(--color-secondary-light);
+    text-decoration: none;
+    transition: var(--transition-base);
+}
+
+.breadcrumbs a:hover {
+    color: var(--color-primary);
+}
+
