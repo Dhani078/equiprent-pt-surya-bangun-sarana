@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Equipment, Rental, Contract, Payment, User } from '../../types';
-import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool } from 'lucide-react';
+import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 
 interface CustomerPortalProps {
   currentUser: User;
@@ -30,6 +31,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
   // E-Sign Modal
   const [signingContract, setSigningContract] = useState<Contract | null>(null);
+  const [signatureName, setSignatureName] = useState(currentUser.full_name);
 
   // Payment Upload Modal
   const [uploadingPayment, setUploadingPayment] = useState<Payment | null>(null);
@@ -87,119 +89,281 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Customer Header */}
+      {/* Customer Header Banner */}
       <div style={{
         padding: '24px',
         backgroundColor: '#FFFFFF',
-        borderRadius: 'var(--radius-eight)',
+        borderRadius: '12px',
         border: '1px solid var(--color-border)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
       }}>
-        <div>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase' }}>
-            Portal Pelanggan PT. SBS
-          </span>
-          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1E293B', margin: '4px 0 0 0' }}>
-            Selamat Datang, {currentUser.full_name}
-          </h2>
-          <p style={{ fontSize: '13px', color: 'var(--color-secondary-light)', margin: '4px 0 0 0' }}>
-            {currentUser.company_name || 'Penyewa Rekanan'} &bull; Sistem Monitoring & Rental Alat Berat
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <img
+            src={STITCH_IMAGES.CUSTOMER_AVATAR}
+            alt={currentUser.full_name}
+            style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--color-primary)' }}
+          />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
+                Selamat Datang, {currentUser.full_name}
+              </h2>
+              <span className="badge badge-info" style={{ fontSize: '11px' }}>
+                {currentUser.company_name || 'Pelanggan Terverifikasi'}
+              </span>
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--color-secondary)', margin: '4px 0 0 0' }}>
+              Portal Pemesanan Alat Berat, Penandatanganan Kontrak Digital, dan Konfirmasi Pembayaran Sewa.
+            </p>
+          </div>
         </div>
 
-        {/* Tab Buttons */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => setActiveTab('catalog')}
-            className={activeTab === 'catalog' ? 'btn-primary' : 'btn-secondary'}
-            style={{ fontSize: '13px', padding: '8px 14px' }}
-          >
-            <Truck size={15} />
-            <span>Katalog Unit</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('my_rentals')}
-            className={activeTab === 'my_rentals' ? 'btn-primary' : 'btn-secondary'}
-            style={{ fontSize: '13px', padding: '8px 14px' }}
-          >
-            <ClipboardList size={15} />
-            <span>Sewa Saya ({myRentals.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('contracts')}
-            className={activeTab === 'contracts' ? 'btn-primary' : 'btn-secondary'}
-            style={{ fontSize: '13px', padding: '8px 14px' }}
-          >
-            <FileCheck size={15} />
-            <span>Kontrak Digital</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('payments')}
-            className={activeTab === 'payments' ? 'btn-primary' : 'btn-secondary'}
-            style={{ fontSize: '13px', padding: '8px 14px' }}
-          >
-            <CreditCard size={15} />
-            <span>Tagihan & Bukti</span>
-          </button>
+        {/* Dedicated Account Manager Card */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '10px 16px',
+          backgroundColor: '#F8FAFC',
+          borderRadius: '8px',
+          border: '1px solid var(--color-border)'
+        }}>
+          <img
+            src={STITCH_IMAGES.MANAGER_AVATAR}
+            alt="Account Manager PT SBS"
+            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+          />
+          <div>
+            <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
+              Account Manager Anda
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)' }}>
+              Rahmat Hidayat, S.T.
+            </div>
+            <div style={{ fontSize: '11px', color: '#059669', fontWeight: 600 }}>
+              WA: +62 811-500-8899 (Online)
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Tab: Catalog */}
+      {/* 4 Interactive Navigation Tabs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('catalog')}
+          style={{
+            padding: '14px',
+            borderRadius: '8px',
+            border: activeTab === 'catalog' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+            backgroundColor: activeTab === 'catalog' ? '#EFF6FF' : '#FFFFFF',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
+            backgroundColor: activeTab === 'catalog' ? 'var(--color-primary)' : '#F1F5F9',
+            color: activeTab === 'catalog' ? '#FFFFFF' : 'var(--color-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Truck size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'catalog' ? 'var(--color-primary)' : '#1E293B' }}>
+              Katalog Alat
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
+              {equipments.filter(e => e.status === 'AVAILABLE').length} Unit Siap Sewa
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('my_rentals')}
+          style={{
+            padding: '14px',
+            borderRadius: '8px',
+            border: activeTab === 'my_rentals' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+            backgroundColor: activeTab === 'my_rentals' ? '#EFF6FF' : '#FFFFFF',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
+            backgroundColor: activeTab === 'my_rentals' ? 'var(--color-primary)' : '#F1F5F9',
+            color: activeTab === 'my_rentals' ? '#FFFFFF' : 'var(--color-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <ClipboardList size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'my_rentals' ? 'var(--color-primary)' : '#1E293B' }}>
+              Sewa Saya
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
+              {myRentals.length} Transaksi
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('contracts')}
+          style={{
+            padding: '14px',
+            borderRadius: '8px',
+            border: activeTab === 'contracts' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+            backgroundColor: activeTab === 'contracts' ? '#EFF6FF' : '#FFFFFF',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
+            backgroundColor: activeTab === 'contracts' ? 'var(--color-primary)' : '#F1F5F9',
+            color: activeTab === 'contracts' ? '#FFFFFF' : 'var(--color-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <FileCheck size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'contracts' ? 'var(--color-primary)' : '#1E293B' }}>
+              Kontrak & E-Sign
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
+              {myContracts.length} Berkas Kontrak
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('payments')}
+          style={{
+            padding: '14px',
+            borderRadius: '8px',
+            border: activeTab === 'payments' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+            backgroundColor: activeTab === 'payments' ? '#EFF6FF' : '#FFFFFF',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
+            backgroundColor: activeTab === 'payments' ? 'var(--color-primary)' : '#F1F5F9',
+            color: activeTab === 'payments' ? '#FFFFFF' : 'var(--color-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <CreditCard size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'payments' ? 'var(--color-primary)' : '#1E293B' }}>
+              Tagihan & Transfer
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
+              {myPayments.length} Pembayaran
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* Tab: Catalog Alat Berat with Authentic Stitch Images */}
       {activeTab === 'catalog' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-              Katalog Alat Berat Siap Sewa
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
+              Katalog Alat Berat Siap Mobilisasi
             </h3>
-            <span style={{ fontSize: '13px', color: 'var(--color-secondary)' }}>
-              Menampilkan armada berstandar industri siap mobilisasi
+            <span style={{ fontSize: '12.5px', color: 'var(--color-secondary)' }}>
+              Armada standar pertambangan & konstruksi PT. SBS Banjarmasin
             </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
             {equipments.map((eq) => {
               const isAvailable = eq.status === 'AVAILABLE';
+              const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
+
               return (
                 <div key={eq.id} className="card-premium" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <div style={{ height: '160px', width: '100%', overflow: 'hidden', position: 'relative', backgroundColor: '#E2E8F0' }}>
+                  <div style={{ height: '175px', width: '100%', overflow: 'hidden', position: 'relative', backgroundColor: '#E2E8F0' }}>
                     <img
-                      src={eq.thumbnail_url || 'https://images.unsplash.com/photo-1579829366248-204fe8413f31?w=600&auto=format&fit=crop&q=80'}
+                      src={imgUrl}
                       alt={eq.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                     <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
                       <span className={`badge badge-${eq.status.toLowerCase()}`}>
-                        {eq.status}
+                        {isAvailable ? 'Tersedia' : eq.status === 'RENTED' ? 'Disewa' : eq.status}
                       </span>
                     </div>
                   </div>
 
                   <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
                     <div>
-                      <div className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary-light)', marginBottom: '4px' }}>
+                      <div className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary)', marginBottom: '4px' }}>
                         {eq.equipment_code}
                       </div>
                       <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: '0 0 6px 0', lineHeight: 1.3 }}>
                         {eq.name}
                       </h4>
                       <div style={{ fontSize: '12px', color: 'var(--color-secondary)', marginBottom: '12px' }}>
-                        Merk: <strong>{eq.brand}</strong> &bull; Tipe: <strong>{eq.type}</strong>
+                        Merk: <strong>{eq.brand}</strong> &bull; Model: <strong>{eq.model}</strong>
                       </div>
                     </div>
 
                     <div>
                       <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
-                          <div style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>Tarif Sewa:</div>
-                          <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>Tarif Sewa:</div>
+                          <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'monospace' }}>
                             {formatRupiah(Number(eq.rental_price_per_day))}
-                            <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-secondary-light)' }}> /hari</span>
+                            <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-secondary)' }}> /hari</span>
                           </div>
                         </div>
 
                         <button
+                          type="button"
                           disabled={!isAvailable}
                           onClick={() => handleOpenRent(eq)}
                           className={isAvailable ? 'btn-primary' : 'btn-secondary'}
@@ -236,31 +400,47 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {myRentals.map((r) => (
-                  <tr key={r.id}>
-                    <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                      {r.rental_code}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '13.5px' }}>{r.equipment_name}</div>
-                      <span className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>{r.equipment_code}</span>
-                    </td>
-                    <td style={{ fontSize: '12px' }}>
-                      {r.start_date} s/d {r.end_date}
-                    </td>
-                    <td style={{ fontSize: '13px' }}>
-                      <strong>{r.total_days} Hari</strong>
-                    </td>
-                    <td style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A' }}>
-                      {formatRupiah(Number(r.subtotal))}
-                    </td>
-                    <td>
-                      <span className={`badge badge-${r.status.toLowerCase()}`}>
-                        {r.status}
-                      </span>
+                {myRentals.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-secondary)' }}>
+                      Belum ada transaksi sewa. Silakan pilih alat pada menu Katalog Alat.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  myRentals.map((r) => {
+                    const imgUrl = getEquipmentImage(r.equipment_code);
+                    return (
+                      <tr key={r.id}>
+                        <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
+                          {r.rental_code}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <img src={imgUrl} alt={r.equipment_name} style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }} />
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: '13.5px' }}>{r.equipment_name}</div>
+                              <span className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{r.equipment_code}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ fontSize: '12px' }}>
+                          {r.start_date} s/d {r.end_date}
+                        </td>
+                        <td style={{ fontSize: '13px' }}>
+                          <strong>{r.total_days} Hari</strong>
+                        </td>
+                        <td style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', fontFamily: 'monospace' }}>
+                          {formatRupiah(Number(r.subtotal))}
+                        </td>
+                        <td>
+                          <span className={`badge badge-${r.status.toLowerCase()}`}>
+                            {r.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -285,47 +465,56 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {myContracts.map((c) => (
-                  <tr key={c.id}>
-                    <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                      {c.contract_code}
-                    </td>
-                    <td className="serial-code" style={{ fontSize: '12px' }}>
-                      {c.rental_code || `RNT-SBS-${c.rental_id}`}
-                    </td>
-                    <td style={{ fontSize: '12px' }}>
-                      {c.contract_date} s/d {c.valid_until}
-                    </td>
-                    <td>
-                      {c.is_signed_customer ? (
-                        <span className="badge badge-available" style={{ fontSize: '11px' }}>
-                          <Check size={12} />
-                          Telah Ditandatangani
-                        </span>
-                      ) : (
-                        <span className="badge badge-pending" style={{ fontSize: '11px' }}>
-                          Belum Ditandatangani
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      {!c.is_signed_customer ? (
-                        <button
-                          onClick={() => setSigningContract(c)}
-                          className="btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
-                        >
-                          <PenTool size={13} />
-                          <span>Tanda Tangan E-Sign</span>
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
-                          Sah & Legalisasi ({c.signed_at?.slice(0, 10)})
-                        </span>
-                      )}
+                {myContracts.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-secondary)' }}>
+                      Belum ada kontrak yang diterbitkan untuk akun ini.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  myContracts.map((c) => (
+                    <tr key={c.id}>
+                      <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
+                        {c.contract_code}
+                      </td>
+                      <td className="serial-code" style={{ fontSize: '12px' }}>
+                        {c.rental_code || `RNT-SBS-${c.rental_id}`}
+                      </td>
+                      <td style={{ fontSize: '12px' }}>
+                        {c.contract_date} s/d {c.valid_until}
+                      </td>
+                      <td>
+                        {c.is_signed_customer ? (
+                          <span className="badge badge-available" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Check size={12} />
+                            Telah Ditandatangani
+                          </span>
+                        ) : (
+                          <span className="badge badge-pending" style={{ fontSize: '11px' }}>
+                            Menunggu Tanda Tangan
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {!c.is_signed_customer ? (
+                          <button
+                            type="button"
+                            onClick={() => setSigningContract(c)}
+                            className="btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '12px' }}
+                          >
+                            <PenTool size={13} />
+                            <span>Tanda Tangan E-Sign</span>
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
+                            Sah & Legalisasi ({c.signed_at?.slice(0, 10)})
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -351,43 +540,52 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {myPayments.map((p) => (
-                  <tr key={p.id}>
-                    <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                      {p.payment_code}
-                    </td>
-                    <td style={{ fontWeight: 700, fontSize: '13.5px' }}>
-                      {formatRupiah(Number(p.amount))}
-                    </td>
-                    <td style={{ fontSize: '12.5px' }}>
-                      {p.payment_method}
-                    </td>
-                    <td style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
-                      {p.payment_date}
-                    </td>
-                    <td>
-                      <span className={`badge badge-${p.status.toLowerCase()}`}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td>
-                      {p.status !== 'PAID' ? (
-                        <button
-                          onClick={() => setUploadingPayment(p)}
-                          className="btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
-                        >
-                          <Upload size={13} />
-                          <span>Unggah Bukti Transfer</span>
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
-                          Pembayaran Lunas
-                        </span>
-                      )}
+                {myPayments.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-secondary)' }}>
+                      Belum ada tagihan pembayaran aktif.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  myPayments.map((p) => (
+                    <tr key={p.id}>
+                      <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
+                        {p.payment_code}
+                      </td>
+                      <td style={{ fontWeight: 700, fontSize: '13.5px', fontFamily: 'monospace' }}>
+                        {formatRupiah(Number(p.amount))}
+                      </td>
+                      <td style={{ fontSize: '12.5px' }}>
+                        {p.payment_method}
+                      </td>
+                      <td style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
+                        {p.payment_date}
+                      </td>
+                      <td>
+                        <span className={`badge badge-${p.status.toLowerCase()}`}>
+                          {p.status}
+                        </span>
+                      </td>
+                      <td>
+                        {p.status !== 'PAID' ? (
+                          <button
+                            type="button"
+                            onClick={() => setUploadingPayment(p)}
+                            className="btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '12px' }}
+                          >
+                            <Upload size={13} />
+                            <span>Unggah Bukti Transfer</span>
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
+                            Pembayaran Lunas
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -399,15 +597,23 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
         <Modal
           isOpen={isRentModalOpen}
           onClose={() => setIsRentModalOpen(false)}
-          title={`Penyewaan Alat: ${selectedEquipment.name}`}
+          title={`Pengajuan Sewa: ${selectedEquipment.name}`}
         >
           <form onSubmit={handleConfirmRent} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                {selectedEquipment.equipment_code} &bull; {selectedEquipment.brand}
-              </div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
-                Tarif: {formatRupiah(Number(selectedEquipment.rental_price_per_day))} / hari
+            <div style={{ display: 'flex', gap: '14px', padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+              <img
+                src={selectedEquipment.thumbnail_url || getEquipmentImage(selectedEquipment.equipment_code, selectedEquipment.type)}
+                alt={selectedEquipment.name}
+                style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }}
+              />
+              <div style={{ fontSize: '13px' }}>
+                <div style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{selectedEquipment.name}</div>
+                <div style={{ color: 'var(--color-secondary)', fontSize: '11.5px', marginBottom: '4px' }}>
+                  Kode: <span className="serial-code">{selectedEquipment.equipment_code}</span> &bull; {selectedEquipment.brand} {selectedEquipment.model}
+                </div>
+                <div style={{ fontWeight: 800, color: '#0F172A', fontFamily: 'monospace' }}>
+                  {formatRupiah(Number(selectedEquipment.rental_price_per_day))} / hari
+                </div>
               </div>
             </div>
 
@@ -418,8 +624,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 </label>
                 <input
                   type="date"
-                  className="input-premium"
                   required
+                  className="input-premium"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
@@ -430,35 +636,36 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 </label>
                 <input
                   type="date"
-                  className="input-premium"
                   required
+                  className="input-premium"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
             </div>
 
-            <div style={{ padding: '12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--color-secondary)' }}>
-                <span>Durasi Hari:</span>
-                <strong>{calculateDays(startDate, endDate)} hari</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)', marginTop: '4px' }}>
-                <span>Total Estimasi:</span>
-                <span>{formatRupiah(calculateDays(startDate, endDate) * Number(selectedEquipment.rental_price_per_day))}</span>
-              </div>
-            </div>
-
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Lokasi & Catatan Proyek
+                Catatan Lokasi / Proyek Pekerjaan
               </label>
               <textarea
+                rows={2}
                 className="input-premium"
-                rows={3}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
+                placeholder="Contoh: Pekerjaan cut & fill Pelabuhan Trisakti Banjarmasin"
               />
+            </div>
+
+            <div style={{ padding: '12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--color-secondary)' }}>
+                <span>Durasi: <strong>{calculateDays(startDate, endDate)} Hari</strong></span>
+                <span>Tarif: <strong>{formatRupiah(Number(selectedEquipment.rental_price_per_day))}</strong>/hari</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)' }}>
+                <span>Total Estimasi Biaya Sewa:</span>
+                <span style={{ fontFamily: 'monospace' }}>{formatRupiah(calculateDays(startDate, endDate) * Number(selectedEquipment.rental_price_per_day))}</span>
+              </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
@@ -466,7 +673,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 Batal
               </button>
               <button type="submit" className="btn-primary">
-                Kirim Permohonan Sewa
+                Ajukan Permohonan Sewa
               </button>
             </div>
           </form>
@@ -480,23 +687,49 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           onClose={() => setSigningContract(null)}
           title={`Penandatanganan Kontrak: ${signingContract.contract_code}`}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', lineHeight: 1.6 }}>
-              <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 8px 0' }}>
-                Syarat & Ketentuan Kontrak Sewa PT. SBS:
-              </h4>
-              <p style={{ whiteSpace: 'pre-line', margin: 0, color: '#334155' }}>
-                {signingContract.terms_conditions}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12.5px', lineHeight: 1.6 }}>
+              <p style={{ margin: '0 0 6px 0' }}>
+                Dengan membubuhkan tanda tangan elektronik di bawah ini, <strong>{currentUser.full_name}</strong> atas nama <strong>{currentUser.company_name || 'Pelanggan'}</strong> menyetujui seluruh ketentuan sewa alat berat PT. Surya Bangun Sarana Banjarmasin, termasuk tanggung jawab operasional dan jadwal mobilisasi.
+              </p>
+              <p style={{ margin: 0, color: 'var(--color-secondary)', fontSize: '11px' }}>
+                Legalitas dokumen dijamin sah berdasarkan UU ITE Pasal 11 tentang Tanda Tangan Elektronik.
               </p>
             </div>
 
-            <div style={{ padding: '16px', border: '2px dashed var(--color-primary)', borderRadius: '8px', textAlign: 'center', backgroundColor: '#EFF6FF' }}>
-              <ShieldCheck size={32} color="var(--color-primary)" style={{ margin: '0 auto 8px auto' }} />
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                Tanda Tangan Elektronik Sah (E-Sign)
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--color-secondary-light)', marginTop: '4px' }}>
-                Dengan menekan tombol setuju di bawah, Anda secara sadar mengikatkan diri dalam perjanjian sewa alat berat PT. Surya Bangun Sarana Banjarmasin.
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
+                Nama Penandatangan Resmi (Sesuai KTP / Perusahaan)
+              </label>
+              <input
+                type="text"
+                className="input-premium"
+                value={signatureName}
+                onChange={(e) => setSignatureName(e.target.value)}
+              />
+            </div>
+
+            {/* E-Signature Canvas Mockup */}
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
+                Goresan Tanda Tangan Digital
+              </label>
+              <div style={{
+                height: '110px',
+                border: '2px dashed var(--color-primary)',
+                borderRadius: '8px',
+                backgroundColor: '#FAFAFA',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative'
+              }}>
+                <div style={{ fontFamily: 'Brush Script MT, cursive, serif', fontSize: '32px', color: 'var(--color-primary)', transform: 'rotate(-3deg)' }}>
+                  {signatureName}
+                </div>
+                <span style={{ position: 'absolute', bottom: '8px', right: '12px', fontSize: '10px', color: 'var(--color-secondary)', fontFamily: 'monospace' }}>
+                  TIMESTAMP: {new Date().toISOString()}
+                </span>
               </div>
             </div>
 
@@ -528,10 +761,36 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           title={`Konfirmasi Transfer: ${uploadingPayment.payment_code}`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px' }}>
-              <div>Jumlah Tagihan: <strong>{formatRupiah(Number(uploadingPayment.amount))}</strong></div>
+            <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px' }}>
+              <div>Jumlah Tagihan: <strong style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatRupiah(Number(uploadingPayment.amount))}</strong></div>
               <div>Metode: <strong>{uploadingPayment.payment_method}</strong></div>
               <div>Rekening Tujuan: <strong>Bank Mandiri 031-00-1234567-8 a/n PT. Surya Bangun Sarana</strong></div>
+            </div>
+
+            {/* Visual Struk Transfer Mockup Asli Stitch Prototype */}
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
+                Pratinjau Struk / Bukti Transfer
+              </label>
+              <div style={{
+                height: '160px',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                border: '1px solid var(--color-border)',
+                backgroundColor: '#F1F5F9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <img
+                  src={STITCH_IMAGES.PAYMENT_PROOF}
+                  alt="Struk Transfer Mockup"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=500&auto=format&fit=crop&q=60';
+                  }}
+                />
+              </div>
             </div>
 
             <div>
@@ -544,7 +803,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 value={proofFile}
                 onChange={(e) => setProofFile(e.target.value)}
               />
-              <div style={{ fontSize: '11px', color: 'var(--color-secondary-light)', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--color-secondary)', marginTop: '4px' }}>
                 Unggah bukti mutasi bank transfer atau struk setor resmi.
               </div>
             </div>

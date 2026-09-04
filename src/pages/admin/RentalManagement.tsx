@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Rental, Equipment, User } from '../../types';
-import { Plus, Search, CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, Clock, FileText, Check } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { getEquipmentImage } from '../../lib/stitchAssets';
 
 interface RentalManagementProps {
   rentals: Rental[];
@@ -81,12 +82,12 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
             Manajemen Transaksi Penyewaan
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--color-secondary-light)', margin: '4px 0 0 0' }}>
+          <p style={{ fontSize: '13px', color: 'var(--color-secondary)', margin: '4px 0 0 0' }}>
             Daftar order sewa alat berat, durasi operasional proyek, dan kontrol status kontrak sewa.
           </p>
         </div>
@@ -103,7 +104,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           <input
             type="text"
             className="input-premium"
-            placeholder="Cari kode rental (RNT-SBS...), nama klien, atau nama unit..."
+            placeholder="Cari kode sewa, pelanggan, perusahaan, atau nama alat..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ paddingLeft: '36px', height: '40px' }}
@@ -116,108 +117,116 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
         >
-          <option value="ALL">Semua Status Rental</option>
+          <option value="ALL">Semua Status Transaksi</option>
           <option value="PENDING">PENDING (Menunggu Persetujuan)</option>
           <option value="APPROVED">APPROVED (Disetujui)</option>
-          <option value="ON_GOING">ON_GOING (Sedang Berjalan)</option>
+          <option value="ON_GOING">ON_GOING (Mobilisasi / Beroperasi)</option>
           <option value="COMPLETED">COMPLETED (Selesai)</option>
           <option value="REJECTED">REJECTED (Ditolak)</option>
         </select>
       </div>
 
-      {/* Rentals Table */}
+      {/* Table with Thumbnails */}
       <div className="table-container">
         <table className="data-table">
           <thead>
             <tr>
               <th>Kode Sewa</th>
-              <th>Klien Penyewa</th>
+              <th>Pelanggan & Korporasi</th>
               <th>Unit Alat Berat</th>
-              <th>Jadwal Sewa</th>
-              <th>Durasi & Total</th>
-              <th>Status</th>
-              <th>Aksi Perubahan Status</th>
+              <th>Periode Sewa</th>
+              <th style={{ textAlign: 'right' }}>Total Biaya</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
+              <th style={{ textAlign: 'center' }}>Aksi Status</th>
             </tr>
           </thead>
           <tbody>
-            {filteredRentals.map((r) => (
-              <tr key={r.id}>
-                <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                  {r.rental_code}
-                </td>
-                <td>
-                  <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#1E293B' }}>{r.company_name || r.customer_name}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--color-secondary-light)' }}>{r.customer_name}</div>
-                </td>
-                <td>
-                  <div style={{ fontWeight: 600, fontSize: '13px' }}>{r.equipment_name}</div>
-                  <span className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>{r.equipment_code}</span>
-                </td>
-                <td style={{ fontSize: '12px' }}>
-                  <div>Mulai: <strong>{r.start_date}</strong></div>
-                  <div>Selesai: <strong>{r.end_date}</strong></div>
-                </td>
-                <td>
-                  <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A' }}>
-                    {formatRupiah(Number(r.subtotal))}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>
-                    {r.total_days} hari operasional
-                  </div>
-                </td>
-                <td>
-                  <span className={`badge badge-${r.status.toLowerCase()}`}>
-                    {r.status}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {r.status === 'PENDING' && (
-                      <>
+            {filteredRentals.map((r) => {
+              const imgUrl = getEquipmentImage(r.equipment_code);
+              return (
+                <tr key={r.id}>
+                  <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
+                    {r.rental_code}
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#1E293B' }}>{r.company_name || r.customer_name}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>{r.customer_name}</div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <img src={imgUrl} alt={r.equipment_name} style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover' }} />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '13px' }}>{r.equipment_name}</div>
+                        <span className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{r.equipment_code}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ fontSize: '12px' }}>
+                    <div>Mulai: <strong>{r.start_date}</strong></div>
+                    <div>Selesai: <strong>{r.end_date}</strong></div>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', fontFamily: 'monospace' }}>
+                      {formatRupiah(Number(r.subtotal))}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
+                      {r.total_days} hari operasional
+                    </div>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span className={`badge badge-${r.status.toLowerCase()}`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                      {r.status === 'PENDING' && (
+                        <>
+                          <button
+                            onClick={() => onUpdateRentalStatus(r.id, 'APPROVED')}
+                            className="btn-primary"
+                            style={{ padding: '5px 10px', fontSize: '11.5px', backgroundColor: '#10B981' }}
+                            title="Setujui Booking"
+                          >
+                            <CheckCircle size={12} />
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            onClick={() => onUpdateRentalStatus(r.id, 'REJECTED')}
+                            className="btn-secondary"
+                            style={{ padding: '5px 10px', fontSize: '11.5px', color: '#EF4444' }}
+                            title="Tolak Booking"
+                          >
+                            <XCircle size={12} />
+                          </button>
+                        </>
+                      )}
+                      {r.status === 'APPROVED' && (
                         <button
-                          onClick={() => onUpdateRentalStatus(r.id, 'APPROVED')}
+                          onClick={() => onUpdateRentalStatus(r.id, 'ON_GOING')}
                           className="btn-primary"
-                          style={{ padding: '5px 10px', fontSize: '11.5px', backgroundColor: '#10B981' }}
-                          title="Setujui Booking"
+                          style={{ padding: '5px 10px', fontSize: '11.5px' }}
                         >
-                          <CheckCircle size={12} />
-                          <span>Approve</span>
+                          Mobilisasi
                         </button>
+                      )}
+                      {r.status === 'ON_GOING' && (
                         <button
-                          onClick={() => onUpdateRentalStatus(r.id, 'REJECTED')}
+                          onClick={() => onUpdateRentalStatus(r.id, 'COMPLETED')}
                           className="btn-secondary"
-                          style={{ padding: '5px 10px', fontSize: '11.5px', color: '#EF4444' }}
-                          title="Tolak Booking"
+                          style={{ padding: '5px 10px', fontSize: '11.5px', color: '#059669', borderColor: '#A7F3D0' }}
                         >
-                          <XCircle size={12} />
+                          Selesai
                         </button>
-                      </>
-                    )}
-                    {r.status === 'APPROVED' && (
-                      <button
-                        onClick={() => onUpdateRentalStatus(r.id, 'ON_GOING')}
-                        className="btn-primary"
-                        style={{ padding: '5px 10px', fontSize: '11.5px' }}
-                      >
-                        Mobilisasi (On Going)
-                      </button>
-                    )}
-                    {r.status === 'ON_GOING' && (
-                      <button
-                        onClick={() => onUpdateRentalStatus(r.id, 'COMPLETED')}
-                        className="btn-secondary"
-                        style={{ padding: '5px 10px', fontSize: '11.5px', color: '#059669', borderColor: '#A7F3D0' }}
-                      >
-                        Selesai (Kembalikan)
-                      </button>
-                    )}
-                    {r.status === 'COMPLETED' && (
-                      <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Tuntas</span>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                      )}
+                      {r.status === 'COMPLETED' && (
+                        <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>Tuntas ✓</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -248,18 +257,26 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
 
           <div>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Pilih Unit Alat Berat (Tersedia)
+              Pilih Alat Berat
             </label>
             <select
               className="input-premium"
               value={formData.equipment_id}
               onChange={(e) => setFormData({ ...formData, equipment_id: Number(e.target.value) })}
             >
-              {availableEquipments.map((eq) => (
-                <option key={eq.id} value={eq.id}>
-                  {eq.equipment_code} - {eq.name} ({formatRupiah(Number(eq.rental_price_per_day))}/hari)
-                </option>
-              ))}
+              {availableEquipments.length === 0 ? (
+                equipments.slice(0, 10).map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.equipment_code} - {e.name} (Rp {formatRupiah(Number(e.rental_price_per_day))}/hari)
+                  </option>
+                ))
+              ) : (
+                availableEquipments.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.equipment_code} - {e.name} ({formatRupiah(Number(e.rental_price_per_day))}/hari)
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -270,8 +287,8 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
               </label>
               <input
                 type="date"
-                className="input-premium"
                 required
+                className="input-premium"
                 value={formData.start_date}
                 onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
               />
@@ -282,8 +299,8 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
               </label>
               <input
                 type="date"
-                className="input-premium"
                 required
+                className="input-premium"
                 value={formData.end_date}
                 onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
               />
@@ -292,11 +309,11 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
 
           <div>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Catatan Lokasi & Pekerjaan Proyek
+              Catatan Proyek & Lokasi
             </label>
             <textarea
+              rows={2}
               className="input-premium"
-              rows={3}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             />
@@ -314,7 +331,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
               type="submit"
               className="btn-primary"
             >
-              Terbitkan Order Sewa
+              Simpan & Terbitkan Order
             </button>
           </div>
         </form>

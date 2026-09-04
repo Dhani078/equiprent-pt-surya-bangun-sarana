@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
 import { Equipment } from '../../types';
-import { Plus, Search, Filter, Edit, Trash2, Gauge, AlertCircle } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, Gauge, AlertCircle, MapPin, Eye } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { getEquipmentImage } from '../../lib/stitchAssets';
 
 interface EquipmentManagementProps {
   equipments: Equipment[];
   onAddEquipment: (item: Omit<Equipment, 'id'>) => Promise<void>;
   onUpdateEquipment: (id: number, data: Partial<Equipment>) => Promise<void>;
   onDeleteEquipment: (id: number) => Promise<void>;
+  onNavigateTracking?: () => void;
 }
 
 export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   equipments,
   onAddEquipment,
   onUpdateEquipment,
-  onDeleteEquipment
+  onDeleteEquipment,
+  onNavigateTracking
 }) => {
   const [filterType, setFilterType] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -33,7 +36,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
     rental_price_per_day: 2500000,
     status: 'AVAILABLE' as Equipment['status'],
     last_maintenance_date: new Date().toISOString().slice(0, 10),
-    thumbnail_url: 'https://images.unsplash.com/photo-1579829366248-204fe8413f31?w=600&auto=format&fit=crop&q=80'
+    thumbnail_url: ''
   });
 
   const handleOpenAdd = () => {
@@ -42,13 +45,13 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
       equipment_code: `EQ-SBS-2026-${String(nextNum).padStart(3, '0')}`,
       name: '',
       type: 'Excavator',
-      model: '',
+      model: 'PC200-8',
       brand: 'Komatsu',
       hour_meter: 0,
       rental_price_per_day: 2500000,
       status: 'AVAILABLE',
       last_maintenance_date: new Date().toISOString().slice(0, 10),
-      thumbnail_url: 'https://images.unsplash.com/photo-1579829366248-204fe8413f31?w=600&auto=format&fit=crop&q=80'
+      thumbnail_url: ''
     });
     setEditingItem(null);
     setIsAddModalOpen(true);
@@ -73,10 +76,11 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const finalImg = formData.thumbnail_url || getEquipmentImage(formData.equipment_code, formData.type);
     if (editingItem) {
-      await onUpdateEquipment(editingItem.id, formData);
+      await onUpdateEquipment(editingItem.id, { ...formData, thumbnail_url: finalImg });
     } else {
-      await onAddEquipment(formData);
+      await onAddEquipment({ ...formData, thumbnail_url: finalImg });
     }
     setIsAddModalOpen(false);
   };
@@ -84,7 +88,8 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   const filteredEquipments = equipments.filter((eq) => {
     const matchesSearch = eq.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       eq.equipment_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      eq.brand.toLowerCase().includes(searchTerm.toLowerCase());
+      eq.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      eq.type.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'ALL' || eq.type === filterType;
     const matchesStatus = filterStatus === 'ALL' || eq.status === filterStatus;
     return matchesSearch && matchesType && matchesStatus;
@@ -94,22 +99,71 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
   };
 
+  // Mini Bento Stats
+  const totalUnit = equipments.length;
+  const availableUnit = equipments.filter(e => e.status === 'AVAILABLE').length;
+  const rentedUnit = equipments.filter(e => e.status === 'RENTED').length;
+  const maintenanceUnit = equipments.filter(e => e.status === 'MAINTENANCE').length;
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
-            Manajemen Inventaris Alat Berat
+            Equipment Inventory & Fleet Monitoring
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--color-secondary-light)', margin: '4px 0 0 0' }}>
-            Data unit alat berat operasional, status kesiapan sewa, dan akumulasi Hour Meter (HM) PT. SBS.
+          <p style={{ fontSize: '13px', color: 'var(--color-secondary)', margin: '4px 0 0 0' }}>
+            Kelola dan pantau status seluruh unit alat berat PT. Surya Bangun Sarana Banjarmasin.
           </p>
         </div>
         <button onClick={handleOpenAdd} className="btn-primary" style={{ padding: '9px 16px', fontSize: '13.5px' }}>
           <Plus size={16} />
-          <span>Tambah Unit Baru</span>
+          <span>Tambah Alat Baru</span>
         </button>
+      </div>
+
+      {/* Bento Mini Stats Bar */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '14px'
+      }}>
+        <div className="card-premium" style={{ padding: '16px' }}>
+          <p style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
+            Total Unit
+          </p>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'monospace' }}>
+            {totalUnit} Unit
+          </div>
+        </div>
+
+        <div className="card-premium" style={{ padding: '16px' }}>
+          <p style={{ fontSize: '11px', color: '#059669', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
+            Tersedia
+          </p>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: '#059669', fontFamily: 'monospace' }}>
+            {availableUnit} Unit
+          </div>
+        </div>
+
+        <div className="card-premium" style={{ padding: '16px' }}>
+          <p style={{ fontSize: '11px', color: '#2563EB', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
+            Disewa (Aktif)
+          </p>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: '#2563EB', fontFamily: 'monospace' }}>
+            {rentedUnit} Unit
+          </div>
+        </div>
+
+        <div className="card-premium" style={{ padding: '16px' }}>
+          <p style={{ fontSize: '11px', color: '#D97706', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
+            Maintenance
+          </p>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: '#D97706', fontFamily: 'monospace' }}>
+            {maintenanceUnit} Unit
+          </div>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -135,7 +189,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
           >
-            <option value="ALL">Semua Tipe Alat</option>
+            <option value="ALL">Semua Kategori Alat</option>
             <option value="Excavator">Excavator</option>
             <option value="Bulldozer">Bulldozer</option>
             <option value="Crane">Crane</option>
@@ -159,74 +213,96 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
         </div>
       </div>
 
-      {/* Equipments Table */}
+      {/* Equipments Table with Stitch Image Thumbnails */}
       <div className="table-container">
         <table className="data-table">
           <thead>
             <tr>
-              <th>Kode Unit</th>
-              <th>Nama & Tipe Mesin</th>
-              <th>Brand & Model</th>
+              <th>Kode Alat</th>
+              <th>Nama & Visual Unit</th>
+              <th>Kategori</th>
               <th>Hour Meter (HM)</th>
-              <th>Tarif Sewa / Hari</th>
-              <th>Status Unit</th>
-              <th>Aksi</th>
+              <th style={{ textAlign: 'right' }}>Harga Sewa / Hari</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
+              <th style={{ textAlign: 'center' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {filteredEquipments.map((eq) => (
-              <tr key={eq.id}>
-                <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                  {eq.equipment_code}
-                </td>
-                <td>
-                  <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#1E293B' }}>{eq.name}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--color-secondary-light)' }}>{eq.type}</div>
-                </td>
-                <td style={{ fontSize: '13px' }}>
-                  <strong>{eq.brand}</strong> &bull; {eq.model}
-                </td>
-                <td className="hour-meter" style={{ fontSize: '13px', fontWeight: 600 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <Gauge size={14} color="var(--color-primary)" />
-                    <span>{Number(eq.hour_meter).toFixed(2)} jam</span>
-                  </div>
-                </td>
-                <td style={{ fontWeight: 700, color: '#0F172A', fontSize: '13.5px' }}>
-                  {formatRupiah(Number(eq.rental_price_per_day))}
-                </td>
-                <td>
-                  <span className={`badge badge-${eq.status.toLowerCase()}`}>
-                    {eq.status}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button
-                      onClick={() => handleOpenEdit(eq)}
-                      className="btn-secondary"
-                      style={{ padding: '6px 10px', fontSize: '12px' }}
-                      title="Ubah Rincian Unit"
-                    >
-                      <Edit size={13} />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Hapus unit ${eq.equipment_code}?`)) {
-                          onDeleteEquipment(eq.id);
-                        }
-                      }}
-                      className="btn-secondary"
-                      style={{ padding: '6px 10px', fontSize: '12px', color: '#EF4444' }}
-                      title="Hapus Unit"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filteredEquipments.map((eq) => {
+              const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
+              return (
+                <tr key={eq.id} className="hover:bg-surface-container-low transition-colors">
+                  <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
+                    {eq.equipment_code}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <img
+                        src={imgUrl}
+                        alt={eq.name}
+                        style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                          backgroundColor: '#E2E8F0',
+                          border: '1px solid var(--color-border)',
+                          flexShrink: 0
+                        }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#1E293B' }}>{eq.name}</div>
+                        <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)' }}>
+                          {eq.brand} &bull; {eq.model}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-secondary)' }}>
+                    {eq.type}
+                  </td>
+                  <td className="hour-meter" style={{ fontSize: '13px', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Gauge size={14} color="var(--color-primary)" />
+                      <span>{Number(eq.hour_meter).toFixed(2)} jam</span>
+                    </div>
+                  </td>
+                  <td style={{ fontWeight: 700, color: '#0F172A', fontSize: '13.5px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    {formatRupiah(Number(eq.rental_price_per_day))}
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span className={`badge badge-${eq.status.toLowerCase()}`}>
+                      {eq.status === 'AVAILABLE' ? 'Tersedia' : eq.status === 'RENTED' ? 'Disewa' : eq.status}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => handleOpenEdit(eq)}
+                        className="btn-secondary"
+                        style={{ padding: '6px 10px', fontSize: '12px' }}
+                        title="Ubah Rincian Unit"
+                      >
+                        <Edit size={13} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Hapus unit alat berat ${eq.equipment_code} (${eq.name})?`)) {
+                            onDeleteEquipment(eq.id);
+                          }
+                        }}
+                        className="btn-secondary"
+                        style={{ padding: '6px 10px', fontSize: '12px', color: '#EF4444' }}
+                        title="Hapus Unit"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -253,7 +329,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Tipe Alat
+                Kategori Alat
               </label>
               <select
                 className="input-premium"
@@ -272,7 +348,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
 
           <div>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Nama Lengkap Unit Alat Berat
+              Nama Lengkap Alat Berat
             </label>
             <input
               type="text"
@@ -293,20 +369,20 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 type="text"
                 className="input-premium"
                 required
-                placeholder="Komatsu / Caterpillar / Tadano"
+                placeholder="Komatsu / Caterpillar / Sakai"
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
               />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Model / Seri
+                Model / Seri Mesin
               </label>
               <input
                 type="text"
                 className="input-premium"
                 required
-                placeholder="PC200-8 / D6R / GR-500EX"
+                placeholder="PC200-8 / D85ESS-2 / SV520"
                 value={formData.model}
                 onChange={(e) => setFormData({ ...formData, model: e.target.value })}
               />
@@ -316,7 +392,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Akumulasi Hour Meter (HM)
+                Hour Meter (HM) Awal
               </label>
               <input
                 type="number"
@@ -329,7 +405,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Tarif Sewa Harian (IDR)
+                Tarif Sewa Per Hari (Rp)
               </label>
               <input
                 type="number"
@@ -341,23 +417,36 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Status Operasional Saat Ini
-            </label>
-            <select
-              className="input-premium"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as Equipment['status'] })}
-            >
-              <option value="AVAILABLE">AVAILABLE (Tersedia & Siap Sewa)</option>
-              <option value="RENTED">RENTED (Sedang Digunakan Proyek)</option>
-              <option value="MAINTENANCE">MAINTENANCE (Dalam Perawatan Mekanik)</option>
-              <option value="UNAVAILABLE">UNAVAILABLE (Tidak Dapat Dioperasikan)</option>
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+                Status Operasional
+              </label>
+              <select
+                className="input-premium"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as Equipment['status'] })}
+              >
+                <option value="AVAILABLE">AVAILABLE (Tersedia)</option>
+                <option value="RENTED">RENTED (Disewa)</option>
+                <option value="MAINTENANCE">MAINTENANCE (Perawatan)</option>
+                <option value="UNAVAILABLE">UNAVAILABLE (Non-Aktif)</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+                Tanggal Servis Terakhir
+              </label>
+              <input
+                type="date"
+                className="input-premium"
+                value={formData.last_maintenance_date}
+                onChange={(e) => setFormData({ ...formData, last_maintenance_date: e.target.value })}
+              />
+            </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px' }}>
             <button
               type="button"
               onClick={() => setIsAddModalOpen(false)}
@@ -369,7 +458,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
               type="submit"
               className="btn-primary"
             >
-              {editingItem ? 'Simpan Perubahan' : 'Daftarkan Alat Berat'}
+              <span>{editingItem ? 'Simpan Perubahan' : 'Tambah Unit'}</span>
             </button>
           </div>
         </form>
