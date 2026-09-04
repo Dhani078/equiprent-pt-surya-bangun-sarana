@@ -22,9 +22,9 @@ Sistem dibangun dengan arsitektur modern **Edge Computing** (Cloudflare Workers)
 
 ---
 
-## 👥 Aktor Pengguna & Kredensial Demonstrasi Sidang Skripsi
+## 👥 Aktor Pengguna & Kredensial Akses Sistem
 
-Untuk kenyamanan pengujian, presentasi, dan sidang skripsi, sistem dilengkapi tombol **1-Click Demo Login Chips** pada layar Login:
+Sistem menyediakan 3 akun pengguna terkonfigurasi untuk masing-masing hak akses:
 
 | Peran (Role) | Username | Password | Deskripsi Hak Akses |
 | :--- | :--- | :--- | :--- |

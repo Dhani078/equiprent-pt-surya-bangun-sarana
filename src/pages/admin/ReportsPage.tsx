@@ -141,7 +141,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) =>
                 </tbody>
               </table>
               <p>
-                Dokumen ini merupakan bukti otentik yang sah dalam sistem monitoring operasional dan dapat dipergunakan dalam lampiran penulisan Skripsi Akademik.
+                Dokumen ini merupakan bukti otentik yang sah dalam sistem monitoring operasional dan diakui secara resmi oleh manajemen PT. Surya Bangun Sarana Banjarmasin.
               </p>
             </div>
 

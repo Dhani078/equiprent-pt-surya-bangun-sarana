@@ -57,7 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout, onSwitchR
       {/* Role Switcher & User Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         
-        {/* Quick Role Switcher for Academic Demo / Sidang Skripsi */}
+        {/* Multi-Role Quick Context Switcher */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
