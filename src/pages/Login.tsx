@@ -55,15 +55,37 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     setErrorMsg('');
 
+    // Validasi sisi klien (untuk UX). Validasi sesungguhnya tetap di server.
+    if (!username.trim()) {
+      setErrorMsg('Username wajib diisi.');
+      setLoading(false);
+      return;
+    }
+    if (!password) {
+      setErrorMsg('Password wajib diisi.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const user = await db.getUserByUsername(username.trim());
-      if (!user) {
-        setErrorMsg('Username tidak ditemukan dalam database sistem TiDB Cloud.');
+      // Verifikasi username DAN password melalui lapisan auth (PBKDF2).
+      const check = await db.verifyCredentials(username, password);
+
+      if (!check.ok) {
+        if (check.reason === 'SUSPENDED') {
+          setErrorMsg('Akun Anda telah dinonaktifkan. Silakan hubungi administrator PT. Surya Bangun Sarana.');
+        } else {
+          // Pesan seragam sengaja dipakai agar penyerang tidak bisa
+          // menebak username mana yang terdaftar (username enumeration).
+          setErrorMsg('Username atau password salah. Silakan periksa kembali kredensial Anda.');
+        }
         setLoading(false);
         return;
       }
 
-      // Check role matching
+      const user = check.user;
+
+      // Pastikan role yang dipilih sesuai dengan role akun sebenarnya.
       if (user.role_name !== selectedRole) {
         setErrorMsg(`Akun "${username}" terdaftar sebagai role ${user.role_name}, bukan ${selectedRole}. Silakan pilih tab role yang sesuai.`);
         setLoading(false);
@@ -71,7 +93,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       }
 
       onLoginSuccess(user);
-    } catch (err: any) {
+    } catch {
       setErrorMsg('Gagal memverifikasi login. Periksa koneksi basis data TiDB.');
     } finally {
       setLoading(false);
