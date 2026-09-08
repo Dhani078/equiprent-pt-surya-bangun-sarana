@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ReportItem, Rental } from '../../types';
-import { FileText, Download, Printer, Eye, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { FileText, Download, Printer, Eye, CheckCircle2, ShieldCheck, TrendingUp, Wallet, AlertCircle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { formatRupiah, LATE_PENALTY_PER_DAY } from '../../lib/businessRules';
 
 interface ReportsPageProps {
   reports: ReportItem[];
@@ -10,6 +11,44 @@ interface ReportsPageProps {
 
 export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) => {
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+
+  /**
+   * Ringkasan finansial dari seluruh transaksi sewa.
+   *
+   * Denda dihitung untuk rental yang masih ON_GOING padahal tanggal
+   * pengembaliannya sudah lewat (keterlambatan berjalan).
+   * Tarif: LATE_PENALTY_PER_DAY per hari.
+   */
+  const ringkasan = useMemo(() => {
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    const hariIni = Date.now();
+
+    const diproses = rentals.filter(r => r.status === 'COMPLETED' || r.status === 'ON_GOING');
+    const pendapatanKotor = diproses.reduce((s, r) => s + Number(r.subtotal), 0);
+
+    let totalDenda = 0;
+    let terlambat = 0;
+
+    for (const r of diproses) {
+      // Keterlambatan hanya dihitung untuk unit yang belum kembali (ON_GOING).
+      if (r.status !== 'ON_GOING') continue;
+      const batas = new Date(r.end_date).getTime();
+      if (!Number.isFinite(batas) || hariIni <= batas) continue;
+
+      const hariTelat = Math.ceil((hariIni - batas) / MS_PER_DAY);
+      if (hariTelat <= 0) continue;
+
+      terlambat += 1;
+      totalDenda += hariTelat * LATE_PENALTY_PER_DAY;
+    }
+
+    return {
+      pendapatanKotor,
+      totalDenda,
+      terlambat,
+      totalTransaksi: diproses.length,
+    };
+  }, [rentals]);
 
   const handlePrint = () => {
     window.print();
@@ -26,6 +65,51 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) =>
           <p style={{ fontSize: '13px', color: 'var(--color-secondary-light)', margin: '4px 0 0 0' }}>
             Ekspor arsip resmi Surat Jalan mobilisasi unit, Berita Acara Serah Terima (BAST), dan rekapitulasi operasional.
           </p>
+        </div>
+      </div>
+
+      {/* Ringkasan Finansial */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '14px'
+      }}>
+        <div className="card-premium" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(5, 150, 105, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Wallet size={20} color="#059669" />
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600 }}>PENDAPATAN KOTOR</p>
+            <p style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: 'var(--color-primary)' }}>
+              {formatRupiah(ringkasan.pendapatanKotor)}
+            </p>
+          </div>
+        </div>
+
+        <div className="card-premium" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(220, 38, 38, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <AlertCircle size={20} color="#dc2626" />
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600 }}>
+              DENDA KETERLAMBATAN (Rp {LATE_PENALTY_PER_DAY.toLocaleString('id-ID')}/HARI)
+            </p>
+            <p style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#dc2626' }}>
+              {formatRupiah(ringkasan.totalDenda)}
+            </p>
+          </div>
+        </div>
+
+        <div className="card-premium" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(37, 99, 235, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={20} color="#2563eb" />
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600 }}>TRANSAKSI DIPROSES</p>
+            <p style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: 'var(--color-primary)' }}>
+              {ringkasan.totalTransaksi} <span style={{ fontSize: '12px', fontWeight: 500 }}>({ringkasan.terlambat} terlambat)</span>
+            </p>
+          </div>
         </div>
       </div>
 

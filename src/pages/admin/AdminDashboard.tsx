@@ -3,6 +3,7 @@ import { StatCard } from '../../components/StatCard';
 import { DollarSign, Truck, ClipboardList, Wrench, Users, ArrowUpRight, Clock, AlertTriangle } from 'lucide-react';
 import { Equipment, Rental, Maintenance, User, Payment } from '../../types';
 import { getEquipmentImage } from '../../lib/stitchAssets';
+import { formatRupiah, getUnitsDueForService } from '../../lib/businessRules';
 
 interface AdminDashboardProps {
   equipments: Equipment[];
@@ -28,9 +29,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const activeRentals = rentals.filter(r => r.status === 'ON_GOING' || r.status === 'APPROVED');
   const urgentMaintenance = maintenance.filter(m => m.status === 'SCHEDULED' || m.status === 'IN_PROGRESS');
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
-  };
+  // Unit yang sudah / mendekati jadwal servis (aturan 250 HM).
+  const serviceAlerts = getUnitsDueForService(equipments, maintenance);
+  const overdueUnits = serviceAlerts.filter(a => a.status.isDue);
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -56,6 +57,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
+      {/* Peringatan Servis Preventif (aturan 250 HM) */}
+      {overdueUnits.length > 0 && (
+        <div
+          className="animate-fade-in"
+          role="alert"
+          style={{
+            padding: '14px 18px',
+            borderRadius: '14px',
+            border: '1px solid rgba(220, 38, 38, 0.35)',
+            background: 'rgba(220, 38, 38, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap'
+          }}
+        >
+          <AlertTriangle size={20} color="#dc2626" />
+          <div style={{ flex: 1, minWidth: '240px' }}>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>
+              {overdueUnits.length} unit telah melewati jadwal servis 250 HM
+            </p>
+            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--color-secondary)' }}>
+              {overdueUnits.slice(0, 3).map(a => a.equipment.equipment_code).join(', ')}
+              {overdueUnits.length > 3 ? ` +${overdueUnits.length - 3} lainnya` : ''}
+            </p>
+          </div>
+          <button
+            onClick={() => onNavigate('maintenance')}
+            className="btn-primary"
+            style={{ fontSize: '12px', padding: '8px 14px' }}
+          >
+            Jadwalkan Servis
+          </button>
+        </div>
+      )}
+
       {/* Top 4 Stat Cards */}
       <div style={{
         display: 'grid',
@@ -64,7 +101,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }}>
         <StatCard
           title="Total Pendapatan Terbayar"
-          value={formatCurrency(totalRevenue)}
+          value={formatRupiah(totalRevenue)}
           subtitle="Akumulasi pembayaran sewa lunas"
           icon={DollarSign}
           badgeText="Lunas"
@@ -148,7 +185,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                       </td>
                       <td style={{ fontWeight: 700, fontSize: '13px', fontFamily: 'monospace' }}>
-                        {formatCurrency(Number(r.subtotal))}
+                        {formatRupiah(Number(r.subtotal))}
                       </td>
                       <td>
                         <span className={`badge badge-${r.status.toLowerCase()}`}>
