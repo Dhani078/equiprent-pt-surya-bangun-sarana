@@ -38,6 +38,7 @@ const suites = [
   'businessRules.test.mjs',
   'dataIntegrity.test.mjs',
   'servicePanel.test.mjs',
+  'lateFee.test.mjs',
 ];
 
 let failed = 0;
