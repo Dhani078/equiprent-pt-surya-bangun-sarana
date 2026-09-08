@@ -3,5 +3,11 @@ dist
 .env
 .env.local
 .env.*.local
+.dev.vars
 .wrangler
 *.log
+
+# PENTING: STATE/ TIDAK boleh di-ignore.
+# Folder ini berisi memori agent (task_queue, changelog, blockers).
+# Jika ter-ignore, agent kehilangan state setiap clone/session baru.
+!STATE/

@@ -1,6 +1,14 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { db } from '../lib/db';
+import { db, isDatabaseConnected } from '../lib/db';
+import {
+  createSessionToken,
+  verifySessionToken,
+  isPathAllowedForRole,
+  SESSION_HEADER,
+  SESSION_TTL_SECONDS,
+} from '../lib/auth';
+import type { RoleName } from '../types';
 
 type Bindings = {
   ASSETS: { fetch: (req: Request) => Promise<Response> };
@@ -8,10 +16,78 @@ type Bindings = {
   TIDB_HOST?: string;
 };
 
-const app = new Hono<{ Bindings: Bindings }>();
+type Variables = {
+  /** Role pengguna yang sudah terverifikasi dari session token. */
+  role: RoleName;
+  userId: number;
+};
+
+const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 // Enable CORS for API requests
 app.use('/api/*', cors());
+
+// ---------------------------------------------------------------------------
+// Global Error Handler
+// ---------------------------------------------------------------------------
+app.onError((err, c) => {
+  // Jangan pernah membocorkan detail exception ke client (stack trace, path file, dll).
+  return c.json(
+    {
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Terjadi kesalahan pada server.' },
+    },
+    500
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Middleware Autentikasi & RBAC
+// Berjalan untuk semua route /api/* KECUALI health & login.
+// ---------------------------------------------------------------------------
+app.use('/api/*', async (c, next) => {
+  const path = new URL(c.req.url).pathname;
+
+  // Endpoint publik — tidak butuh autentikasi.
+  if (path === '/api/health' || path === '/api/auth/login') {
+    await next();
+    return;
+  }
+
+  const token = c.req.header(SESSION_HEADER);
+  const result = await verifySessionToken(token);
+
+  if (!result.valid) {
+    const message =
+      result.reason === 'EXPIRED'
+        ? 'Sesi Anda telah berakhir. Silakan masuk kembali.'
+        : 'Akses ditolak. Silakan masuk terlebih dahulu.';
+    return c.json(
+      { success: false, error: { code: result.reason, message } },
+      401
+    );
+  }
+
+  const role = result.payload.rol;
+
+  // Otorisasi berbasis role — dicek di server, bukan di client.
+  if (!isPathAllowedForRole(path, role)) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: `Role ${role} tidak memiliki hak akses ke resource ini.`,
+        },
+      },
+      403
+    );
+  }
+
+  c.set('role', role);
+  c.set('userId', result.payload.uid);
+  await next();
+});
 
 // Health Check
 app.get('/api/health', (c) => {
@@ -20,23 +96,103 @@ app.get('/api/health', (c) => {
     app: 'PT. SURYA BANGUN SARANA BANJARMASIN',
     runtime: 'Cloudflare Workers Edge',
     database: 'TiDB Cloud Serverless',
+    database_connected: isDatabaseConnected(),
     timestamp: new Date().toISOString()
   });
 });
 
-// Auth Route
-app.post('/api/auth/login', async (c) => {
-  const body = await c.req.json();
-  const { username, password } = body;
+// ---------------------------------------------------------------------------
+// Rate Limiting Sederhana untuk Endpoint Login
+// Mencegah brute-force. Catatan: counter per-isolate, bukan global.
+// ---------------------------------------------------------------------------
+const loginAttempts = new Map<string, { count: number; firstAt: number }>();
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 menit
 
-  const user = await db.getUserByUsername(username);
-  if (!user) {
-    return c.json({ success: false, message: 'Username atau password salah.' }, 401);
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+
+  if (!entry || now - entry.firstAt > LOGIN_WINDOW_MS) {
+    loginAttempts.set(key, { count: 1, firstAt: now });
+    return false;
   }
 
-  // Simplified auth verification for rapid skripsi presentation
+  entry.count += 1;
+  return entry.count > LOGIN_MAX_ATTEMPTS;
+}
+
+function clearRateLimit(key: string): void {
+  loginAttempts.delete(key);
+}
+
+// Auth Route — verifikasi username DAN password
+app.post('/api/auth/login', async (c) => {
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json(
+      { success: false, error: { code: 'INVALID_JSON', message: 'Format request tidak valid.' } },
+      400
+    );
+  }
+
+  const { username, password } = (body ?? {}) as { username?: unknown; password?: unknown };
+
+  // Validasi input — jangan percaya data dari client.
+  if (typeof username !== 'string' || typeof password !== 'string') {
+    return c.json(
+      { success: false, error: { code: 'VALIDATION_ERROR', message: 'Username dan password wajib diisi.' } },
+      400
+    );
+  }
+
+  if (username.trim().length === 0 || password.length === 0) {
+    return c.json(
+      { success: false, error: { code: 'VALIDATION_ERROR', message: 'Username dan password wajib diisi.' } },
+      400
+    );
+  }
+
+  // Rate limiting berbasis IP (header CF-Connecting-IP disediakan Cloudflare)
+  const clientIp = c.req.header('CF-Connecting-IP') ?? 'unknown';
+  if (isRateLimited(clientIp)) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.',
+        },
+      },
+      429
+    );
+  }
+
+  const check = await db.verifyCredentials(username, password);
+
+  if (!check.ok) {
+    // Pesan sengaja dibuat seragam untuk mencegah username enumeration.
+    const message =
+      check.reason === 'SUSPENDED'
+        ? 'Akun Anda telah dinonaktifkan. Silakan hubungi administrator.'
+        : 'Username atau password salah.';
+    return c.json(
+      { success: false, error: { code: check.reason, message } },
+      401
+    );
+  }
+
+  clearRateLimit(clientIp);
+
+  const user = check.user;
+  const token = await createSessionToken(user);
+
   return c.json({
     success: true,
+    token,
+    expires_in: SESSION_TTL_SECONDS,
     user: {
       id: user.id,
       username: user.username,

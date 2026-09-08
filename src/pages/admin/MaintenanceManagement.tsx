@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Maintenance, Equipment, User } from '../../types';
 import { Plus, Search, Filter, Wrench, CheckCircle, Clock, Calendar, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
+import { getUnitsDueForService, formatRupiah, SERVICE_INTERVAL_HM } from '../../lib/businessRules';
 
 interface MaintenanceManagementProps {
   maintenance: Maintenance[];
   equipments: Equipment[];
   users: User[];
-  onScheduleMaintenance: (item: Omit<Maintenance, 'id' | 'maintenance_code'>) => Promise<any>;
+  onScheduleMaintenance: (item: Omit<Maintenance, 'id' | 'maintenance_code'>) => Promise<void>;
 }
 
 export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
@@ -37,6 +38,21 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
 
   const technicians = users.filter(u => u.role_id === 2);
 
+  /**
+   * Unit yang sudah / mendekati jadwal servis berbasis aturan 250 HM.
+   * Di-memo agar tidak dihitung ulang pada setiap render.
+   */
+  const serviceAlerts = useMemo(
+    () => getUnitsDueForService(equipments, maintenance),
+    [equipments, maintenance]
+  );
+
+  /** Jumlah unit yang sudah lewat batas (butuh tindakan segera). */
+  const overdueCount = useMemo(
+    () => serviceAlerts.filter(a => a.status.isDue).length,
+    [serviceAlerts]
+  );
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const eq = equipments.find(e => e.id === Number(formData.equipment_id));
@@ -63,15 +79,11 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
 
   const filteredMaintenance = maintenance.filter((m) => {
     const matchesSearch = m.maintenance_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.equipment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (m.equipment_name && m.equipment_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (m.technician_name && m.technician_name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === 'ALL' || m.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
-
-  const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
-  };
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -90,6 +102,110 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
           <span>Jadwalkan Perawatan</span>
         </button>
       </div>
+
+      {/* Panel Peringatan Servis Berbasis 250 HM */}
+      {serviceAlerts.length > 0 && (
+        <div
+          className="card-premium animate-fade-in"
+          style={{
+            padding: '16px 18px',
+            borderLeft: `4px solid ${overdueCount > 0 ? '#DC2626' : '#F59E0B'}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <AlertTriangle size={18} color={overdueCount > 0 ? '#DC2626' : '#F59E0B'} />
+            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+              Peringatan Servis Preventif (interval {SERVICE_INTERVAL_HM} HM)
+            </h3>
+            <span
+              style={{
+                marginLeft: 'auto',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                padding: '3px 10px',
+                borderRadius: '999px',
+                backgroundColor: overdueCount > 0 ? '#FEE2E2' : '#FEF3C7',
+                color: overdueCount > 0 ? '#991B1B' : '#92400E',
+              }}
+            >
+              {overdueCount} unit jatuh tempo · {serviceAlerts.length - overdueCount} unit mendekati
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {serviceAlerts.slice(0, 5).map(({ equipment, status }) => (
+              <div
+                key={equipment.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '10px 12px',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '1px solid var(--color-border)',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                    {equipment.name}
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)' }}>
+                    {equipment.equipment_code}
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
+                  HM saat ini: <strong>{status.currentHM.toFixed(2)}</strong>
+                </div>
+
+                <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
+                  Servis berikutnya: <strong>{status.nextServiceTargetHM.toFixed(2)} HM</strong>
+                </div>
+
+                <span
+                  style={{
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: status.isDue ? '#DC2626' : '#F59E0B',
+                    color: '#FFFFFF',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {status.isDue
+                    ? `LEWAT ${Math.abs(Math.round(status.hmUntilNextService))} HM`
+                    : `SISA ${Math.round(status.hmUntilNextService)} HM`}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      equipment_id: equipment.id,
+                      hour_meter_at_maintenance: status.currentHM,
+                    }));
+                    setIsModalOpen(true);
+                  }}
+                  className="btn-primary"
+                  style={{ padding: '5px 12px', fontSize: '11.5px' }}
+                >
+                  Jadwalkan
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {serviceAlerts.length > 5 && (
+            <p style={{ fontSize: '11.5px', color: 'var(--color-secondary)', margin: '10px 0 0 0' }}>
+              Dan {serviceAlerts.length - 5} unit lainnya memerlukan perhatian.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="card-premium" style={{ padding: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
