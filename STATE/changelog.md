@@ -164,3 +164,23 @@ terbaca sebagai false positive.
 **Verifikasi:** 7/7 suite lulus · typecheck + build PASS (467 KB)
 
 ---
+
+## [CYCLE 10] 2026-09-09T08:10:00Z — T-0020 — P2 — DONE
+**Judul:** Cegah double-booking di level aplikasi (server + UI)
+**Bug ditemukan:** `isEquipmentAvailable()` sudah ada di `businessRules.ts`
+tetapi **tidak dipanggil di mana pun**. Validasi hanya mengandalkan data seed
+yang konsisten — sewa baru lewat API/UI tetap bisa membuat bentrok meski data
+awal bersih.
+**Perubahan:**
+- `POST /api/rentals`: tolak `409` bila unit bentrok dengan sewa aktif
+  (`APPROVED` / `ON_GOING`), kode error `EQUIPMENT_UNAVAILABLE`
+- `PUT /api/rentals/:id/status`: tolak `409` bila approval/aktivasi membuat bentrok
+- Validasi tanggal: `end_date` harus setelah `start_date` → `400`
+- Validasi unit benar-benar ada → `404`
+- `CustomerPortal.tsx`: cek ketersediaan sebelum submit + panel peringatan
+  merah di modal (state `rentError`, direset saat modal dibuka)
+- 5 pemeriksaan baru di `tests/api.test.mjs`
+**Catatan:** Satu test lama (`PUT /api/rentals/1/status → 200`) sempat gagal
+karena rental #1 memang bentrok — validasi baru bekerja sesuai desain. Test
+diperbaiki agar memilih rental `PENDING` yang unitnya sedang tidak disewa.
+**Verifikasi:** 7/7 suite lulus (47/47 API) · typecheck + build PASS (468 KB)
