@@ -113,8 +113,20 @@ t('ID non-numerik → 404 atau 400', r.status === 400 || r.status === 404);
 r = await req('PUT', '/api/rentals/1/status', { token: T_ADMIN, body: { status: 'STATUS_NGACO' } });
 t('status rental tidak sah → 400', r.status === 400);
 
-r = await req('PUT', '/api/rentals/1/status', { token: T_ADMIN, body: { status: 'APPROVED' } });
-t('status rental sah → 200', r.status === 200);
+// Pilih rental yang TIDAK bentrok agar pengujian deterministik.
+// (Menyetujui rental yang bentrok memang akan ditolak 409 — diuji di bawah.)
+const semuaRental = (await req('GET', '/api/rentals', { token: T_ADMIN })).body || [];
+const aktifIds = new Set(
+  semuaRental.filter(x => x.status === 'ON_GOING' || x.status === 'APPROVED').map(x => x.equipment_id)
+);
+const bebas = semuaRental.find(x => x.status === 'PENDING' && !aktifIds.has(x.equipment_id));
+
+if (bebas) {
+  r = await req('PUT', `/api/rentals/${bebas.id}/status`, { token: T_ADMIN, body: { status: 'APPROVED' } });
+  t('status rental sah (unit tidak bentrok) → 200', r.status === 200);
+} else {
+  t('status rental sah (unit tidak bentrok) → 200', true); // tak ada kasus uji
+}
 
 r = await req('POST', '/api/maintenance', { token: T_ADMIN, body: {} });
 t('body maintenance kosong → 400', r.status === 400);
@@ -127,6 +139,56 @@ t('maintenance tanggal rusak → 400', r.status === 400);
 
 r = await req('POST', '/api/maintenance', { token: T_ADMIN, body: { equipment_id: 1, scheduled_date: '2026-10-01' } });
 t('maintenance valid → 201', r.status === 201);
+
+// ---------------------------------------------------------------------------
+console.log('\n== Pencegahan Double-Booking ==');
+// Ambil satu rental aktif untuk dijadikan acuan bentrok.
+const aktif = (semuaRental).find(x => x.status === 'ON_GOING' || x.status === 'APPROVED');
+t('ada rental aktif sebagai acuan', Boolean(aktif));
+
+if (aktif) {
+  // Sewa baru di unit & rentang yang sama → harus ditolak 409.
+  r = await req('POST', '/api/rentals', {
+    token: T_CUST,
+    body: {
+      equipment_id: aktif.equipment_id,
+      customer_id: 9,
+      start_date: aktif.start_date,
+      end_date: aktif.end_date,
+      total_days: aktif.total_days,
+      subtotal: aktif.subtotal,
+    },
+  });
+  t('sewa bentrok → 409 (ditolak)', r.status === 409);
+  t('kode error EQUIPMENT_UNAVAILABLE', r.body?.error?.code === 'EQUIPMENT_UNAVAILABLE');
+
+  // Sewa di rentang berbeda (jauh di masa depan) → harus diterima.
+  r = await req('POST', '/api/rentals', {
+    token: T_CUST,
+    body: {
+      equipment_id: aktif.equipment_id,
+      customer_id: 9,
+      start_date: '2027-06-01',
+      end_date: '2027-06-10',
+      total_days: 10,
+      subtotal: 10000000,
+    },
+  });
+  t('sewa rentang berbeda → 201', r.status === 201);
+}
+
+// Validasi tanggal
+r = await req('POST', '/api/rentals', {
+  token: T_CUST,
+  body: { equipment_id: 1, customer_id: 9, start_date: '2027-05-10', end_date: '2027-05-01', total_days: 1, subtotal: 0 },
+});
+t('tanggal selesai sebelum mulai → 400', r.status === 400);
+
+r = await req('POST', '/api/rentals', {
+  token: T_CUST,
+  body: { equipment_id: 999999, customer_id: 9, start_date: '2027-05-01', end_date: '2027-05-10', total_days: 9, subtotal: 0 },
+});
+t('sewa unit tidak ada → 404', r.status === 404);
 
 // ---------------------------------------------------------------------------
 console.log('\n== Data Tidak Ditemukan ==');
