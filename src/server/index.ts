@@ -8,9 +8,19 @@ import {
   SESSION_HEADER,
   SESSION_TTL_SECONDS,
 } from '../lib/auth';
-import type { RoleName } from '../types';
+import type { RoleName, ReportId } from '../types';
 import type { Equipment, Rental, Maintenance } from '../types';
 import { isEquipmentAvailable } from '../lib/businessRules';
+import {
+  buildReport,
+  isReportId,
+  normalizeRange,
+  REPORT_CATALOG,
+} from '../lib/reports';
+import type { ReportDataSource } from '../lib/reports';
+
+/** Laporan yang tampil pertama kali saat halaman dibuka. */
+const DEFAULT_REPORT_ID: ReportId = REPORT_CATALOG[0].id;
 
 type Bindings = {
   ASSETS: { fetch: (req: Request) => Promise<Response> };
@@ -534,6 +544,45 @@ app.get('/api/tracking', async (c) => {
 app.get('/api/reports', async (c) => {
   const items = await db.getReports();
   return c.json(items);
+});
+
+/**
+ * Endpoint agregasi 11 laporan operasional.
+ *
+ * RBAC: path ini berada di bawah `/api/reports` sehingga otomatis hanya
+ * boleh diakses ADMIN & STAFF (lihat RBAC_MATRIX di src/lib/auth.ts).
+ *
+ * Query:
+ *   id    — salah satu ReportId; default RENTAL_BULANAN
+ *   from  — batas awal periode (YYYY-MM-DD), opsional
+ *   to    — batas akhir periode (YYYY-MM-DD), opsional
+ */
+app.get('/api/reports/analytics', async (c) => {
+  const rawId = c.req.query('id');
+  const id = isReportId(rawId) ? rawId : (rawId === undefined || rawId === '' ? DEFAULT_REPORT_ID : null);
+
+  if (id === null) {
+    return c.json(
+      { success: false, error: { code: 'VALIDATION_ERROR', message: 'Jenis laporan tidak dikenal.' } },
+      400
+    );
+  }
+
+  const range = normalizeRange(c.req.query('from') ?? '', c.req.query('to') ?? '');
+
+  const source: ReportDataSource = {
+    rentals: await db.getRentals(),
+    equipments: await db.getEquipments(),
+    users: await db.getUsers(),
+    payments: await db.getPayments(),
+    maintenance: await db.getMaintenance(),
+    gps: await db.getGpsTracking(),
+    reports: await db.getReports(),
+  };
+
+  const result = buildReport(id, source, range);
+
+  return c.json({ success: true, data: result, meta: { total: result.totalRows } });
 });
 
 // Users API
