@@ -456,6 +456,16 @@ function generatePayments(contracts: readonly Contract[], rentals: readonly Rent
       amount,
       payment_method: rng() < 0.7 ? 'BANK_TRANSFER' : 'QRIS',
       status,
+      // Bukti transfer dilampirkan pelanggan untuk pembayaran yang sudah atau
+      // sedang diproses. Sengaja disisakan ~1 dari 4 yang BELUM upload bukti
+      // agar antrean verifikasi staf realistis (ada yang bisa diverifikasi,
+      // ada yang masih menunggu pelanggan melampirkan bukti).
+      payment_proof_path:
+        status === 'PAID'
+          ? `uploads/proofs/bukti_${c.contract_code}.png`
+          : status === 'PENDING_VERIFICATION' && idx % 4 !== 1
+            ? `uploads/proofs/bukti_${c.contract_code}.png`
+            : undefined,
       payment_date: paid ? isoDate(addDays(new Date(c.contract_date), intBetween(0, 5))) : isoDate(new Date(c.contract_date)),
       verified_by: verified ? pick(TEKNISI_IDS) : null,
       verified_by_name: verified ? pick(['Hendra Wijaya', 'Siska Amanda']) : undefined,

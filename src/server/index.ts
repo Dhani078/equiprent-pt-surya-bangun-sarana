@@ -425,10 +425,21 @@ app.post('/api/contracts/:id/sign', async (c) => {
   const id = parseId(c.req.param('id'));
   if (id === null) return c.json(BAD_ID, 400);
 
-  const updated = await db.signContract(id);
-  if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Kontrak tidak ditemukan.' } }, 404);
-
-  return c.json({ success: true, item: updated });
+  try {
+    const updated = await db.signContract(id);
+    if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Kontrak tidak ditemukan.' } }, 404);
+    return c.json({ success: true, item: updated });
+  } catch (err) {
+    // Kontrak sudah ditandatangani sebelumnya → jangan timpa bukti waktu.
+    const msg = err instanceof Error ? err.message : '';
+    if (msg === 'KONTRAK_SUDAH_DITANDATANGANI') {
+      return c.json(
+        { success: false, error: { code: msg, message: 'Kontrak ini sudah ditandatangani sebelumnya.' } },
+        409
+      );
+    }
+    throw err;
+  }
 });
 
 // Payments API
@@ -448,10 +459,28 @@ app.post('/api/payments/:id/verify', async (c) => {
   const staffId = typeof body.staffId === 'number' && body.staffId > 0 ? body.staffId : 3;
   const staffName = typeof body.staffName === 'string' && body.staffName.trim() ? body.staffName : 'Hendra Wijaya';
 
-  const updated = await db.verifyPayment(id, staffId, staffName);
-  if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
-
-  return c.json({ success: true, item: updated });
+  try {
+    const updated = await db.verifyPayment(id, staffId, staffName);
+    if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
+    return c.json({ success: true, item: updated });
+  } catch (err) {
+    // Penolakan aturan bisnis: status bukan PENDING_VERIFICATION,
+    // atau bukti transfer belum dilampirkan.
+    const msg = err instanceof Error ? err.message : '';
+    if (msg === 'STATUS_PEMBAYARAN_TIDAK_VALID') {
+      return c.json(
+        { success: false, error: { code: msg, message: 'Pembayaran tidak menunggu verifikasi.' } },
+        409
+      );
+    }
+    if (msg === 'BUKTI_TRANSFER_BELUM_ADA') {
+      return c.json(
+        { success: false, error: { code: msg, message: 'Bukti transfer belum dilampirkan.' } },
+        409
+      );
+    }
+    throw err;
+  }
 });
 
 // Maintenance API

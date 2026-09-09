@@ -191,6 +191,52 @@ r = await req('POST', '/api/rentals', {
 t('sewa unit tidak ada → 404', r.status === 404);
 
 // ---------------------------------------------------------------------------
+console.log('\n== Aturan Verifikasi Pembayaran ==');
+const semuaPayment = (await req('GET', '/api/payments', { token: T_ADMIN })).body || [];
+
+// Pembayaran yang sudah PAID tidak boleh diverifikasi ulang.
+const sudahPaid = semuaPayment.find(x => x.status === 'PAID');
+if (sudahPaid) {
+  r = await req('POST', `/api/payments/${sudahPaid.id}/verify`, { token: T_ADMIN, body: {} });
+  t('verifikasi ulang pembayaran PAID → 409', r.status === 409);
+  t('kode STATUS_PEMBAYARAN_TIDAK_VALID', r.body?.error?.code === 'STATUS_PEMBAYARAN_TIDAK_VALID');
+}
+
+// Pembayaran PENDING_VERIFICATION tapi tanpa bukti → ditolak.
+const tanpaBukti = semuaPayment.find(x => x.status === 'PENDING_VERIFICATION' && !x.payment_proof_path);
+if (tanpaBukti) {
+  r = await req('POST', `/api/payments/${tanpaBukti.id}/verify`, { token: T_ADMIN, body: {} });
+  t('verifikasi tanpa bukti transfer → 409', r.status === 409);
+  t('kode BUKTI_TRANSFER_BELUM_ADA', r.body?.error?.code === 'BUKTI_TRANSFER_BELUM_ADA');
+}
+
+// Pembayaran PENDING_VERIFICATION + ada bukti → berhasil.
+const siapVerif = semuaPayment.find(x => x.status === 'PENDING_VERIFICATION' && x.payment_proof_path);
+if (siapVerif) {
+  r = await req('POST', `/api/payments/${siapVerif.id}/verify`, { token: T_ADMIN, body: { staffName: 'Staf Uji' } });
+  t('verifikasi sah → 200', r.status === 200);
+  t('status berubah jadi PAID', r.body?.item?.status === 'PAID');
+  t('nama verifikator tercatat', r.body?.item?.verified_by_name === 'Staf Uji');
+  t('waktu verifikasi tercatat', Boolean(r.body?.item?.verified_at));
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n== Aturan Penandatanganan Kontrak ==');
+const semuaKontrak = (await req('GET', '/api/contracts', { token: T_ADMIN })).body || [];
+const belumTtd = semuaKontrak.find(x => x.is_signed_customer !== 1);
+if (belumTtd) {
+  r = await req('POST', `/api/contracts/${belumTtd.id}/sign`, { token: T_CUST, body: {} });
+  t('tanda tangani kontrak pertama kali → 200', r.status === 200);
+  t('status is_signed_customer = 1', r.body?.item?.is_signed_customer === 1);
+  t('waktu ttd tercatat', Boolean(r.body?.item?.signed_at));
+
+  // Tanda tangan kedua kali harus ditolak agar audit trail tidak tertimpa.
+  r = await req('POST', `/api/contracts/${belumTtd.id}/sign`, { token: T_CUST, body: {} });
+  t('tanda tangan ulang → 409', r.status === 409);
+  t('kode KONTRAK_SUDAH_DITANDATANGANI', r.body?.error?.code === 'KONTRAK_SUDAH_DITANDATANGANI');
+}
+
+// ---------------------------------------------------------------------------
 console.log('\n== Data Tidak Ditemukan ==');
 r = await req('PUT', '/api/equipments/999999', { token: T_ADMIN, body: { status: 'AVAILABLE' } });
 t('update unit tidak ada → 404', r.status === 404);
