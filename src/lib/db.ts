@@ -211,10 +211,16 @@ export const db = {
   getContracts: async () => stateStore.contracts,
   signContract: async (contractId: number) => {
     const c = stateStore.contracts.find(x => x.id === contractId);
-    if (c) {
-      c.is_signed_customer = 1;
-      c.signed_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    if (!c) return undefined;
+
+    // Kontrak yang sudah ditandatangani tidak boleh ditandatangani ulang:
+    // signed_at adalah bukti waktu yang dipakai sebagai audit trail.
+    if (c.is_signed_customer === 1) {
+      throw new Error('KONTRAK_SUDAH_DITANDATANGANI');
     }
+
+    c.is_signed_customer = 1;
+    c.signed_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
     return c;
   },
 
@@ -222,12 +228,22 @@ export const db = {
   getPayments: async () => stateStore.payments,
   verifyPayment: async (paymentId: number, staffUserId: number, staffName: string) => {
     const p = stateStore.payments.find(x => x.id === paymentId);
-    if (p) {
-      p.status = 'PAID';
-      p.verified_by = staffUserId;
-      p.verified_by_name = staffName;
-      p.verified_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    if (!p) return undefined;
+
+    // Hanya pembayaran yang menunggu verifikasi DAN sudah melampirkan bukti
+    // transfer yang boleh ditandai PAID. Tanpa ini, staf bisa mengesahkan
+    // pembayaran yang belum pernah dibayar atau belum upload bukti.
+    if (p.status !== 'PENDING_VERIFICATION') {
+      throw new Error('STATUS_PEMBAYARAN_TIDAK_VALID');
     }
+    if (!p.payment_proof_path) {
+      throw new Error('BUKTI_TRANSFER_BELUM_ADA');
+    }
+
+    p.status = 'PAID';
+    p.verified_by = staffUserId;
+    p.verified_by_name = staffName;
+    p.verified_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
     return p;
   },
   addPaymentProof: async (paymentId: number, proofPath: string) => {
