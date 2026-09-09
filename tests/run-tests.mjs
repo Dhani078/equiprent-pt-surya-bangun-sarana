@@ -39,6 +39,7 @@ const suites = [
   'dataIntegrity.test.mjs',
   'servicePanel.test.mjs',
   'lateFee.test.mjs',
+  'consistency.test.mjs',
 ];
 
 let failed = 0;
