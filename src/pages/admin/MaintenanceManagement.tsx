@@ -53,6 +53,43 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
     [serviceAlerts]
   );
 
+  // ---------------------------------------------------------------------------
+  // Fitur: Riwayat Servis per Unit (drill-down log servis)
+  // ---------------------------------------------------------------------------
+  const [historyUnitId, setHistoryUnitId] = useState<number | 'ALL'>('ALL');
+
+  /** Unit yang punya minimal satu catatan servis, untuk pilihan dropdown. */
+  const unitsWithHistory = useMemo(() => {
+    const ids = new Set(maintenance.map(m => m.equipment_id));
+    return equipments.filter(e => ids.has(e.id));
+  }, [equipments, maintenance]);
+
+  /** Riwayat servis unit terpilih, diurutkan dari yang paling baru. */
+  const serviceHistory = useMemo(() => {
+    if (historyUnitId === 'ALL') return [];
+    return maintenance
+      .filter(m => m.equipment_id === historyUnitId)
+      .sort((a, b) => {
+        const da = a.scheduled_date ?? '';
+        const db = b.scheduled_date ?? '';
+        return db.localeCompare(da);
+      });
+  }, [maintenance, historyUnitId]);
+
+  /** Ringkasan biaya & HM untuk unit terpilih. */
+  const historySummary = useMemo(() => {
+    const done = serviceHistory.filter(m => m.status === 'COMPLETED');
+    return {
+      totalServis: serviceHistory.length,
+      selesai: done.length,
+      totalBiaya: serviceHistory.reduce((s, m) => s + Number(m.cost ?? 0), 0),
+      rataBiaya: serviceHistory.length
+        ? serviceHistory.reduce((s, m) => s + Number(m.cost ?? 0), 0) / serviceHistory.length
+        : 0,
+      hmAkhir: serviceHistory[0]?.hour_meter_at_maintenance ?? 0,
+    };
+  }, [serviceHistory]);
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const eq = equipments.find(e => e.id === Number(formData.equipment_id));
@@ -195,6 +232,16 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                 >
                   Jadwalkan
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setHistoryUnitId(equipment.id)}
+                  className="btn-secondary"
+                  style={{ padding: '5px 12px', fontSize: '11.5px' }}
+                  title={`Lihat riwayat servis ${equipment.equipment_code}`}
+                >
+                  Riwayat
+                </button>
               </div>
             ))}
           </div>
@@ -206,6 +253,140 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
           )}
         </div>
       )}
+
+      {/* Panel Riwayat Servis per Unit */}
+      <div className="card-premium" style={{ padding: '16px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          <Wrench size={18} color="#0F766E" />
+          <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+            Riwayat Servis per Unit
+          </h3>
+
+          <select
+            className="input-premium"
+            value={historyUnitId}
+            onChange={(e) => setHistoryUnitId(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+            style={{ marginLeft: 'auto', width: 'auto', minWidth: '240px', height: '36px', fontSize: '12.5px' }}
+            aria-label="Pilih unit untuk melihat riwayat servis"
+          >
+            <option value="ALL">— Pilih unit untuk melihat riwayat —</option>
+            {unitsWithHistory.map(u => (
+              <option key={u.id} value={u.id}>
+                {u.equipment_code} — {u.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {historyUnitId === 'ALL' ? (
+          <p style={{ fontSize: '12.5px', color: 'var(--color-secondary)', margin: 0 }}>
+            Pilih salah satu unit di atas untuk melihat log servis, total biaya perawatan, dan tren hour meter.
+            {unitsWithHistory.length > 0 && ` Tersedia ${unitsWithHistory.length} unit yang memiliki catatan servis.`}
+          </p>
+        ) : serviceHistory.length === 0 ? (
+          <p style={{ fontSize: '12.5px', color: 'var(--color-secondary)', margin: 0 }}>
+            Unit ini belum memiliki catatan servis.
+          </p>
+        ) : (
+          <>
+            {/* Ringkasan */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gap: '10px',
+                marginBottom: '14px',
+              }}
+            >
+              {[
+                { label: 'Total Servis', value: String(historySummary.totalServis) },
+                { label: 'Selesai', value: `${historySummary.selesai}/${historySummary.totalServis}` },
+                { label: 'Total Biaya', value: formatRupiah(historySummary.totalBiaya) },
+                { label: 'Rata-rata / Servis', value: formatRupiah(historySummary.rataBiaya) },
+                { label: 'HM Terakhir', value: `${historySummary.hmAkhir.toFixed(2)} HM` },
+              ].map(item => (
+                <div
+                  key={item.label}
+                  style={{
+                    padding: '10px 12px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <div style={{ fontSize: '11px', color: 'var(--color-secondary)', marginBottom: '3px' }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-primary)' }}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Tabel log servis */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left' }}>
+                    {['Kode Servis', 'Tanggal', 'Jenis', 'HM', 'Suku Cadang', 'Biaya', 'Status'].map(h => (
+                      <th
+                        key={h}
+                        style={{ padding: '8px 10px', fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 700 }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {serviceHistory.map(m => (
+                    <tr key={m.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '8px 10px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                        {m.maintenance_code}
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>{m.scheduled_date ?? '-'}</td>
+                      <td style={{ padding: '8px 10px' }}>{m.maintenance_type}</td>
+                      <td style={{ padding: '8px 10px' }}>
+                        {Number(m.hour_meter_at_maintenance ?? 0).toFixed(2)}
+                      </td>
+                      <td style={{ padding: '8px 10px', maxWidth: '220px' }}>
+                        <span style={{ color: 'var(--color-secondary)' }}>
+                          {m.spareparts_replaced || '-'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontWeight: 700 }}>
+                        {formatRupiah(Number(m.cost ?? 0))}
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <span
+                          style={{
+                            fontSize: '10.5px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            backgroundColor:
+                              m.status === 'COMPLETED' ? '#DCFCE7'
+                                : m.status === 'IN_PROGRESS' ? '#DBEAFE'
+                                  : '#FEF3C7',
+                            color:
+                              m.status === 'COMPLETED' ? '#166534'
+                                : m.status === 'IN_PROGRESS' ? '#1E40AF'
+                                  : '#92400E',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {m.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Filter Bar */}
       <div className="card-premium" style={{ padding: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
