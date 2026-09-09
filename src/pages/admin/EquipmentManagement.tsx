@@ -4,12 +4,16 @@ import { Plus, Search, Filter, Edit, Trash2, Gauge, AlertCircle, MapPin, Eye } f
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
 import { formatRupiah } from '../../lib/businessRules';
+import { validateEquipmentInput, EQUIPMENT_TYPES } from '../../lib/validators';
+import type { ValidatedEquipmentInput } from '../../lib/validators';
 
 interface EquipmentManagementProps {
   equipments: Equipment[];
   onAddEquipment: (item: Omit<Equipment, 'id'>) => Promise<void>;
   onUpdateEquipment: (id: number, data: Partial<Equipment>) => Promise<void>;
   onDeleteEquipment: (id: number) => Promise<void>;
+  /** Menampilkan pesan sukses/gagal di tingkat aplikasi. */
+  onNotify?: (message: string, tone: 'success' | 'error') => void;
   onNavigateTracking?: () => void;
 }
 
@@ -18,6 +22,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   onAddEquipment,
   onUpdateEquipment,
   onDeleteEquipment,
+  onNotify,
   onNavigateTracking
 }) => {
   const [filterType, setFilterType] = useState<string>('ALL');
@@ -25,6 +30,11 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Equipment | null>(null);
+  /** Galat per-field dari validator terpusat (kunci = nama field form). */
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof ValidatedEquipmentInput, string>>>({});
+  /** Galat tingkat form: misal kode unit sudah dipakai (dari server). */
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -41,7 +51,9 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   });
 
   const handleOpenAdd = () => {
-    const nextNum = equipments.length + 1;
+    // Kode saran dibuat dari nomor urut maksimum + 1 agar tidak bentrok
+    // dengan unit yang sudah ada (bahkan bila ada unit yang pernah dihapus).
+    const nextNum = equipments.reduce((maks, e) => Math.max(maks, e.id), 0) + 1;
     setFormData({
       equipment_code: `EQ-SBS-2026-${String(nextNum).padStart(3, '0')}`,
       name: '',
@@ -55,6 +67,8 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
       thumbnail_url: ''
     });
     setEditingItem(null);
+    setFormErrors({});
+    setFormError(null);
     setIsAddModalOpen(true);
   };
 
@@ -72,18 +86,55 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
       last_maintenance_date: item.last_maintenance_date || new Date().toISOString().slice(0, 10),
       thumbnail_url: item.thumbnail_url || ''
     });
+    setFormErrors({});
+    setFormError(null);
     setIsAddModalOpen(true);
+  };
+
+  /** Menutup modal sekaligus membersihkan seluruh penanda galat. */
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setEditingItem(null);
+    setFormErrors({});
+    setFormError(null);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalImg = formData.thumbnail_url || getEquipmentImage(formData.equipment_code, formData.type);
-    if (editingItem) {
-      await onUpdateEquipment(editingItem.id, { ...formData, thumbnail_url: finalImg });
-    } else {
-      await onAddEquipment({ ...formData, thumbnail_url: finalImg });
+    if (isSubmitting) return;
+
+    // Validasi memakai modul yang SAMA dengan server, sehingga pesan galat
+    // di layar identik dengan respons API.
+    const hasil = validateEquipmentInput(formData);
+    if (!hasil.ok) {
+      setFormErrors(hasil.errors);
+      setFormError(null);
+      return;
     }
-    setIsAddModalOpen(false);
+
+    setFormErrors({});
+    setFormError(null);
+    setIsSubmitting(true);
+
+    const input: ValidatedEquipmentInput = hasil.value;
+
+    try {
+      if (editingItem) {
+        await onUpdateEquipment(editingItem.id, input);
+        onNotify?.(`Unit ${input.equipment_code} berhasil diperbarui.`, 'success');
+      } else {
+        await onAddEquipment(input);
+        onNotify?.(`Unit ${input.equipment_code} berhasil ditambahkan ke armada.`, 'success');
+      }
+      handleCloseModal();
+    } catch (err) {
+      // Pesan dari server (misal kode unit sudah dipakai) ditampilkan apa adanya.
+      const pesan = err instanceof Error && err.message ? err.message : 'Gagal menyimpan data unit.';
+      setFormError(pesan);
+      onNotify?.(pesan, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filteredEquipments = equipments.filter((eq) => {
@@ -101,6 +152,13 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   const availableUnit = equipments.filter(e => e.status === 'AVAILABLE').length;
   const rentedUnit = equipments.filter(e => e.status === 'RENTED').length;
   const maintenanceUnit = equipments.filter(e => e.status === 'MAINTENANCE').length;
+
+  /**
+   * Unit yang tidak boleh dihapus: sedang disewa atau sedang dirawat.
+   * Menghapusnya akan memutus referensi riwayat rental & laporan.
+   */
+  const isProtected = (status: Equipment['status']): boolean =>
+    status === 'RENTED' || status === 'MAINTENANCE';
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -187,12 +245,9 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             onChange={(e) => setFilterType(e.target.value)}
           >
             <option value="ALL">Semua Kategori Alat</option>
-            <option value="Excavator">Excavator</option>
-            <option value="Bulldozer">Bulldozer</option>
-            <option value="Crane">Crane</option>
-            <option value="Vibratory Roller">Vibratory Roller</option>
-            <option value="Motor Grader">Motor Grader</option>
-            <option value="Wheel Loader">Wheel Loader</option>
+            {EQUIPMENT_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
           </select>
 
           <select
@@ -286,12 +341,29 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                       <button
                         onClick={() => {
                           if (confirm(`Hapus unit alat berat ${eq.equipment_code} (${eq.name})?`)) {
-                            onDeleteEquipment(eq.id);
+                            onDeleteEquipment(eq.id).catch((err: unknown) => {
+                              const pesan =
+                                err instanceof Error && err.message
+                                  ? err.message
+                                  : 'Gagal menghapus unit.';
+                              onNotify?.(pesan, 'error');
+                            });
                           }
                         }}
+                        disabled={isProtected(eq.status)}
                         className="btn-secondary"
-                        style={{ padding: '6px 10px', fontSize: '12px', color: '#EF4444' }}
-                        title="Hapus Unit"
+                        style={{
+                          padding: '6px 10px',
+                          fontSize: '12px',
+                          color: '#EF4444',
+                          opacity: isProtected(eq.status) ? 0.45 : 1,
+                          cursor: isProtected(eq.status) ? 'not-allowed' : 'pointer',
+                        }}
+                        title={
+                          isProtected(eq.status)
+                            ? 'Unit sedang disewa — selesaikan transaksinya dulu'
+                            : 'Hapus Unit'
+                        }
                       >
                         <Trash2 size={13} />
                       </button>
@@ -307,10 +379,32 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
       {/* Modal Add / Edit */}
       <Modal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={handleCloseModal}
         title={editingItem ? `Perbarui Data Alat Berat: ${editingItem.equipment_code}` : 'Tambah Unit Alat Berat Baru'}
       >
-        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <form onSubmit={handleFormSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Ringkasan galat: muncul bila server menolak (kode unit sudah dipakai). */}
+          {formError && (
+            <div
+              role="alert"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#991B1B',
+                fontSize: '12.5px',
+                lineHeight: 1.5,
+              }}
+            >
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+              <span>{formError}</span>
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
@@ -321,8 +415,19 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 className="input-premium"
                 required
                 value={formData.equipment_code}
-                onChange={(e) => setFormData({ ...formData, equipment_code: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, equipment_code: e.target.value });
+                  setFormErrors({ ...formErrors, equipment_code: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.equipment_code)}
+                aria-label="Kode registrasi unit"
+                style={formErrors.equipment_code ? { borderColor: '#F87171' } : undefined}
               />
+              {formErrors.equipment_code && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.equipment_code}
+                </p>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
@@ -331,15 +436,23 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
               <select
                 className="input-premium"
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, type: e.target.value });
+                  setFormErrors({ ...formErrors, type: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.type)}
+                aria-label="Kategori alat berat"
+                style={formErrors.type ? { borderColor: '#F87171' } : undefined}
               >
-                <option value="Excavator">Excavator</option>
-                <option value="Bulldozer">Bulldozer</option>
-                <option value="Crane">Crane</option>
-                <option value="Vibratory Roller">Vibratory Roller</option>
-                <option value="Motor Grader">Motor Grader</option>
-                <option value="Wheel Loader">Wheel Loader</option>
+                {EQUIPMENT_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
               </select>
+              {formErrors.type && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.type}
+                </p>
+              )}
             </div>
           </div>
 
@@ -353,8 +466,19 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
               required
               placeholder="Contoh: Hydraulic Excavator Komatsu PC200-8"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value });
+                setFormErrors({ ...formErrors, name: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.name)}
+              aria-label="Nama lengkap alat berat"
+              style={formErrors.name ? { borderColor: '#F87171' } : undefined}
             />
+            {formErrors.name && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                {formErrors.name}
+              </p>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -368,8 +492,19 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 required
                 placeholder="Komatsu / Caterpillar / Sakai"
                 value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, brand: e.target.value });
+                  setFormErrors({ ...formErrors, brand: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.brand)}
+                aria-label="Merk alat berat"
+                style={formErrors.brand ? { borderColor: '#F87171' } : undefined}
               />
+              {formErrors.brand && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.brand}
+                </p>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
@@ -381,8 +516,19 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 required
                 placeholder="PC200-8 / D85ESS-2 / SV520"
                 value={formData.model}
-                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, model: e.target.value });
+                  setFormErrors({ ...formErrors, model: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.model)}
+                aria-label="Model atau seri mesin"
+                style={formErrors.model ? { borderColor: '#F87171' } : undefined}
               />
+              {formErrors.model && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.model}
+                </p>
+              )}
             </div>
           </div>
 
@@ -394,11 +540,23 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
               <input
                 type="number"
                 step="0.1"
+                min={0}
                 className="input-premium"
                 required
                 value={formData.hour_meter}
-                onChange={(e) => setFormData({ ...formData, hour_meter: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  setFormData({ ...formData, hour_meter: Number(e.target.value) });
+                  setFormErrors({ ...formErrors, hour_meter: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.hour_meter)}
+                aria-label="Hour Meter awal"
+                style={formErrors.hour_meter ? { borderColor: '#F87171' } : undefined}
               />
+              {formErrors.hour_meter && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.hour_meter}
+                </p>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
@@ -406,11 +564,24 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
               </label>
               <input
                 type="number"
+                min={0}
+                step={100000}
                 className="input-premium"
                 required
                 value={formData.rental_price_per_day}
-                onChange={(e) => setFormData({ ...formData, rental_price_per_day: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  setFormData({ ...formData, rental_price_per_day: Number(e.target.value) });
+                  setFormErrors({ ...formErrors, rental_price_per_day: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.rental_price_per_day)}
+                aria-label="Tarif sewa per hari"
+                style={formErrors.rental_price_per_day ? { borderColor: '#F87171' } : undefined}
               />
+              {formErrors.rental_price_per_day && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.rental_price_per_day}
+                </p>
+              )}
             </div>
           </div>
 
@@ -438,15 +609,26 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 type="date"
                 className="input-premium"
                 value={formData.last_maintenance_date}
-                onChange={(e) => setFormData({ ...formData, last_maintenance_date: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, last_maintenance_date: e.target.value });
+                  setFormErrors({ ...formErrors, last_maintenance_date: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.last_maintenance_date)}
+                aria-label="Tanggal servis terakhir"
+                style={formErrors.last_maintenance_date ? { borderColor: '#F87171' } : undefined}
               />
+              {formErrors.last_maintenance_date && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.last_maintenance_date}
+                </p>
+              )}
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px' }}>
             <button
               type="button"
-              onClick={() => setIsAddModalOpen(false)}
+              onClick={handleCloseModal}
               className="btn-secondary"
             >
               Batal
@@ -454,8 +636,10 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             <button
               type="submit"
               className="btn-primary"
+              disabled={isSubmitting}
+              style={isSubmitting ? { opacity: 0.6, cursor: 'wait' } : undefined}
             >
-              <span>{editingItem ? 'Simpan Perubahan' : 'Tambah Unit'}</span>
+              <span>{isSubmitting ? 'Menyimpan...' : editingItem ? 'Simpan Perubahan' : 'Tambah Unit'}</span>
             </button>
           </div>
         </form>

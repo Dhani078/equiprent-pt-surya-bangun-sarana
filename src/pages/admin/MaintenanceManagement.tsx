@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Maintenance, Equipment, User } from '../../types';
+import { MAINTENANCE_TYPES, MAINTENANCE_TYPE_LABEL } from '../../lib/validators';
+import type { MaintenanceTypeValue } from '../../lib/validators';
 import { Plus, Search, Filter, Wrench, CheckCircle, Clock, Calendar, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
@@ -516,11 +518,13 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
               <select
                 className="input-premium"
                 value={formData.maintenance_type}
-                onChange={(e) => setFormData({ ...formData, maintenance_type: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, maintenance_type: e.target.value as MaintenanceTypeValue })}
               >
-                <option value="PREVENTIVE">PREVENTIVE (Rutin / Berkala)</option>
-                <option value="CORRECTIVE">CORRECTIVE (Perbaikan Kerusakan)</option>
-                <option value="INSPECTION">INSPECTION (Inspeksi Fisik)</option>
+                {MAINTENANCE_TYPES.map((jenis) => (
+                  <option key={jenis} value={jenis}>
+                    {jenis} ({MAINTENANCE_TYPE_LABEL[jenis]})
+                  </option>
+                ))}
               </select>
             </div>
             <div>

@@ -77,6 +77,17 @@ export const stateStore = {
 };
 
 /**
+ * Menghasilkan ID baru yang bebas bentrok.
+ *
+ * Tidak memakai `panjang Array + 1`: bila sebuah baris dihapus, panjang array
+ * menyusut dan ID lama akan dipakai ulang — dua entitas berbeda lalu berbagi
+ * satu ID (data laporan & riwayat jadi kacau). `maksimum + 1` aman.
+ */
+function nextId(daftar: ReadonlyArray<{ id: number }>): number {
+  return daftar.reduce((maks, item) => (item.id > maks ? item.id : maks), 0) + 1;
+}
+
+/**
  * Eksekusi Query SQL ke TiDB Cloud Serverless.
  *
  * CATATAN KEAMANAN: Parameter WAJIB dikirim terpisah (parameterized query).
@@ -118,7 +129,7 @@ export const db = {
   },
 
   addUser: async (user: Omit<User, 'id'>) => {
-    const newUser = { ...user, id: stateStore.users.length + 1 };
+    const newUser: User = { ...user, id: nextId(stateStore.users) };
     stateStore.users.push(newUser);
     return newUser;
   },
@@ -134,7 +145,7 @@ export const db = {
   getEquipments: async () => stateStore.equipments,
   getEquipmentById: async (id: number) => stateStore.equipments.find(e => e.id === id),
   addEquipment: async (eq: Omit<Equipment, 'id'>) => {
-    const newEq = { ...eq, id: stateStore.equipments.length + 1 };
+    const newEq: Equipment = { ...eq, id: nextId(stateStore.equipments) };
     stateStore.equipments.unshift(newEq);
     return newEq;
   },
@@ -157,12 +168,12 @@ export const db = {
   // Rentals
   getRentals: async () => stateStore.rentals,
   addRental: async (rental: Omit<Rental, 'id' | 'rental_code'>) => {
-    const nextId = stateStore.rentals.length + 1;
+    const id = nextId(stateStore.rentals);
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const code = `RNT-SBS-${dateStr}-${String(nextId).padStart(3, '0')}`;
+    const code = `RNT-SBS-${dateStr}-${String(id).padStart(3, '0')}`;
     const newRental: Rental = {
       ...rental,
-      id: nextId,
+      id,
       rental_code: code,
       booking_date: new Date().toISOString().replace('T', ' ').slice(0, 19),
       status: 'PENDING'
@@ -258,12 +269,12 @@ export const db = {
   // Maintenance
   getMaintenance: async () => stateStore.maintenance,
   scheduleMaintenance: async (item: Omit<Maintenance, 'id' | 'maintenance_code'>) => {
-    const nextId = stateStore.maintenance.length + 1;
+    const id = nextId(stateStore.maintenance);
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const code = `MNT-SBS-${dateStr}-${String(nextId).padStart(3, '0')}`;
+    const code = `MNT-SBS-${dateStr}-${String(id).padStart(3, '0')}`;
     const newM: Maintenance = {
       ...item,
-      id: nextId,
+      id,
       maintenance_code: code,
       status: 'SCHEDULED'
     };

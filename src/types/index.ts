@@ -12,6 +12,14 @@ export interface User {
   company_name: string | null;
   status: 'ACTIVE' | 'SUSPENDED';
   created_at?: string;
+  /**
+   * Hash password PBKDF2 (format `pbkdf2$<iterasi>$<salt>$<hash>`).
+   *
+   * Sengaja TIDAK pernah dikirim ke klien — lihat whitelist field pada
+   * `GET /api/users`. Nilai `null` berarti akun belum bisa login (akun demo
+   * memakai hash bawaan di `src/lib/auth.ts`).
+   */
+  password_hash?: string | null;
 }
 
 export interface Equipment {

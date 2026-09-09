@@ -37,6 +37,7 @@ bundle('src/lib/availability.ts', '.tmp_availability.mjs');
 bundle('src/lib/reports.ts', '.tmp_reports.mjs');
 bundle('src/lib/documents.ts', '.tmp_documents.mjs');
 bundle('src/server/index.ts', '.tmp_server.mjs');
+bundle('src/lib/validators.ts', '.tmp_validators.mjs');
 
 // Panel laporan butuh JSX → sertakan loader .tsx dan jadikan React eksternal
 // agar modul react/react-dom tidak ikut ter-bundle (cukup satu instans).
@@ -59,6 +60,7 @@ execSync(
 
 const suites = [
   'businessRules.test.mjs',
+  'validators.test.mjs',
   'availability.test.mjs',
   'dataIntegrity.test.mjs',
   'servicePanel.test.mjs',

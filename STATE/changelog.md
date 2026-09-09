@@ -361,3 +361,83 @@ perlu dipelihara setiap hari.
   perawatan (yang mengubah status unit menjadi MAINTENANCE), sehingga pemilihan
   kasus uji tidak lagi bergantung pada urutan eksekusi.
 **Verifikasi:** typecheck PASS · build PASS (533 KB) · npm test 12/12 suite PASS
+
+
+---
+
+## [CYCLE 19] 2026-09-09T16:30:00Z — T-0004 — P1 — DONE
+**Judul:** CRUD master users & equipments (Admin) (F1.2, F1.3)
+**Fitur baru:**
+- `src/lib/validators.ts` (BARU) — modul validasi TERPUSAT & MURNI (tanpa DOM/DB).
+  Dipakai dua arah: sisi server sebagai sumber kebenaran, sisi klien untuk
+  umpan balik cepat. Karena satu modul, pesan galat di layar identik dengan
+  respons API — tidak ada lagi dua versi aturan yang perlahan menyimpang.
+  - `ValidationResult<T>` berbentuk discriminated union (`ok: true/false`)
+    dengan kode galat stabil: REQUIRED, TOO_SHORT, TOO_LONG, INVALID_FORMAT,
+    OUT_OF_RANGE, NOT_INTEGER.
+  - Batasan panjang disamakan dengan skema tabel TiDB (varchar), sehingga
+    galat muncul di form, bukan sebagai kegagalan INSERT misterius.
+  - `sanitizeText()` membuang karakter kontrol (NUL, escape) yang bisa
+    merusak query atau tampilan tabel, lalu merapikan spasi di ujung.
+  - Kategori alat berat dipusatkan di `EQUIPMENT_TYPES` (Excavator,
+    Bulldozer, Wheel Loader, Crane, Vibro Roller, Dump Truck, Motor Grader) —
+    sinkron dengan `seedGenerator.ts`. Kategori lama "Vibratory Roller"
+    kini ditolak dengan pesan jelas.
+  - `MAINTENANCE_TYPES` = PREVENTIVE / CORRECTIVE / OVERHAUL. `INSPECTION`
+    yang pernah ditawarkan form TIDAK ada di ENUM skema, karenanya ditolak
+    alih-alih disimpan sebagai nilai kosong (barisnya hilang dari laporan).
+  - `validateThumbnailUrl()` hanya mengizinkan http(s) — menutup celah
+    skema berbahaya seperti `javascript:`.
+- `src/server/index.ts`:
+  - `POST /api/users` (BARU) — pendaftaran identitas oleh Admin. Password
+    TIDAK diterima lewat endpoint ini: `password_hash` disetel `null` dan
+    pemilik akun menetapkan password sendiri lewat alur registrasi yang
+    memanggil `hashPassword()`. Menghilangkan `any` pada kontrak komponen.
+  - Pemeriksaan keunikan username & email (keduanya identitas login) → 409
+    dengan galat per-field, bukan 500 dari constraint database.
+  - `ringkasUser()` — whitelist field publik yang TERpusat. `password_hash`
+    tidak pernah ikut dalam satu pun respons.
+  - `POST /api/equipments` — validasi terpusat + kode unit unik (dipakai
+    sebagai identitas di dokumen & CSV) + thumbnail otomatis bila kosong.
+  - `PUT /api/equipments/:id` — validasi, kode unik (kecuali miliknya
+    sendiri), serta pengecekan role ADMIN secara eksplisit.
+  - `DELETE /api/equipments/:id` — menolak 409 `EQUIPMENT_IN_USE` bila unit
+    masih tercatat dalam sewa APPROVED/ON_GOING: menghapusnya akan memutus
+    referensi riwayat rental & laporan.
+  - `POST /api/maintenance` — jenis pemeliharaan kini divalidasi terhadap
+    ENUM skema.
+- `src/pages/admin/EquipmentManagement.tsx` — form memakai validator yang
+  sama dengan server; galat per-field ditampilkan di bawah input
+  (border merah + `aria-invalid`), plus ringkasan galat untuk penolakan
+  server (kode unit sudah dipakai). Tombol hapus dinonaktifkan pada unit
+  RENTED/MAINTENANCE. Kode saran memakai `maks(id)+1` agar tidak bentrok.
+- `src/pages/admin/UserManagement.tsx` — galat per-field, pesan sukses/gagal,
+  penjelasan bahwa password tidak ditetapkan di sini, dan `Promise<void>`
+  menggantikan `Promise<any>` pada kontrak props.
+- `src/pages/admin/MaintenanceManagement.tsx` — opsi jenis pemeliharaan
+  dibangkitkan dari `MAINTENANCE_TYPES` (cast `as any` dihapus).
+- `src/App.tsx` — notifikasi global (toast) sukses/gagal untuk aksi master data.
+- `src/lib/db.ts` — `nextId()` memakai `maksimum + 1`, bukan `panjang + 1`:
+  bila sebuah baris dihapus, ID lama tidak dipakai ulang.
+- `src/types/index.ts` — `password_hash?: string | null` didokumentasikan
+  sebagai field yang tidak pernah dikirim ke klien.
+**Perilaku yang dijaga:**
+- Menulis ke unit yang tidak ada kini menjawab 404, bukan 400: keberadaan
+  unit diperiksa SEBELUM validasi isi (sebelumnya body `{status:...}` yang
+  tidak lengkap memicu 400 dan menutupi 404).
+- Form Admin memakai modul yang sama dengan server, sehingga pesan galat
+  konsisten dan tidak ada aturan yang hanya berlaku di satu sisi.
+**Pengujian:**
+- `tests/validators.test.mjs` (BARU) — 95 pemeriksaan: tiap validator
+  (nama, username, email, telepon, alamat, instansi, role, kode unit, HM,
+  tarif, status, kategori, jenis pemeliharaan, tanggal, URL foto), form
+  lengkap pengguna & unit, serta fuzzing ringan (12 nilai aneh × 18
+  validator tidak boleh melempar).
+- `tests/api.test.mjs` — 34 pemeriksaan baru: pendaftaran pengguna (201,
+  duplikat 409, validasi 400, staff 403, tanpa token 401, password_hash
+  tidak bocor), master unit (tambah/ubah/hapus, kode duplikat 409, HM
+  negatif 400, URL berbahaya 400, customer 403, hapus unit yang disewa 409),
+  serta penolakan `maintenance_type: INSPECTION`.
+- `tests/run-tests.mjs` — menambahkan bundle `.tmp_validators.mjs` & suite
+  baru (total 13 suite).
+**Verifikasi:** typecheck PASS · build PASS (545 KB) · npm test 13/13 suite PASS
