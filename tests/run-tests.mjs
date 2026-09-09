@@ -41,6 +41,7 @@ const suites = [
   'servicePanel.test.mjs',
   'lateFee.test.mjs',
   'consistency.test.mjs',
+  'dueNotifications.test.mjs',
   'api.test.mjs',
   'codeQuality.test.mjs',
 ];
