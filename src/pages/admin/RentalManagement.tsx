@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Rental, Equipment, User } from '../../types';
-import { Plus, Search, CheckCircle, XCircle, Clock, FileText, Check } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, CalendarX2, TriangleAlert } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
 import { formatRupiah } from '../../lib/businessRules';
+import {
+  buildEquipmentAvailability,
+  describeBlockedReason,
+  summarizeAvailability,
+} from '../../lib/availability';
 
 interface RentalManagementProps {
   rentals: Rental[];
   equipments: Equipment[];
   users: User[];
-  onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<any>;
-  onUpdateRentalStatus: (id: number, status: Rental['status']) => Promise<any>;
+  onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<void>;
+  onUpdateRentalStatus: (id: number, status: Rental['status']) => Promise<void>;
 }
 
 export const RentalManagement: React.FC<RentalManagementProps> = ({
@@ -23,6 +28,8 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  /** Pesan galat form: unit bentrok, unit dirawat, atau rentang tidak valid. */
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -33,8 +40,24 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
     notes: 'Pekerjaan proyek konstruksi di wilayah Kalsel'
   });
 
-  const availableEquipments = equipments.filter(e => e.status === 'AVAILABLE');
   const customers = users.filter(u => u.role_id === 3);
+
+  /**
+   * Ketersediaan SELURUH unit pada rentang tanggal yang sedang dipilih.
+   * Dihitung ulang hanya bila tanggal atau daftar unit/sewa berubah.
+   */
+  const availability = useMemo(
+    () => buildEquipmentAvailability(equipments, rentals, formData.start_date, formData.end_date),
+    [equipments, rentals, formData.start_date, formData.end_date]
+  );
+
+  const availabilitySummary = useMemo(() => summarizeAvailability(availability), [availability]);
+
+  /** Unit yang dipilih saat ini, lengkap dengan alasan bila tidak bisa dipesan. */
+  const selectedAvailability = useMemo(
+    () => availability.find(a => a.equipment.id === Number(formData.equipment_id)),
+    [availability, formData.equipment_id]
+  );
 
   const calculateDays = (start: string, end: string) => {
     const diff = new Date(end).getTime() - new Date(start).getTime();
@@ -43,6 +66,19 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validasi client: unit yang bentrok tidak boleh dikirim ke server.
+    // Server tetap memvalidasi ulang — ini hanya untuk umpan balik cepat.
+    if (!selectedAvailability?.isBookable) {
+      setFormError(
+        selectedAvailability
+          ? describeBlockedReason(selectedAvailability)
+          : 'Unit yang dipilih tidak tersedia. Silakan pilih unit lain.'
+      );
+      return;
+    }
+
+    setFormError(null);
     const customer = users.find(u => u.id === Number(formData.customer_id));
     const eq = equipments.find(e => e.id === Number(formData.equipment_id));
     const totalDays = calculateDays(formData.start_date, formData.end_date);
@@ -259,23 +295,106 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
             <select
               className="input-premium"
               value={formData.equipment_id}
-              onChange={(e) => setFormData({ ...formData, equipment_id: Number(e.target.value) })}
+              onChange={(e) => {
+                setFormData({ ...formData, equipment_id: Number(e.target.value) });
+                setFormError(null);
+              }}
+              aria-label="Pilih alat berat yang tersedia pada periode sewa"
             >
-              {availableEquipments.length === 0 ? (
-                equipments.slice(0, 10).map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.equipment_code} - {e.name} ({formatRupiah(Number(e.rental_price_per_day))}/hari)
-                  </option>
-                ))
-              ) : (
-                availableEquipments.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.equipment_code} - {e.name} ({formatRupiah(Number(e.rental_price_per_day))}/hari)
-                  </option>
-                ))
-              )}
+              {/* Semua unit tetap ditampilkan agar pengguna paham MENGAPA suatu
+                  unit tidak bisa dipilih, lalu ditandai & dinonaktifkan. */}
+              {availability.map(({ equipment, isBookable, blockedReason }) => (
+                <option key={equipment.id} value={equipment.id} disabled={!isBookable}>
+                  {equipment.equipment_code} - {equipment.name}{' '}
+                  ({formatRupiah(Number(equipment.rental_price_per_day))}/hari)
+                  {isBookable
+                    ? ''
+                    : blockedReason === 'DATE_CONFLICT'
+                      ? ' — sudah dipesan pada periode ini'
+                      : blockedReason === 'UNIT_STATUS'
+                        ? ` — ${equipment.status}`
+                        : ' — periode tidak valid'}
+                </option>
+              ))}
             </select>
+
+            <div
+              style={{
+                marginTop: '6px',
+                fontSize: '11.5px',
+                color: 'var(--color-secondary)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '4px 10px',
+              }}
+              aria-live="polite"
+            >
+              <span>
+                <strong style={{ color: 'var(--color-primary)' }}>
+                  {availabilitySummary.bookable}
+                </strong>{' '}
+                dari {availabilitySummary.total} unit tersedia pada periode ini
+              </span>
+              {availabilitySummary.blockedByDate > 0 && (
+                <span>· {availabilitySummary.blockedByDate} unit bentrok jadwal</span>
+              )}
+              {availabilitySummary.blockedByStatus > 0 && (
+                <span>· {availabilitySummary.blockedByStatus} unit dirawat / nonaktif</span>
+              )}
+            </div>
           </div>
+
+          {/* Peringatan: unit terpilih tidak bisa dipesan pada periode ini */}
+          {selectedAvailability && !selectedAvailability.isBookable && (
+            <div
+              role="alert"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#991B1B',
+                fontSize: '12.5px',
+                lineHeight: 1.5,
+              }}
+            >
+              <TriangleAlert size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+              <div>
+                <strong>Unit tidak dapat dipesan.</strong>{' '}
+                {describeBlockedReason(selectedAvailability)}
+                {selectedAvailability.conflicts.length > 0 && (
+                  <div style={{ marginTop: '6px', fontSize: '11.5px', color: '#7F1D1D' }}>
+                    Bentrok dengan:{' '}
+                    {selectedAvailability.conflicts
+                      .map(c => `${c.rentalCode} (${c.startDate} s.d. ${c.endDate})`)
+                      .join('; ')}
+                  </div>
+                )}
+                <div style={{ marginTop: '6px', fontSize: '11.5px' }}>
+                  Ganti tanggal sewa atau pilih unit lain yang masih tersedia.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {formError && (
+            <div
+              role="alert"
+              style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#991B1B',
+                fontSize: '12.5px',
+              }}
+            >
+              {formError}
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
@@ -287,7 +406,10 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                 required
                 className="input-premium"
                 value={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, start_date: e.target.value });
+                  setFormError(null);
+                }}
               />
             </div>
             <div>
@@ -299,7 +421,10 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                 required
                 className="input-premium"
                 value={formData.end_date}
-                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, end_date: e.target.value });
+                  setFormError(null);
+                }}
               />
             </div>
           </div>
@@ -319,7 +444,10 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
             <button
               type="button"
-              onClick={() => setIsAddModalOpen(false)}
+              onClick={() => {
+                setIsAddModalOpen(false);
+                setFormError(null);
+              }}
               className="btn-secondary"
             >
               Batal
@@ -327,6 +455,17 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
             <button
               type="submit"
               className="btn-primary"
+              disabled={!selectedAvailability?.isBookable}
+              title={
+                selectedAvailability?.isBookable
+                  ? 'Terbitkan order sewa'
+                  : 'Pilih unit lain atau ubah periode sewa'
+              }
+              style={
+                selectedAvailability?.isBookable
+                  ? undefined
+                  : { opacity: 0.55, cursor: 'not-allowed' }
+              }
             >
               Simpan & Terbitkan Order
             </button>

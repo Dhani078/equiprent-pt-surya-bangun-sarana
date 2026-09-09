@@ -33,6 +33,7 @@ function bundle(entry, out) {
 console.log('Menyiapkan bundle modul untuk pengujian...');
 bundle('src/lib/businessRules.ts', '.tmp_businessRules.mjs');
 bundle('src/lib/db.ts', '.tmp_db.mjs');
+bundle('src/lib/availability.ts', '.tmp_availability.mjs');
 bundle('src/lib/reports.ts', '.tmp_reports.mjs');
 bundle('src/lib/documents.ts', '.tmp_documents.mjs');
 bundle('src/server/index.ts', '.tmp_server.mjs');
@@ -58,6 +59,7 @@ execSync(
 
 const suites = [
   'businessRules.test.mjs',
+  'availability.test.mjs',
   'dataIntegrity.test.mjs',
   'servicePanel.test.mjs',
   'lateFee.test.mjs',
@@ -90,7 +92,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }

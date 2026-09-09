@@ -10,7 +10,14 @@ import {
 } from '../lib/auth';
 import type { RoleName, ReportId } from '../types';
 import type { Equipment, Rental, Maintenance } from '../types';
-import { isEquipmentAvailable } from '../lib/businessRules';
+import {
+  buildEquipmentAvailability,
+  describeBlockedReason,
+  getRentalConflicts,
+  isUnitOutOfService,
+  summarizeAvailability,
+} from '../lib/availability';
+import type { BlockedReason, EquipmentAvailability } from '../lib/availability';
 import {
   buildReport,
   isReportId,
@@ -353,15 +360,39 @@ app.post('/api/rentals', async (c) => {
     );
   }
 
-  // Cegah double-booking: unit tidak boleh disewa pada rentang yang bentrok.
-  const semuaRental = await db.getRentals();
-  if (!isEquipmentAvailable(equipmentId, startDate, endDate, semuaRental)) {
+  // Unit yang sedang dirawat atau dinonaktifkan tidak boleh disewa kapan pun.
+  // Catatan: status RENTED tidak ditolak di sini — status unit adalah keadaan
+  // hari ini, sedangkan pemesanan bisa untuk masa depan. Yang menentukan
+  // adalah bentrokan rentang tanggal (diperiksa di bawah).
+  if (isUnitOutOfService(unit.status)) {
     return c.json(
       {
         success: false,
         error: {
           code: 'EQUIPMENT_UNAVAILABLE',
-          message: `Unit ${unit.equipment_code} sudah disewa pada rentang tanggal tersebut.`,
+          message: `Unit ${unit.equipment_code} tidak tersedia untuk disewa (status: ${unit.status}).`,
+        },
+      },
+      409
+    );
+  }
+
+  // Cegah double-booking: unit tidak boleh disewa pada rentang yang bentrok.
+  // Mesin yang sama dipakai UI supaya pesan galat selalu konsisten.
+  const [availability] = buildEquipmentAvailability(
+    [unit],
+    await db.getRentals(),
+    startDate,
+    endDate
+  );
+
+  if (!availability.isBookable) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'EQUIPMENT_UNAVAILABLE',
+          message: describeBlockedReason(availability),
         },
       },
       409
@@ -370,6 +401,143 @@ app.post('/api/rentals', async (c) => {
 
   const newItem = await db.addRental(body);
   return c.json({ success: true, item: newItem }, 201);
+});
+
+/**
+ * Pemeriksaan ketersediaan unit untuk rentang tanggal tertentu.
+ * Dipakai form rental agar pilihan unit langsung mengikuti periode sewa.
+ *
+ * Query: equipmentId, from, to, excludeRentalId (opsional)
+ */
+app.get('/api/rentals/availability', async (c) => {
+  const query = c.req.query();
+  const from = query.from ?? '';
+  const to = query.to ?? '';
+
+  if (from === '' || to === '') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Parameter from dan to wajib diisi (format YYYY-MM-DD).',
+        },
+      },
+      400
+    );
+  }
+
+  const equipmentIdRaw = query.equipmentId ?? '';
+  const equipmentId = equipmentIdRaw === '' ? null : Number(equipmentIdRaw);
+
+  // excludeRentalId dipakai saat mengedit rental yang sudah ada.
+  const excludeRaw = query.excludeRentalId ?? '';
+  const excludeParsed = excludeRaw === '' ? null : Number(excludeRaw);
+  const excludeRentalId =
+    excludeParsed !== null && Number.isInteger(excludeParsed) && excludeParsed > 0
+      ? excludeParsed
+      : undefined;
+
+  const semuaUnit = await db.getEquipments();
+  const rentals = await db.getRentals();
+
+  // equipmentId diberikan → periksa satu unit saja (dipakai oleh validasi form).
+  if (equipmentId !== null) {
+    if (!Number.isInteger(equipmentId) || equipmentId <= 0) {
+      return c.json(
+        { success: false, error: { code: 'VALIDATION_ERROR', message: 'equipmentId tidak valid.' } },
+        400
+      );
+    }
+
+    const unit = semuaUnit.find((e) => e.id === equipmentId);
+    if (!unit) {
+      return c.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } },
+        404
+      );
+    }
+
+    const conflicts = getRentalConflicts(equipmentId, from, to, rentals, excludeRentalId);
+    const isBookable = conflicts.length === 0 && !isUnitOutOfService(unit.status);
+
+    return c.json({
+      success: true,
+      data: {
+        equipmentId,
+        equipmentCode: unit.equipment_code,
+        from,
+        to,
+        isBookable,
+        conflicts,
+        reason: conflicts.length > 0 ? 'Terbentur jadwal sewa lain.' : null,
+      },
+    });
+  }
+
+  // Tanpa equipmentId → ringkasan semua unit (dipakai untuk mengisi dropdown).
+  const availability = buildEquipmentAvailability(semuaUnit, rentals, from, to, excludeRentalId);
+
+  return c.json({
+    success: true,
+    data: {
+      from,
+      to,
+      summary: summarizeAvailability(availability),
+      items: availability.map((a): {
+        id: number;
+        equipmentCode: string;
+        name: string;
+        status: Equipment['status'];
+        isBookable: boolean;
+        reason: BlockedReason;
+        conflicts: number;
+      } => ({
+        id: a.equipment.id,
+        equipmentCode: a.equipment.equipment_code,
+        name: a.equipment.name,
+        status: a.equipment.status,
+        isBookable: a.isBookable,
+        reason: a.blockedReason,
+        conflicts: a.conflicts.length,
+      })),
+    },
+  });
+});
+
+/**
+ * Daftar unit yang bisa dipesan pada rentang tertentu.
+ * Bentuknya sengaja ringkas (tanpa rincian bentrokan) agar ringan dipanggil
+ * berulang kali saat pengguna mengubah tanggal.
+ */
+app.get('/api/rentals/bookable', async (c) => {
+  const query = c.req.query();
+  const from = query.from ?? '';
+  const to = query.to ?? '';
+
+  const availability = buildEquipmentAvailability(
+    await db.getEquipments(),
+    await db.getRentals(),
+    from,
+    to
+  );
+
+  const bookable: EquipmentAvailability[] = availability.filter((a) => a.isBookable);
+
+  return c.json({
+    success: true,
+    data: {
+      from,
+      to,
+      summary: summarizeAvailability(availability),
+      items: bookable.map((a) => ({
+        id: a.equipment.id,
+        equipmentCode: a.equipment.equipment_code,
+        name: a.equipment.name,
+        rentalPricePerDay: a.equipment.rental_price_per_day,
+      })),
+    },
+  });
 });
 
 app.put('/api/rentals/:id/status', async (c) => {
@@ -392,26 +560,34 @@ app.put('/api/rentals/:id/status', async (c) => {
   // tidak bentrok dengan rental aktif lain. Mencegah double-booking dari
   // jalur persetujuan staf.
   if (body.status === 'APPROVED' || body.status === 'ON_GOING') {
-    const target = (await db.getRentals()).find(r => r.id === id);
+    const semuaRental = await db.getRentals();
+    const target = semuaRental.find(r => r.id === id);
     if (!target) {
       return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Rental tidak ditemukan.' } }, 404);
     }
 
-    const bentrok = (await db.getRentals()).some(r =>
-      r.id !== id &&
-      r.equipment_id === target.equipment_id &&
-      r.status !== 'REJECTED' && r.status !== 'COMPLETED' &&
-      new Date(target.start_date) <= new Date(r.end_date) &&
-      new Date(target.end_date) >= new Date(r.start_date)
+    const unit = (await db.getEquipments()).find(e => e.id === target.equipment_id);
+    if (!unit) {
+      return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
+    }
+
+    // Mesin yang sama dengan POST /api/rentals — rental ini dikecualikan agar
+    // tidak bentrok dengan dirinya sendiri.
+    const [availability] = buildEquipmentAvailability(
+      [unit],
+      semuaRental,
+      target.start_date,
+      target.end_date,
+      id
     );
 
-    if (bentrok) {
+    if (!availability.isBookable) {
       return c.json(
         {
           success: false,
           error: {
             code: 'EQUIPMENT_UNAVAILABLE',
-            message: 'Unit sudah disewa pada rentang tanggal tersebut. Persetujuan dibatalkan.',
+            message: `${describeBlockedReason(availability)} Persetujuan dibatalkan.`,
           },
         },
         409

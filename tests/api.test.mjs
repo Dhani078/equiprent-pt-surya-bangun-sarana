@@ -113,13 +113,32 @@ t('ID non-numerik → 404 atau 400', r.status === 400 || r.status === 404);
 r = await req('PUT', '/api/rentals/1/status', { token: T_ADMIN, body: { status: 'STATUS_NGACO' } });
 t('status rental tidak sah → 400', r.status === 400);
 
+// Daftar unit dipakai berulang kali agar pemilihan kasus uji deterministik.
+// Disimpan dalam `let` karena status unit bisa berubah di tengah pengujian
+// (membuat jadwal perawatan akan menandai unit sebagai MAINTENANCE).
+let semuaUnit = (await req('GET', '/api/equipments', { token: T_ADMIN })).body || [];
+
+// Unit yang dirawat / dinonaktifkan tidak boleh disewa kapan pun, jadi
+// tidak layak dipakai sebagai contoh "rentang bebas" maupun "rentang bentrok".
+let unitBermasalah = new Set(
+  semuaUnit.filter(e => e.status === 'MAINTENANCE' || e.status === 'UNAVAILABLE').map(e => e.id)
+);
+
+/** Menyegarkan daftar unit & pengelompokannya setelah ada perubahan status. */
+async function segarkanUnit() {
+  semuaUnit = (await req('GET', '/api/equipments', { token: T_ADMIN })).body || [];
+  unitBermasalah = new Set(
+    semuaUnit.filter(e => e.status === 'MAINTENANCE' || e.status === 'UNAVAILABLE').map(e => e.id)
+  );
+}
+
 // Pilih rental yang TIDAK bentrok agar pengujian deterministik.
 // (Menyetujui rental yang bentrok memang akan ditolak 409 — diuji di bawah.)
 const semuaRental = (await req('GET', '/api/rentals', { token: T_ADMIN })).body || [];
 const aktifIds = new Set(
   semuaRental.filter(x => x.status === 'ON_GOING' || x.status === 'APPROVED').map(x => x.equipment_id)
 );
-const bebas = semuaRental.find(x => x.status === 'PENDING' && !aktifIds.has(x.equipment_id));
+const bebas = semuaRental.find(x => x.status === 'PENDING' && !aktifIds.has(x.equipment_id) && !unitBermasalah.has(x.equipment_id));
 
 if (bebas) {
   r = await req('PUT', `/api/rentals/${bebas.id}/status`, { token: T_ADMIN, body: { status: 'APPROVED' } });
@@ -142,8 +161,13 @@ t('maintenance valid → 201', r.status === 201);
 
 // ---------------------------------------------------------------------------
 console.log('\n== Pencegahan Double-Booking ==');
+// Jadwal perawatan di atas mengubah status unit → daftar unit disegarkan.
+await segarkanUnit();
+
 // Ambil satu rental aktif untuk dijadikan acuan bentrok.
-const aktif = (semuaRental).find(x => x.status === 'ON_GOING' || x.status === 'APPROVED');
+const aktif = (semuaRental).find(
+  x => (x.status === 'ON_GOING' || x.status === 'APPROVED') && !unitBermasalah.has(x.equipment_id)
+);
 t('ada rental aktif sebagai acuan', Boolean(aktif));
 
 if (aktif) {
@@ -189,6 +213,92 @@ r = await req('POST', '/api/rentals', {
   body: { equipment_id: 999999, customer_id: 9, start_date: '2027-05-01', end_date: '2027-05-10', total_days: 9, subtotal: 0 },
 });
 t('sewa unit tidak ada → 404', r.status === 404);
+
+// Unit dalam perawatan / nonaktif tidak boleh disewa kapan pun.
+const unitRusak = semuaUnit.find(e => e.status === 'MAINTENANCE' || e.status === 'UNAVAILABLE');
+if (unitRusak) {
+  r = await req('POST', '/api/rentals', {
+    token: T_CUST,
+    body: {
+      equipment_id: unitRusak.id,
+      customer_id: 9,
+      start_date: '2027-07-01',
+      end_date: '2027-07-10',
+      total_days: 10,
+      subtotal: 10000000,
+    },
+  });
+  t('sewa unit MAINTENANCE/UNAVAILABLE → 409', r.status === 409);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n== Endpoint Ketersediaan Unit ==');
+r = await req('GET', '/api/rentals/availability', { token: T_ADMIN });
+t('availability tanpa from/to → 400', r.status === 400);
+
+r = await req('GET', '/api/rentals/availability?from=2026-09-01&to=2026-09-30', { token: T_ADMIN });
+t('availability ringkasan → 200', r.status === 200);
+t('ringkasan punya total unit', typeof r.body?.data?.summary?.total === 'number');
+t('ringkasan total sama dengan jumlah unit', r.body?.data?.summary?.total === semuaUnit.length);
+t('items berupa array', Array.isArray(r.body?.data?.items));
+t('setiap item punya isBookable boolean',
+  r.body?.data?.items?.every(i => typeof i.isBookable === 'boolean'));
+t('setiap item punya alasan yang sah',
+  r.body?.data?.items?.every(i =>
+    ['AVAILABLE', 'UNIT_STATUS', 'DATE_CONFLICT', 'INVALID_RANGE'].includes(i.reason)));
+
+// Periksa satu unit yang sedang disewa pada periode tersebut.
+if (aktif) {
+  r = await req(
+    'GET',
+    `/api/rentals/availability?equipmentId=${aktif.equipment_id}&from=${aktif.start_date}&to=${aktif.end_date}`,
+    { token: T_ADMIN }
+  );
+  t('availability unit aktif → 200', r.status === 200);
+  t('unit yang sedang disewa → isBookable false', r.body?.data?.isBookable === false);
+  t('unit yang sedang disewa punya daftar bentrokan',
+    Array.isArray(r.body?.data?.conflicts) && r.body.data.conflicts.length > 0);
+
+  // Rentang jauh di masa depan untuk unit yang sama → harus bebas.
+  r = await req(
+    'GET',
+    `/api/rentals/availability?equipmentId=${aktif.equipment_id}&from=2027-08-01&to=2027-08-10`,
+    { token: T_ADMIN }
+  );
+  t('unit yang sama di periode lain → isBookable true', r.body?.data?.isBookable === true);
+  t('unit di periode lain tidak punya bentrokan', r.body?.data?.conflicts?.length === 0);
+}
+
+r = await req('GET', '/api/rentals/availability?equipmentId=999999&from=2026-09-01&to=2026-09-30', { token: T_ADMIN });
+t('availability unit tidak ada → 404', r.status === 404);
+
+r = await req('GET', '/api/rentals/availability?equipmentId=abc&from=2026-09-01&to=2026-09-30', { token: T_ADMIN });
+t('availability equipmentId non-numerik → 400', r.status === 400);
+
+// ---------------------------------------------------------------------------
+console.log('\n== Endpoint Unit yang Bisa Dipesan ==');
+r = await req('GET', '/api/rentals/bookable?from=2026-09-01&to=2026-09-30', { token: T_ADMIN });
+t('bookable → 200', r.status === 200);
+t('bookable items berupa array', Array.isArray(r.body?.data?.items));
+t('setiap item bookable punya harga sewa',
+  r.body?.data?.items?.every(i => typeof i.rentalPricePerDay === 'number'));
+t('jumlah bookable sama dengan ringkasan',
+  r.body?.data?.items?.length === r.body?.data?.summary?.bookable);
+
+// Tanpa parameter seharusnya tidak membuat server error.
+r = await req('GET', '/api/rentals/bookable', { token: T_ADMIN });
+t('bookable tanpa tanggal → 200 (bukan 500)', r.status === 200);
+
+// ---------------------------------------------------------------------------
+console.log('\n== Endpoint Availability Butuh Autentikasi ==');
+r = await req('GET', '/api/rentals/availability?from=2026-09-01&to=2026-09-30');
+t('availability tanpa token → 401', r.status === 401);
+
+r = await req('GET', '/api/rentals/bookable?from=2026-09-01&to=2026-09-30');
+t('bookable tanpa token → 401', r.status === 401);
+
+r = await req('GET', '/api/rentals/availability?from=2026-09-01&to=2026-09-30', { token: T_CUST });
+t('customer boleh cek availability → 200', r.status === 200);
 
 // ---------------------------------------------------------------------------
 console.log('\n== Aturan Verifikasi Pembayaran ==');

@@ -319,3 +319,45 @@ perlu dipelihara setiap hari.
 - `tests/run-tests.mjs` — menambahkan bundle .tmp_documents.mjs,
   .tmp_preview.mjs, .tmp_printpanel.mjs dan suite baru.
 **Verifikasi:** typecheck PASS · build PASS (529 KB) · npm test 11/11 suite PASS
+
+
+---
+
+## [CYCLE 18] 2026-09-09T14:30:00Z — T-0030 — P1 — DONE
+**Judul:** Validasi unavailability unit pada form rental (cegah double booking) (F2.1)
+**Fitur baru:**
+- `src/lib/availability.ts` (BARU) — mesin ketersediaan MURNI (tanpa DOM/DB):
+  `isBlockingStatus`, `isUnitOutOfService`, `normalizeBookingRange`,
+  `getRentalConflicts`, `buildEquipmentAvailability`, `describeBlockedReason`,
+  `summarizeAvailability`. Satu-satunya tempat aturan bentrokan ditulis, agar
+  pesan galat UI & API selalu identik.
+  - Dua rentang bentrok bila `start <= rEnd && end >= rStart` (ujung yang
+    bersentuhan tetap bentrok: unit butuh waktu mobilisasi & demobilisasi).
+  - Tanggal diparse ke UTC tengah hari (`T12:00:00Z`) agar zona waktu tidak
+    menggeser tanggal — masalah klasik `new Date('2026-09-01')`.
+  - Status RENTED sengaja TIDAK mengunci unit: status adalah keadaan hari ini,
+    sedangkan pemesanan menyangkut masa depan. Yang menentukan: bentrokan rentang.
+- `src/server/index.ts`:
+  - `POST /api/rentals` — menolak 409 `EQUIPMENT_UNAVAILABLE` bila unit berstatus
+    MAINTENANCE/UNAVAILABLE atau rentangnya bentrok dengan sewa aktif.
+  - `PUT /api/rentals/:id/status` — persetujuan (APPROVED / ON_GOING) ikut
+    divalidasi; rental yang bersangkutan dikecualikan agar tidak bentrok dengan
+    dirinya sendiri.
+  - `GET /api/rentals/availability` — ringkasan semua unit atau satu unit
+    (`equipmentId`), dengan `excludeRentalId` untuk mode edit.
+  - `GET /api/rentals/bookable` — daftar unit yang benar-benar bisa dipesan pada
+    rentang tertentu, lengkap dengan harga sewa per hari.
+- `src/pages/admin/RentalManagement.tsx` — form kini menyaring pilihan unit
+  berdasarkan rentang tanggal, menampilkan ringkasan "N dari M unit tersedia",
+  dan menandai unit yang terkunci beserta alasannya.
+- `src/pages/customer/CustomerPortal.tsx` — portal pelanggan memakai aturan yang
+  sama, sehingga pelanggan tidak bisa mengajukan sewa pada unit yang bentrok.
+**Pengujian:**
+- `tests/availability.test.mjs` (BARU) — uji mesin bentrokan murni.
+- `tests/api.test.mjs` — 25+ pemeriksaan baru: sewa bentrok → 409, sewa rentang
+  berbeda → 201, unit MAINTENANCE → 409, endpoint availability & bookable,
+  penolakan akses tanpa token.
+- Perbaikan stabilitas: `semuaUnit` kini disegarkan setelah pembuatan jadwal
+  perawatan (yang mengubah status unit menjadi MAINTENANCE), sehingga pemilihan
+  kasus uji tidak lagi bergantung pada urutan eksekusi.
+**Verifikasi:** typecheck PASS · build PASS (533 KB) · npm test 12/12 suite PASS
