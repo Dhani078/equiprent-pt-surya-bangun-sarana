@@ -214,3 +214,29 @@ wrangler deploy` agar dependensi terpasang sebelum build.
 **Verifikasi:** `wrangler deploy --dry-run` berhasil membaca 4 berkas dari
 `dist/` (147 KiB / gzip 37 KiB) dengan binding `env.ASSETS`.
 **Status:** Konfigurasi valid. Deploy sungguhan butuh login Cloudflare.
+
+---
+
+## [CYCLE 13] 2026-09-09T09:10:00Z — T-0022 — P2 — DONE
+**Judul:** Fitur baru — Riwayat Servis per Unit
+**Perubahan:** Panel drill-down di `MaintenanceManagement.tsx`:
+- Dropdown pilih unit (hanya unit yang punya catatan servis)
+- Ringkasan: total servis, yang selesai, total biaya, rata-rata per servis, HM terakhir
+- Tabel log: kode servis, tanggal, jenis, HM, suku cadang, biaya, status
+- Tombol "Riwayat" di panel peringatan 250 HM untuk drill-down cepat
+- Diurutkan dari servis terbaru (`scheduled_date` menurun)
+**Verifikasi:** typecheck + build PASS (473 KB)
+
+---
+
+## [CYCLE 14] 2026-09-09T09:30:00Z — T-0023 — P2 — DONE
+**Judul:** Notifikasi jatuh tempo & keterlambatan di dashboard staf
+**Perubahan:** Panel notifikasi di `StaffDashboard.tsx`:
+- Rental `ON_GOING` yang terlambat (> `end_date`) atau jatuh tempo ≤ 3 hari
+- Denda otomatis: `hariTerlambat × LATE_PENALTY_PER_DAY` (Rp 500.000/hari)
+- Total estimasi denda di footer panel; tombol "Tindak Lanjut" → tab rental
+- `tests/dueNotifications.test.mjs` (BARU): 14 pemeriksaan, termasuk kasus
+  batas (hari ini, 3 hari, 4 hari, terlambat 3 hari, COMPLETED, tanpa end_date)
+**Catatan:** Tanggal acuan dibuat dinamis (`new Date()`) agar test tidak
+perlu dipelihara setiap hari.
+**Verifikasi:** 8/8 suite lulus · typecheck + build PASS (477 KB)
