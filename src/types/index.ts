@@ -121,3 +121,68 @@ export interface ReportItem {
   file_path: string;
   generated_at: string;
 }
+
+// ---------------------------------------------------------------------------
+// Modul Laporan Operasional (11 jenis laporan skripsi)
+// ---------------------------------------------------------------------------
+
+/** Identitas 11 jenis laporan operasional. */
+export type ReportId =
+  | 'RENTAL_BULANAN'
+  | 'PEMBAYARAN_PIUTANG'
+  | 'PENDAPATAN_BERSIH'
+  | 'MAINTENANCE_SERVIS'
+  | 'UTILISASI_HM'
+  | 'KERUSAKAN_UNIT'
+  | 'TELEMETRI_GPS'
+  | 'KINERJA_STAF'
+  | 'SUKU_CADANG'
+  | 'KEPUASAN_PELANGGAN'
+  | 'AUDIT_TRAIL';
+
+/** Cara sebuah sel ditampilkan di tabel dan diekspor ke CSV. */
+export type ReportColumnFormat =
+  | 'text'
+  | 'currency'
+  | 'integer'
+  | 'decimal'
+  | 'date'
+  | 'datetime';
+
+export interface ReportColumn {
+  /** Kunci kolom, dipakai sebagai identitas saat merender sel. */
+  key: string;
+  /** Judul kolom yang tampil di kepala tabel & baris pertama CSV. */
+  label: string;
+  /** Perataan sel. Angka selalu rata kanan mengikuti design system. */
+  align?: 'left' | 'right';
+  /** Format tampilan sel. */
+  format?: ReportColumnFormat;
+}
+
+/** Nilai sel: angka disimpan mentah agar CSV bisa dijumlahkan di Excel. */
+export type ReportCellValue = string | number;
+
+export interface ReportSummary {
+  label: string;
+  value: string;
+  tone?: 'positive' | 'negative' | 'neutral';
+}
+
+/** Rentang tanggal laporan. String kosong berarti tanpa batas. */
+export interface DateRangeFilter {
+  from: string;
+  to: string;
+}
+
+export interface ReportResult {
+  id: ReportId;
+  title: string;
+  description: string;
+  /** Label periode yang sedang difilter, misal `01 Jan 2026 – 31 Des 2026`. */
+  periodLabel: string;
+  columns: ReportColumn[];
+  rows: ReportCellValue[][];
+  summaries: ReportSummary[];
+  totalRows: number;
+}
