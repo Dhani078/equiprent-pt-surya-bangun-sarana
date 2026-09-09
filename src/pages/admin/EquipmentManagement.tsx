@@ -3,6 +3,7 @@ import { Equipment } from '../../types';
 import { Plus, Search, Filter, Edit, Trash2, Gauge, AlertCircle, MapPin, Eye } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
+import { formatRupiah } from '../../lib/businessRules';
 
 interface EquipmentManagementProps {
   equipments: Equipment[];
@@ -94,10 +95,6 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
     const matchesStatus = filterStatus === 'ALL' || eq.status === filterStatus;
     return matchesSearch && matchesType && matchesStatus;
   });
-
-  const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
-  };
 
   // Mini Bento Stats
   const totalUnit = equipments.length;

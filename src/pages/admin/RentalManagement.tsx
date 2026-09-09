@@ -3,6 +3,7 @@ import { Rental, Equipment, User } from '../../types';
 import { Plus, Search, CheckCircle, XCircle, Clock, FileText, Check } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
+import { formatRupiah } from '../../lib/businessRules';
 
 interface RentalManagementProps {
   rentals: Rental[];
@@ -74,10 +75,6 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
     const matchesStatus = filterStatus === 'ALL' || r.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
-
-  const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
-  };
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -267,7 +264,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
               {availableEquipments.length === 0 ? (
                 equipments.slice(0, 10).map((e) => (
                   <option key={e.id} value={e.id}>
-                    {e.equipment_code} - {e.name} (Rp {formatRupiah(Number(e.rental_price_per_day))}/hari)
+                    {e.equipment_code} - {e.name} ({formatRupiah(Number(e.rental_price_per_day))}/hari)
                   </option>
                 ))
               ) : (

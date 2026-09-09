@@ -42,6 +42,7 @@ const suites = [
   'lateFee.test.mjs',
   'consistency.test.mjs',
   'api.test.mjs',
+  'codeQuality.test.mjs',
 ];
 
 let failed = 0;

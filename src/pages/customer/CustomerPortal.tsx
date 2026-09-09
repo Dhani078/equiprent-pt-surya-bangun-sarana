@@ -3,6 +3,7 @@ import { Equipment, Rental, Contract, Payment, User } from '../../types';
 import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
+import { formatRupiah } from '../../lib/businessRules';
 
 interface CustomerPortalProps {
   currentUser: User;
@@ -81,10 +82,6 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
     setIsRentModalOpen(false);
     setActiveTab('my_rentals');
-  };
-
-  const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
   };
 
   return (
