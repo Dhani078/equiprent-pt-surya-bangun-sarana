@@ -533,8 +533,27 @@ if (typeof idUserBaru === 'number') {
 console.log('\n== Dashboard Stats ==');
 r = await req('GET', '/api/dashboard/stats', { token: T_ADMIN });
 t('stats → 200', r.status === 200);
-t('stats punya totalRevenue', typeof r.body?.totalRevenue === 'number');
-t('stats punya totalEquipments = 50', r.body?.totalEquipments === 50);
+t('stats dibungkus { success, data }', r.body?.success === true);
+
+const ds = r.body?.data ?? {};
+t('stats punya totalRevenue', typeof ds.totalRevenue === 'number');
+t('stats punya totalEquipments = 50', ds.totalEquipments === 50);
+t('distribusi armada menjumlahkan total',
+  ds.availableEquipments + ds.rentedEquipments + ds.maintenanceEquipments + ds.unavailableEquipments
+    === ds.totalEquipments);
+t('stats punya daftar transaksi terbaru', Array.isArray(ds.recentRentals));
+t('transaksi terbaru maksimal 5', ds.recentRentals.length <= 5);
+t('stats punya antrean servis', Array.isArray(ds.serviceQueue));
+t('stats punya generatedAt', typeof ds.generatedAt === 'string');
+t('jumlah pelanggan terhitung', typeof ds.totalCustomers === 'number' && ds.totalCustomers > 0);
+
+// Dashboard boleh diakses STAFF (bukan hanya ADMIN).
+r = await req('GET', '/api/dashboard/stats', { token: T_STAFF });
+t('stats oleh STAFF → 200', r.status === 200);
+
+// Tetap terproteksi: tanpa token harus 401.
+r = await req('GET', '/api/dashboard/stats');
+t('stats tanpa token → 401', r.status === 401);
 
 console.log(`\n=== HASIL: ${pass} PASS, ${fail} FAIL ===`);
 process.exit(fail === 0 ? 0 : 1);

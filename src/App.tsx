@@ -162,14 +162,7 @@ export const App: React.FC = () => {
           {currentUser.role_name === 'ADMIN' && (
             <>
               {activeTab === 'dashboard' && (
-                <AdminDashboard
-                  equipments={equipments}
-                  rentals={rentals}
-                  maintenance={maintenance}
-                  users={users}
-                  payments={payments}
-                  onNavigate={setActiveTab}
-                />
+                <AdminDashboard onNavigate={setActiveTab} />
               )}
               {activeTab === 'equipment' && (
                 <EquipmentManagement

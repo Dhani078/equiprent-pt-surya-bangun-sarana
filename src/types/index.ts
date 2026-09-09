@@ -131,6 +131,79 @@ export interface ReportItem {
 }
 
 // ---------------------------------------------------------------------------
+// Dashboard Eksekutif Administrator
+// ---------------------------------------------------------------------------
+
+/** Baris ringkas riwayat sewa untuk tabel "Transaksi Terbaru". */
+export interface DashboardRentalRow {
+  id: number;
+  rental_code: string;
+  customer_name: string;
+  company_name: string | null;
+  equipment_name: string;
+  equipment_code: string;
+  subtotal: number;
+  status: Rental['status'];
+  start_date: string;
+  booking_date: string;
+}
+
+/** Baris antrean servis untuk panel pemeliharaan. */
+export interface DashboardServiceRow {
+  id: number;
+  maintenance_code: string;
+  equipment_name: string;
+  equipment_code: string;
+  maintenance_type: Maintenance['maintenance_type'];
+  hour_meter_at_maintenance: number;
+  scheduled_date: string;
+  status: Maintenance['status'];
+}
+
+/**
+ * Agregat dashboard eksekutif.
+ *
+ * Dihasilkan oleh modul murni `src/lib/dashboard.ts` dari sumber data yang
+ * sama, baik saat dipanggil edge API (`/api/dashboard/stats`) maupun saat
+ * klien menghitung lokal sebagai fallback. Karena itu angka yang tampil di
+ * layar identik dengan yang dihitung server.
+ */
+export interface AdminDashboardStats {
+  /** Akumulasi pembayaran berstatus PAID (Rupiah). */
+  totalRevenue: number;
+  /** Nilai pembayaran yang masih menunggu verifikasi staf (Rupiah). */
+  pendingPaymentAmount: number;
+  /** Banyaknya pembayaran yang menunggu verifikasi. */
+  pendingPaymentCount: number;
+  totalEquipments: number;
+  availableEquipments: number;
+  rentedEquipments: number;
+  maintenanceEquipments: number;
+  unavailableEquipments: number;
+  /** Rental berstatus APPROVED atau ON_GOING. */
+  activeRentals: number;
+  /** Pengajuan sewa yang belum diproses. */
+  pendingRentals: number;
+  completedRentals: number;
+  /** Pengguna ber-role CUSTOMER. */
+  totalCustomers: number;
+  /** Unit yang HM-nya sudah melewati interval servis 250 HM. */
+  serviceDueCount: number;
+  /** Unit yang mendekati interval servis (dalam ambang peringatan). */
+  serviceApproachingCount: number;
+  /** Kode unit yang sudah jatuh tempo servis (maksimal 5, untuk pratinjau). */
+  serviceDueCodes: string[];
+  /** Servis terjadwal / sedang dikerjakan. */
+  pendingMaintenanceCount: number;
+  /** Lima transaksi sewa terbaru. */
+  recentRentals: DashboardRentalRow[];
+  /** Antrean servis terdekat. */
+  serviceQueue: DashboardServiceRow[];
+  /** Waktu agregat dihitung (ISO 8601). */
+  generatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
 // Modul Laporan Operasional (11 jenis laporan skripsi)
 // ---------------------------------------------------------------------------
 
