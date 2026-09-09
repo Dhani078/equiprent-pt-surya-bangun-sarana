@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Rental, Contract, Payment, Maintenance, User, Equipment } from '../../types';
-import { ClipboardCheck, CreditCard, FileCheck, Check, Clock, AlertCircle, CheckCircle, XCircle, Eye } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Rental, Contract, Payment, Maintenance, User } from '../../types';
+import { ClipboardCheck, CreditCard, FileCheck, Check, Clock, AlertCircle, CheckCircle, XCircle, Eye, Bell } from 'lucide-react';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { Modal } from '../../components/Modal';
-import { formatRupiah } from '../../lib/businessRules';
+import { formatRupiah, LATE_PENALTY_PER_DAY } from '../../lib/businessRules';
 
 interface StaffDashboardProps {
   rentals: Rental[];
@@ -30,6 +30,47 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   const pendingPayments = payments.filter(p => p.status === 'PENDING_VERIFICATION');
   const pendingRentals = rentals.filter(r => r.status === 'PENDING');
 
+  /**
+   * Notifikasi jatuh tempo & keterlambatan.
+   * Fokus pada rental ON_GOING: segera jatuh tempo (≤ 3 hari) atau sudah
+   * lewat end_date (berjalan, unit belum kembali).
+   * Denda memakai tarif flat LATE_PENALTY_PER_DAY dari aturan bisnis.
+   */
+  const dueNotifications = useMemo(() => {
+    const hariIni = new Date();
+    hariIni.setHours(0, 0, 0, 0);
+
+    const rows = rentals
+      .filter(r => r.status === 'ON_GOING' && r.end_date)
+      .map(r => {
+        const akhir = new Date(r.end_date as string);
+        akhir.setHours(0, 0, 0, 0);
+        const selisihHari = Math.floor((akhir.getTime() - hariIni.getTime()) / 86400000);
+        const terlambat = selisihHari < 0;
+        return {
+          rental: r,
+          selisihHari,
+          terlambat,
+          hariTerlambat: terlambat ? Math.abs(selisihHari) : 0,
+          denda: terlambat ? Math.abs(selisihHari) * LATE_PENALTY_PER_DAY : 0,
+          segeraJatuhTempo: !terlambat && selisihHari <= 3,
+        };
+      })
+      .filter(x => x.terlambat || x.segeraJatuhTempo)
+      .sort((a, b) => (b.terlambat ? 1 : 0) - (a.terlambat ? 1 : 0) || b.hariTerlambat - a.hariTerlambat);
+
+    return rows;
+  }, [rentals]);
+
+  const totalDenda = useMemo(
+    () => dueNotifications.reduce((s, x) => s + x.denda, 0),
+    [dueNotifications]
+  );
+  const jumlahTerlambat = useMemo(
+    () => dueNotifications.filter(x => x.terlambat).length,
+    [dueNotifications]
+  );
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
@@ -41,6 +82,122 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           Validasi bukti transfer pembayaran klien, penerbitan kontrak sewa, dan pengesahan order rental PT. SBS.
         </p>
       </div>
+
+      {/* Panel Notifikasi Jatuh Tempo & Keterlambatan */}
+      {dueNotifications.length > 0 && (
+        <div
+          className="card-premium animate-fade-in"
+          style={{ padding: '16px 18px', borderLeft: `4px solid ${jumlahTerlambat > 0 ? '#DC2626' : '#F59E0B'}` }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            <Bell size={18} color={jumlahTerlambat > 0 ? '#DC2626' : '#F59E0B'} />
+            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+              Notifikasi Jatuh Tempo & Keterlambatan
+            </h3>
+            <span
+              style={{
+                marginLeft: 'auto',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                padding: '3px 10px',
+                borderRadius: '999px',
+                backgroundColor: jumlahTerlambat > 0 ? '#FEE2E2' : '#FEF3C7',
+                color: jumlahTerlambat > 0 ? '#991B1B' : '#92400E',
+              }}
+            >
+              {jumlahTerlambat} terlambat · {dueNotifications.length - jumlahTerlambat} segera jatuh tempo
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {dueNotifications.slice(0, 6).map(({ rental, terlambat, hariTerlambat, denda, selisihHari }) => (
+              <div
+                key={rental.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '10px 12px',
+                  backgroundColor: terlambat ? '#FEF2F2' : '#FFFBEB',
+                  borderRadius: '8px',
+                  border: `1px solid ${terlambat ? '#FECACA' : '#FDE68A'}`,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                    {rental.equipment_name || `Unit #${rental.equipment_id}`}
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)' }}>
+                    {rental.rental_code} · {rental.customer_name}
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
+                  Jatuh tempo: <strong>{rental.end_date}</strong>
+                </div>
+
+                <span
+                  style={{
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: terlambat ? '#DC2626' : '#F59E0B',
+                    color: '#FFFFFF',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {terlambat ? `TERLAMBAT ${hariTerlambat} HARI` : `${selisihHari} HARI LAGI`}
+                </span>
+
+                {terlambat && (
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      fontFamily: 'monospace',
+                      color: '#991B1B',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Denda {formatRupiah(denda)}
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab('rentals')}
+                  className="btn-secondary"
+                  style={{ padding: '5px 12px', fontSize: '11.5px' }}
+                >
+                  Tindak Lanjut
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {jumlahTerlambat > 0 && (
+            <div
+              style={{
+                marginTop: '12px',
+                paddingTop: '12px',
+                borderTop: '1px solid var(--color-border)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '13px',
+                fontWeight: 800,
+                color: '#991B1B',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <span>Total estimasi denda keterlambatan (tarif {formatRupiah(LATE_PENALTY_PER_DAY)}/hari)</span>
+              <span style={{ fontFamily: 'monospace' }}>{formatRupiah(totalDenda)}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Action Stat Badges */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
