@@ -475,7 +475,7 @@
       "title": "Validasi unavailability unit pada form rental (cegah double booking)",
       "category": "CORE",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 60,
       "depends_on": [
         "T-0006"
@@ -490,7 +490,9 @@
         "Pesan galat berbahasa Indonesia & jelas"
       ],
       "created_by": "agent",
-      "created_at": "2026-09-09T12:00:00Z"
+      "created_at": "2026-09-09T12:00:00Z",
+      "completed_at": "2026-09-09T14:30:00Z",
+      "completed_cycle": 18
     }
   ]
 }

@@ -1,19 +1,19 @@
 {
-  "cycle": 17,
-  "last_run": "2026-09-09T11:58:00Z",
+  "cycle": 18,
+  "last_run": "2026-09-09T14:30:00Z",
   "current_task_id": "T-0026",
   "current_phase": "PENDING",
-  "session_summary": "Cycle 16: T-0024 — ekspor PDF dokumen BAST IN / BAST OUT / Surat Jalan siap cetak A4: src/lib/documents.ts (mesin murni), src/lib/documentPrinter.ts (jendela cetak), src/components/DocumentPreview.tsx, src/components/DocumentPrintPanel.tsx, integrasi ke ReportsPage + print CSS @page A4.",
+  "session_summary": "Cycle 18: T-0030 — validasi ketersediaan unit (cegah double booking) rampung. Mesin murni src/lib/availability.ts + endpoint /api/rentals/availability & /api/rentals/bookable + validasi server pada POST /api/rentals dan PUT /api/rentals/:id/status + filter unit pada form rental (Admin & Portal Customer). Perbaikan stabilitas: uji API kini menyegarkan daftar unit setelah jadwal perawatan dibuat.",
   "quality_gate": {
     "type_check": "PASS",
     "build": "PASS",
     "test": "PASS"
   },
-  "test_suites": 11,
-  "commits": 12,
+  "test_suites": 12,
+  "commits": 13,
   "deploy": {
     "status": "READY",
     "note": "deploy:cloud sudah benar; deploy sungguhan butuh login Cloudflare"
   },
-  "next_focus": "T-0026: ideation lanjutan — katalog pelanggan, kontrak digital, atau penjadwalan servis otomatis"
+  "next_focus": "T-0026: notifikasi stok suku cadang menipis pada modul maintenance (P2)"
 }

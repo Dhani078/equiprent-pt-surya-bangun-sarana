@@ -3,7 +3,8 @@ import { Equipment, Rental, Contract, Payment, User } from '../../types';
 import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
-import { formatRupiah, isEquipmentAvailable } from '../../lib/businessRules';
+import { formatRupiah } from '../../lib/businessRules';
+import { buildEquipmentAvailability, describeBlockedReason } from '../../lib/availability';
 
 interface CustomerPortalProps {
   currentUser: User;
@@ -72,10 +73,16 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     }
 
     // Cegah double-booking di sisi klien (server tetap memvalidasi ulang).
-    if (!isEquipmentAvailable(selectedEquipment.id, startDate, endDate, rentals)) {
-      setRentError(
-        `Unit ${selectedEquipment.equipment_code} sudah disewa pada rentang tanggal tersebut. Silakan pilih tanggal lain.`
-      );
+    // Mesin yang sama dengan halaman admin agar pesannya konsisten.
+    const [availability] = buildEquipmentAvailability(
+      [selectedEquipment],
+      rentals,
+      startDate,
+      endDate
+    );
+
+    if (!availability.isBookable) {
+      setRentError(describeBlockedReason(availability));
       return;
     }
 
