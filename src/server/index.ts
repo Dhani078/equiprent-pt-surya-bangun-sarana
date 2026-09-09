@@ -9,6 +9,7 @@ import {
   SESSION_TTL_SECONDS,
 } from '../lib/auth';
 import type { RoleName } from '../types';
+import type { Equipment, Rental, Maintenance } from '../types';
 
 type Bindings = {
   ASSETS: { fetch: (req: Request) => Promise<Response> };
@@ -230,6 +231,34 @@ app.get('/api/dashboard/stats', async (c) => {
   });
 });
 
+/**
+ * Helper: membaca body JSON dengan aman.
+ * Mengembalikan null bila body tidak valid agar handler bisa merespons 400,
+ * bukan membiarkan Worker melempar exception 500.
+ */
+async function readJsonBody<T = Record<string, unknown>>(
+  c: { req: { json: () => Promise<unknown> } }
+): Promise<T | null> {
+  try {
+    return (await c.req.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Helper: mem-parsing parameter ID dari URL.
+ * Mengembalikan null bila bukan angka bulat positif.
+ */
+function parseId(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+const BAD_ID = { success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid.' } } as const;
+const BAD_JSON = { success: false, error: { code: 'INVALID_JSON', message: 'Format request tidak valid.' } } as const;
+
 // Equipments API
 app.get('/api/equipments', async (c) => {
   const items = await db.getEquipments();
@@ -237,21 +266,33 @@ app.get('/api/equipments', async (c) => {
 });
 
 app.post('/api/equipments', async (c) => {
-  const body = await c.req.json();
+  const body = await readJsonBody<Omit<Equipment, 'id'>>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
   const newItem = await db.addEquipment(body);
   return c.json({ success: true, item: newItem }, 201);
 });
 
 app.put('/api/equipments/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  const body = await c.req.json();
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  const body = await readJsonBody<Partial<Equipment>>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
   const updated = await db.updateEquipment(id, body);
+  if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
+
   return c.json({ success: true, item: updated });
 });
 
 app.delete('/api/equipments/:id', async (c) => {
-  const id = Number(c.req.param('id'));
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
   const ok = await db.deleteEquipment(id);
+  if (!ok) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
+
   return c.json({ success: ok });
 });
 
@@ -262,15 +303,32 @@ app.get('/api/rentals', async (c) => {
 });
 
 app.post('/api/rentals', async (c) => {
-  const body = await c.req.json();
+  const body = await readJsonBody<Omit<Rental, 'id' | 'rental_code'>>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
   const newItem = await db.addRental(body);
   return c.json({ success: true, item: newItem }, 201);
 });
 
 app.put('/api/rentals/:id/status', async (c) => {
-  const id = Number(c.req.param('id'));
-  const { status } = await c.req.json();
-  const updated = await db.updateRentalStatus(id, status);
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  const body = await readJsonBody<{ status?: unknown }>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  // Validasi status agar tidak ada nilai sembarang yang masuk ke data.
+  const STATUS_VALID = ['PENDING', 'APPROVED', 'ON_GOING', 'COMPLETED', 'REJECTED'] as const;
+  if (typeof body.status !== 'string' || !STATUS_VALID.includes(body.status as typeof STATUS_VALID[number])) {
+    return c.json(
+      { success: false, error: { code: 'VALIDATION_ERROR', message: `Status harus salah satu dari: ${STATUS_VALID.join(', ')}.` } },
+      400
+    );
+  }
+
+  const updated = await db.updateRentalStatus(id, body.status as typeof STATUS_VALID[number]);
+  if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Rental tidak ditemukan.' } }, 404);
+
   return c.json({ success: true, item: updated });
 });
 
@@ -281,8 +339,12 @@ app.get('/api/contracts', async (c) => {
 });
 
 app.post('/api/contracts/:id/sign', async (c) => {
-  const id = Number(c.req.param('id'));
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
   const updated = await db.signContract(id);
+  if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Kontrak tidak ditemukan.' } }, 404);
+
   return c.json({ success: true, item: updated });
 });
 
@@ -293,9 +355,19 @@ app.get('/api/payments', async (c) => {
 });
 
 app.post('/api/payments/:id/verify', async (c) => {
-  const id = Number(c.req.param('id'));
-  const body = await c.req.json();
-  const updated = await db.verifyPayment(id, body.staffId || 3, body.staffName || 'Hendra Wijaya');
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  // Body opsional; bila ada harus JSON valid.
+  const body = await readJsonBody<{ staffId?: unknown; staffName?: unknown }>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  const staffId = typeof body.staffId === 'number' && body.staffId > 0 ? body.staffId : 3;
+  const staffName = typeof body.staffName === 'string' && body.staffName.trim() ? body.staffName : 'Hendra Wijaya';
+
+  const updated = await db.verifyPayment(id, staffId, staffName);
+  if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
+
   return c.json({ success: true, item: updated });
 });
 
@@ -306,7 +378,9 @@ app.get('/api/maintenance', async (c) => {
 });
 
 app.post('/api/maintenance', async (c) => {
-  const body = await c.req.json();
+  const body = await readJsonBody<Omit<Maintenance, 'id' | 'maintenance_code'>>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
   const newItem = await db.scheduleMaintenance(body);
   return c.json({ success: true, item: newItem }, 201);
 });
@@ -324,14 +398,40 @@ app.get('/api/reports', async (c) => {
 });
 
 // Users API
+// Catatan: field sensitif (password hash) TIDAK pernah dikirim ke klien.
 app.get('/api/users', async (c) => {
   const items = await db.getUsers();
-  return c.json(items);
+  const aman = items.map(u => ({
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    full_name: u.full_name,
+    phone: u.phone,
+    address: u.address,
+    company_name: u.company_name,
+    role_id: u.role_id,
+    role_name: u.role_name,
+    status: u.status,
+  }));
+  return c.json(aman);
 });
 
 app.post('/api/users/:id/toggle', async (c) => {
-  const id = Number(c.req.param('id'));
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  // Mencegah admin menonaktifkan akunnya sendiri (bisa mengunci sistem).
+  const operatorId = c.get('userId');
+  if (typeof operatorId === 'number' && operatorId === id) {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Anda tidak dapat menonaktifkan akun sendiri.' } },
+      403
+    );
+  }
+
   const updated = await db.toggleUserStatus(id);
+  if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pengguna tidak ditemukan.' } }, 404);
+
   return c.json({ success: true, item: updated });
 });
 
