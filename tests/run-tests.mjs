@@ -33,6 +33,7 @@ function bundle(entry, out) {
 console.log('Menyiapkan bundle modul untuk pengujian...');
 bundle('src/lib/businessRules.ts', '.tmp_businessRules.mjs');
 bundle('src/lib/db.ts', '.tmp_db.mjs');
+bundle('src/server/index.ts', '.tmp_server.mjs');
 
 const suites = [
   'businessRules.test.mjs',
@@ -40,6 +41,7 @@ const suites = [
   'servicePanel.test.mjs',
   'lateFee.test.mjs',
   'consistency.test.mjs',
+  'api.test.mjs',
 ];
 
 let failed = 0;
@@ -62,7 +64,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_server.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }
