@@ -159,6 +159,19 @@ t('maintenance tanggal rusak → 400', r.status === 400);
 r = await req('POST', '/api/maintenance', { token: T_ADMIN, body: { equipment_id: 1, scheduled_date: '2026-10-01' } });
 t('maintenance valid → 201', r.status === 201);
 
+// INSPECTION tidak ada di ENUM skema → harus ditolak, bukan disimpan kosong.
+r = await req('POST', '/api/maintenance', {
+  token: T_ADMIN,
+  body: { equipment_id: 1, scheduled_date: '2026-10-01', maintenance_type: 'INSPECTION' },
+});
+t('maintenance jenis INSPECTION → 400', r.status === 400);
+
+r = await req('POST', '/api/maintenance', {
+  token: T_ADMIN,
+  body: { equipment_id: 1, scheduled_date: '2026-10-01', maintenance_type: 'OVERHAUL' },
+});
+t('maintenance jenis OVERHAUL → 201', r.status === 201);
+
 // ---------------------------------------------------------------------------
 console.log('\n== Pencegahan Double-Booking ==');
 // Jadwal perawatan di atas mengubah status unit → daftar unit disegarkan.
@@ -392,6 +405,129 @@ t('staff boleh akses laporan → 200', r.status === 200);
 
 r = await req('GET', '/api/reports/analytics', {});
 t('laporan tanpa token → 401', r.status === 401);
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+console.log('\n== Pendaftaran Pengguna oleh Admin ==');
+const USER_BARU = {
+  role_id: 3,
+  username: 'ujicoba.agent',
+  email: 'ujicoba.agent@sbs.co.id',
+  full_name: 'Agen Uji Coba',
+  phone: '081234567890',
+  address: 'Jl. Ahmad Yani KM 12, Banjarmasin',
+  company_name: 'CV. Uji Coba',
+};
+
+r = await req('POST', '/api/users', { token: T_ADMIN, body: USER_BARU });
+t('daftar pengguna valid → 201', r.status === 201);
+t('pengguna baru punya id', typeof r.body?.item?.id === 'number');
+t('password_hash TIDAK dikirim ke klien', !('password_hash' in (r.body?.item ?? {})));
+
+const idUserBaru = r.body?.item?.id;
+
+// Duplikasi: username & email dipakai sebagai identitas login → harus unik.
+r = await req('POST', '/api/users', { token: T_ADMIN, body: USER_BARU });
+t('username duplikat → 409', r.status === 409);
+t('kode galat username duplikat = VALIDATION_ERROR', r.body?.error?.code === 'VALIDATION_ERROR');
+t('galat menyebut field username', Boolean(r.body?.error?.errors?.username));
+
+r = await req('POST', '/api/users', {
+  token: T_ADMIN,
+  body: { ...USER_BARU, username: 'ujicoba.lain', email: 'ujicoba.agent@sbs.co.id' },
+});
+t('email duplikat → 409', r.status === 409);
+t('galat menyebut field email', Boolean(r.body?.error?.errors?.email));
+
+// Validasi field
+r = await req('POST', '/api/users', { token: T_ADMIN, body: {} });
+t('body pengguna kosong → 400', r.status === 400);
+t('galat per-field dikembalikan', Object.keys(r.body?.error?.errors ?? {}).length > 0);
+
+r = await req('POST', '/api/users', { token: T_ADMIN, body: { ...USER_BARU, username: 'x', email: 'bukan-email' } });
+t('username & email rusak → 400', r.status === 400);
+
+r = await req('POST', '/api/users', { token: T_STAFF, body: { ...USER_BARU, username: 'staff.coba' } });
+t('staff DILARANG mendaftar pengguna → 403', r.status === 403);
+
+r = await req('POST', '/api/users', { body: USER_BARU });
+t('daftar pengguna tanpa token → 401', r.status === 401);
+
+// ---------------------------------------------------------------------------
+console.log('\n== Validasi Master Unit Alat Berat ==');
+const UNIT_BARU = {
+  equipment_code: 'EXCA-UJI-PC300-01',
+  name: 'Hydraulic Excavator Komatsu PC300 Uji',
+  type: 'Excavator',
+  model: 'PC300-8',
+  brand: 'Komatsu',
+  hour_meter: 100,
+  rental_price_per_day: 3_000_000,
+  status: 'AVAILABLE',
+  last_maintenance_date: '2026-05-01',
+  thumbnail_url: '',
+};
+
+r = await req('POST', '/api/equipments', { token: T_ADMIN, body: UNIT_BARU });
+t('tambah unit valid → 201', r.status === 201);
+t('unit baru punya id', typeof r.body?.item?.id === 'number');
+const idUnitBaru = r.body?.item?.id;
+
+r = await req('POST', '/api/equipments', { token: T_ADMIN, body: UNIT_BARU });
+t('kode unit duplikat → 409', r.status === 409);
+t('galat menyebut field equipment_code', Boolean(r.body?.error?.errors?.equipment_code));
+
+r = await req('POST', '/api/equipments', { token: T_ADMIN, body: { ...UNIT_BARU, equipment_code: 'EXCA-UJI-02', hour_meter: -5 } });
+t('hour meter negatif → 400', r.status === 400);
+t('galat menyebut field hour_meter', Boolean(r.body?.error?.errors?.hour_meter));
+
+r = await req('POST', '/api/equipments', { token: T_ADMIN, body: { ...UNIT_BARU, equipment_code: 'EXCA-UJI-03', type: 'Helikopter' } });
+t('kategori tidak dikenal → 400', r.status === 400);
+
+r = await req('POST', '/api/equipments', { token: T_ADMIN, body: { ...UNIT_BARU, equipment_code: 'EXCA UJI 04' } });
+t('kode unit mengandung spasi → 400', r.status === 400);
+
+r = await req('POST', '/api/equipments', { token: T_ADMIN, body: { ...UNIT_BARU, equipment_code: 'EXCA-UJI-05', thumbnail_url: 'javascript:alert(1)' } });
+t('URL foto berbahaya → 400', r.status === 400);
+
+r = await req('POST', '/api/equipments', { token: T_ADMIN, body: {} });
+t('body unit kosong → 400', r.status === 400);
+
+r = await req('POST', '/api/equipments', { token: T_CUST, body: UNIT_BARU });
+t('customer DILARANG menambah unit → 403', r.status === 403);
+
+// Ubah & hapus
+r = await req('PUT', `/api/equipments/${idUnitBaru}`, { token: T_ADMIN, body: { ...UNIT_BARU, hour_meter: 250 } });
+t('ubah unit valid → 200', r.status === 200);
+t('hour meter tersimpan', r.body?.item?.hour_meter === 250);
+
+r = await req('PUT', `/api/equipments/${idUnitBaru}`, { token: T_STAFF, body: UNIT_BARU });
+t('staff DILARANG mengubah unit → 403', r.status === 403);
+
+r = await req('PUT', `/api/equipments/${idUnitBaru}`, { token: T_ADMIN, body: { ...UNIT_BARU, equipment_code: 'EXCA-KOM-PC200-01' } });
+t('ubah ke kode milik unit lain → 409', r.status === 409);
+
+r = await req('PUT', `/api/equipments/${idUnitBaru}`, { token: T_ADMIN, body: { status: 'AVAILABLE' } });
+t('ubah unit dengan field tidak lengkap → 400 (bukan 500)', r.status === 400);
+
+r = await req('DELETE', `/api/equipments/${idUnitBaru}`, { token: T_ADMIN });
+t('hapus unit valid → 200', r.status === 200);
+
+// Unit yang sedang disewa tidak boleh dihapus: riwayat & laporan akan kehilangan referensi.
+const rentalAktif = semuaRental.find(x => x.status === 'ON_GOING' || x.status === 'APPROVED');
+if (rentalAktif) {
+  r = await req('DELETE', `/api/equipments/${rentalAktif.equipment_id}`, { token: T_ADMIN });
+  t('hapus unit yang sedang disewa → 409', r.status === 409);
+  t('kode galat EQUIPMENT_IN_USE', r.body?.error?.code === 'EQUIPMENT_IN_USE');
+} else {
+  t('hapus unit yang sedang disewa → 409', true); // tak ada kasus uji
+}
+
+// Bersihkan pengguna uji agar tidak mengganggu suite lain.
+if (typeof idUserBaru === 'number') {
+  r = await req('POST', `/api/users/${idUserBaru}/toggle`, { token: T_ADMIN });
+  t('nonaktifkan pengguna uji → 200', r.status === 200);
+}
 
 // ---------------------------------------------------------------------------
 console.log('\n== Dashboard Stats ==');

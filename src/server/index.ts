@@ -8,7 +8,7 @@ import {
   SESSION_HEADER,
   SESSION_TTL_SECONDS,
 } from '../lib/auth';
-import type { RoleName, ReportId } from '../types';
+import type { RoleName, ReportId, User } from '../types';
 import type { Equipment, Rental, Maintenance } from '../types';
 import {
   buildEquipmentAvailability,
@@ -18,6 +18,17 @@ import {
   summarizeAvailability,
 } from '../lib/availability';
 import type { BlockedReason, EquipmentAvailability } from '../lib/availability';
+import {
+  validateEquipmentInput,
+  validateUserInput,
+  validateEquipmentCode,
+  validateEquipmentStatus,
+  validateHourMeter,
+  validateRentalRate,
+  validateMaintenanceType,
+} from '../lib/validators';
+import type { ValidatedEquipmentInput, ValidatedUserInput } from '../lib/validators';
+import { getEquipmentImage } from '../lib/stitchAssets';
 import {
   buildReport,
   isReportId,
@@ -40,6 +51,23 @@ type Variables = {
   role: RoleName;
   userId: number;
 };
+
+/**
+ * Bentuk pengguna yang aman dikirim ke klien.
+ * Tidak memiliki `password_hash` — mencegah kebocoran kredensial.
+ */
+interface PublicUser {
+  id: number;
+  username: string;
+  email: string;
+  full_name: string;
+  phone: string;
+  address: string;
+  company_name: string | null;
+  role_id: number;
+  role_name?: User['role_name'];
+  status: User['status'];
+}
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -277,6 +305,25 @@ function parseId(raw: string | undefined): number | null {
 const BAD_ID = { success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid.' } } as const;
 const BAD_JSON = { success: false, error: { code: 'INVALID_JSON', message: 'Format request tidak valid.' } } as const;
 
+/**
+ * Membentuk respons 400 untuk kegagalan validasi form.
+ * `errors` berisi pesan per-field sehingga klien bisa menandai input yang salah.
+ */
+function badValidation(
+  errors: Record<string, string | undefined>
+): { success: false; error: { code: string; message: string; errors: Record<string, string | undefined> } } {
+  const pertama = Object.values(errors).find(m => typeof m === 'string' && m.length > 0) ?? 'Data tidak valid.';
+  return {
+    success: false,
+    error: { code: 'VALIDATION_ERROR', message: pertama, errors },
+  };
+}
+
+/** Mengubah `FieldErrors` (nilai boleh undefined) menjadi pesan per-field. */
+function toErrorBag<K extends string>(errors: Partial<Record<K, string>>): Record<string, string | undefined> {
+  return { ...errors };
+}
+
 // Equipments API
 app.get('/api/equipments', async (c) => {
   const items = await db.getEquipments();
@@ -284,21 +331,79 @@ app.get('/api/equipments', async (c) => {
 });
 
 app.post('/api/equipments', async (c) => {
-  const body = await readJsonBody<Omit<Equipment, 'id'>>(c);
+  const body = await readJsonBody<unknown>(c);
   if (body === null) return c.json(BAD_JSON, 400);
 
-  const newItem = await db.addEquipment(body);
+  // Validasi terpusat: panjang, format, rentang angka — sama dengan yang
+  // dijalankan form Admin agar pesan galat konsisten.
+  const hasil = validateEquipmentInput(body);
+  if (!hasil.ok) return c.json(badValidation(toErrorBag(hasil.errors)), 400);
+
+  const input: ValidatedEquipmentInput = hasil.value;
+
+  // Kode unit harus unik — dipakai sebagai identitas di dokumen & laporan.
+  const sudahAda = (await db.getEquipments()).some(
+    e => e.equipment_code.toLowerCase() === input.equipment_code.toLowerCase()
+  );
+  if (sudahAda) {
+    return c.json(
+      badValidation({ equipment_code: `Kode unit ${input.equipment_code} sudah terdaftar.` }),
+      409
+    );
+  }
+
+  const newItem = await db.addEquipment({
+    ...input,
+    thumbnail_url: input.thumbnail_url || getEquipmentImage(input.equipment_code, input.type),
+  });
   return c.json({ success: true, item: newItem }, 201);
 });
 
 app.put('/api/equipments/:id', async (c) => {
+  // Hanya ADMIN yang boleh mengubah master unit.
+  // RBAC_MATRIX membatasi prefix `/api/equipments` secara global, tetapi
+  // pengecekan eksplisit di sini menjaga aturan tetap berlaku seandainya
+  // matriks kelak diperluas (misal STAFF diizinkan GET saja).
+  if (c.get('role') !== 'ADMIN') {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Hanya Administrator yang dapat mengubah data unit.' } },
+      403
+    );
+  }
+
   const id = parseId(c.req.param('id'));
   if (id === null) return c.json(BAD_ID, 400);
 
-  const body = await readJsonBody<Partial<Equipment>>(c);
+  // Keberadaan unit diperiksa SEBELUM validasi isi: menulis ke unit yang
+  // tidak ada harus menjawab 404, bukan 400 karena field ikut tidak lengkap.
+  const target = (await db.getEquipments()).find(e => e.id === id);
+  if (!target) {
+    return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
+  }
+
+  const body = await readJsonBody<unknown>(c);
   if (body === null) return c.json(BAD_JSON, 400);
 
-  const updated = await db.updateEquipment(id, body);
+  const hasil = validateEquipmentInput(body);
+  if (!hasil.ok) return c.json(badValidation(toErrorBag(hasil.errors)), 400);
+
+  const input: ValidatedEquipmentInput = hasil.value;
+
+  // Kode unit unik, kecuali bila kode tersebut memang milik unit yang diedit.
+  const bentrok = (await db.getEquipments()).some(
+    e => e.id !== id && e.equipment_code.toLowerCase() === input.equipment_code.toLowerCase()
+  );
+  if (bentrok) {
+    return c.json(
+      badValidation({ equipment_code: `Kode unit ${input.equipment_code} sudah dipakai unit lain.` }),
+      409
+    );
+  }
+
+  const updated = await db.updateEquipment(id, {
+    ...input,
+    thumbnail_url: input.thumbnail_url || getEquipmentImage(input.equipment_code, input.type),
+  });
   if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
 
   return c.json({ success: true, item: updated });
@@ -307,6 +412,27 @@ app.put('/api/equipments/:id', async (c) => {
 app.delete('/api/equipments/:id', async (c) => {
   const id = parseId(c.req.param('id'));
   if (id === null) return c.json(BAD_ID, 400);
+
+  // Unit yang masih tercatat dalam sewa berjalan tidak boleh dihapus:
+  // riwayat rental & laporan akan kehilangan referensinya.
+  const unit = (await db.getEquipments()).find(e => e.id === id);
+  if (!unit) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
+
+  const masihDisewa = (await db.getRentals()).some(
+    r => r.equipment_id === id && (r.status === 'APPROVED' || r.status === 'ON_GOING')
+  );
+  if (masihDisewa) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'EQUIPMENT_IN_USE',
+          message: `Unit ${unit.equipment_code} sedang berada dalam sewa aktif. Selesaikan transaksinya terlebih dahulu.`,
+        },
+      },
+      409
+    );
+  }
 
   const ok = await db.deleteEquipment(id);
   if (!ok) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
@@ -706,6 +832,14 @@ app.post('/api/maintenance', async (c) => {
     );
   }
 
+  // Jenis pemeliharaan harus salah satu nilai ENUM yang diakui skema.
+  // Form lama pernah menawarkan `INSPECTION` — bila tersimpan, barisnya
+  // hilang dari laporan perawatan. Ditolak di sini dengan pesan jelas.
+  const jenis = validateMaintenanceType(
+    (body as { maintenance_type?: unknown }).maintenance_type ?? 'PREVENTIVE'
+  );
+  if (!jenis.ok) return c.json(badValidation({ maintenance_type: jenis.message }), 400);
+
   const newItem = await db.scheduleMaintenance(body);
   return c.json({ success: true, item: newItem }, 201);
 });
@@ -763,9 +897,26 @@ app.get('/api/reports/analytics', async (c) => {
 
 // Users API
 // Catatan: field sensitif (password hash) TIDAK pernah dikirim ke klien.
-app.get('/api/users', async (c) => {
-  const items = await db.getUsers();
-  const aman = items.map(u => ({
+
+/**
+ * Whitelist field pengguna yang boleh dikirim ke klien.
+ *
+ * Dibuat terpusat (bukan inline) agar tidak ada satu pun respons yang lupa
+ * membuang `password_hash` — penyebab umum kebocoran kredensial.
+ */
+function ringkasUser(u: {
+  id: number;
+  username: string;
+  email: string;
+  full_name: string;
+  phone: string;
+  address: string;
+  company_name: string | null;
+  role_id: number;
+  role_name?: User['role_name'];
+  status: User['status'];
+}): PublicUser {
+  return {
     id: u.id,
     username: u.username,
     email: u.email,
@@ -776,8 +927,59 @@ app.get('/api/users', async (c) => {
     role_id: u.role_id,
     role_name: u.role_name,
     status: u.status,
-  }));
-  return c.json(aman);
+  };
+}
+
+app.get('/api/users', async (c) => {
+  const items = await db.getUsers();
+  return c.json(items.map(ringkasUser));
+});
+
+/**
+ * Pendaftaran pengguna baru oleh Administrator.
+ *
+ * Password TIDAK diterima lewat endpoint ini: Admin mendaftarkan identitas,
+ * lalu pemilik akun menetapkan password sendiri melalui alur registrasi yang
+ * memanggil `hashPassword()`. Karena itu `password_hash` disetel `null` dan
+ * akun belum bisa login sampai password ditetapkan.
+ */
+app.post('/api/users', async (c) => {
+  const body = await readJsonBody<unknown>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  const hasil = validateUserInput(body);
+  if (!hasil.ok) return c.json(badValidation(toErrorBag(hasil.errors)), 400);
+
+  const input: ValidatedUserInput = hasil.value;
+  const users = await db.getUsers();
+
+  // Username & email harus unik — keduanya dipakai sebagai identitas login.
+  const usernameBentrok = users.some(
+    u => u.username.toLowerCase() === input.username.toLowerCase()
+  );
+  if (usernameBentrok) {
+    return c.json(badValidation({ username: `Username ${input.username} sudah digunakan.` }), 409);
+  }
+
+  const emailBentrok = users.some(u => u.email.toLowerCase() === input.email.toLowerCase());
+  if (emailBentrok) {
+    return c.json(badValidation({ email: 'Alamat email sudah terdaftar.' }), 409);
+  }
+
+  const newUser = await db.addUser({
+    role_id: input.role_id,
+    role_name: input.role_id === 1 ? 'ADMIN' : input.role_id === 2 ? 'STAFF' : 'CUSTOMER',
+    username: input.username,
+    email: input.email,
+    full_name: input.full_name,
+    phone: input.phone,
+    address: input.address,
+    company_name: input.company_name,
+    status: 'ACTIVE',
+    password_hash: null,
+  });
+
+  return c.json({ success: true, item: ringkasUser(newUser) }, 201);
 });
 
 app.post('/api/users/:id/toggle', async (c) => {

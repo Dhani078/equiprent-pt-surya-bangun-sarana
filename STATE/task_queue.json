@@ -70,14 +70,23 @@
       "title": "CRUD master users & equipments (Admin)",
       "category": "CORE",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 90,
       "depends_on": [
         "T-0003"
       ],
       "files": [
+        "src/lib/validators.ts",
+        "src/server/index.ts",
+        "src/pages/admin/EquipmentManagement.tsx",
         "src/pages/admin/UserManagement.tsx",
-        "src/pages/admin/EquipmentManagement.tsx"
+        "src/pages/admin/MaintenanceManagement.tsx",
+        "src/App.tsx",
+        "src/lib/db.ts",
+        "src/types/index.ts",
+        "tests/validators.test.mjs",
+        "tests/api.test.mjs",
+        "tests/run-tests.mjs"
       ],
       "acceptance_criteria": [
         "Tambah/ubah/hapus user & unit berfungsi",
@@ -86,7 +95,9 @@
         "Pagination/search"
       ],
       "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
+      "created_at": "2026-09-04T19:00:00Z",
+      "completed_at": "2026-09-09T16:30:00Z",
+      "completed_cycle": 19
     },
     {
       "id": "T-0005",

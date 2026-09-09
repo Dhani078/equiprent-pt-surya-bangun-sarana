@@ -1,27 +1,36 @@
 import React, { useState } from 'react';
 import { User, RoleName } from '../../types';
-import { Plus, Search, Shield, ToggleLeft, ToggleRight, UserCheck, Mail, Phone, Building2 } from 'lucide-react';
+import { Plus, Search, Shield, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getUserAvatar } from '../../lib/stitchAssets';
+import { validateUserInput } from '../../lib/validators';
+import type { ValidatedUserInput } from '../../lib/validators';
 
 interface UserManagementProps {
   users: User[];
-  onAddUser: (user: Omit<User, 'id'>) => Promise<any>;
-  onToggleStatus: (id: number) => Promise<any>;
+  onAddUser: (user: Omit<User, 'id'>) => Promise<void>;
+  onToggleStatus: (id: number) => Promise<void>;
+  /** Menampilkan pesan sukses/gagal di tingkat aplikasi. */
+  onNotify?: (message: string, tone: 'success' | 'error') => void;
 }
 
 export const UserManagement: React.FC<UserManagementProps> = ({
   users,
   onAddUser,
-  onToggleStatus
+  onToggleStatus,
+  onNotify
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  /** Galat per-field dari validator terpusat. */
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof ValidatedUserInput, string>>>({});
+  /** Galat tingkat form, misal username sudah dipakai (dari server). */
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     role_id: 3,
-    role_name: 'CUSTOMER' as RoleName,
     username: '',
     email: '',
     full_name: '',
@@ -31,14 +40,56 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     status: 'ACTIVE' as User['status']
   });
 
+  /** Menutup modal sekaligus membersihkan penanda galat. */
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setFormErrors({});
+    setFormError(null);
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const roleName: RoleName = formData.role_id === 1 ? 'ADMIN' : formData.role_id === 2 ? 'STAFF' : 'CUSTOMER';
-    await onAddUser({
-      ...formData,
-      role_name: roleName
-    });
-    setIsModalOpen(false);
+    if (isSubmitting) return;
+
+    // Validasi memakai modul yang sama dengan server → pesan galat identik.
+    const hasil = validateUserInput(formData);
+    if (!hasil.ok) {
+      setFormErrors(hasil.errors);
+      setFormError(null);
+      return;
+    }
+
+    setFormErrors({});
+    setFormError(null);
+    setIsSubmitting(true);
+
+    const input: ValidatedUserInput = hasil.value;
+    const roleName: RoleName = input.role_id === 1 ? 'ADMIN' : input.role_id === 2 ? 'STAFF' : 'CUSTOMER';
+
+    try {
+      await onAddUser({ ...input, role_name: roleName, status: 'ACTIVE' });
+      onNotify?.(`Pengguna ${input.username} berhasil didaftarkan.`, 'success');
+      setIsModalOpen(false);
+      setFormData({
+        role_id: 3,
+        username: '',
+        email: '',
+        full_name: '',
+        phone: '',
+        address: 'Banjarmasin, Kalimantan Selatan',
+        company_name: '',
+        status: 'ACTIVE'
+      });
+      setFormErrors({});
+      setFormError(null);
+    } catch (err) {
+      const pesan =
+        err instanceof Error && err.message ? err.message : 'Gagal mendaftarkan pengguna.';
+      setFormError(pesan);
+      onNotify?.(pesan, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filteredUsers = users.filter((u) => {
@@ -146,10 +197,17 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <button
-                      onClick={() => onToggleStatus(u.id)}
+                      onClick={() => {
+                        onToggleStatus(u.id).catch((err: unknown) => {
+                          const pesan =
+                            err instanceof Error && err.message ? err.message : 'Gagal mengubah status akun.';
+                          onNotify?.(pesan, 'error');
+                        });
+                      }}
                       className="btn-secondary"
                       style={{ padding: '5px 10px', fontSize: '12px' }}
                       title={u.status === 'ACTIVE' ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
+                      aria-label={u.status === 'ACTIVE' ? `Nonaktifkan akun ${u.full_name}` : `Aktifkan akun ${u.full_name}`}
                     >
                       {u.status === 'ACTIVE' ? (
                         <span style={{ color: '#EF4444', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -172,10 +230,49 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       {/* Modal Add User */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         title="Pendaftaran Pengguna Baru"
       >
-        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <form onSubmit={handleFormSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Ringkasan galat dari server (username/email sudah dipakai). */}
+          {formError && (
+            <div
+              role="alert"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#991B1B',
+                fontSize: '12.5px',
+                lineHeight: 1.5,
+              }}
+            >
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+              <span>{formError}</span>
+            </div>
+          )}
+
+          <p
+            style={{
+              margin: 0,
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: '#EFF6FF',
+              border: '1px solid #BFDBFE',
+              color: '#1E40AF',
+              fontSize: '12px',
+              lineHeight: 1.5,
+            }}
+          >
+            Password tidak ditetapkan di sini. Admin mendaftarkan identitas akun,
+            lalu pemilik akun menetapkan password sendiri melalui alur registrasi
+            (disimpan sebagai hash PBKDF2, tidak pernah dalam bentuk teks biasa).
+          </p>
+
           <div>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
               Nama Lengkap
@@ -186,8 +283,19 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               placeholder="Contoh: Budi Santoso"
               className="input-premium"
               value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, full_name: e.target.value });
+                setFormErrors({ ...formErrors, full_name: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.full_name)}
+              aria-label="Nama lengkap pengguna"
+              style={formErrors.full_name ? { borderColor: '#F87171' } : undefined}
             />
+            {formErrors.full_name && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                {formErrors.full_name}
+              </p>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -201,8 +309,19 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 placeholder="budisantoso"
                 className="input-premium"
                 value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, username: e.target.value });
+                  setFormErrors({ ...formErrors, username: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.username)}
+                aria-label="Username login"
+                style={formErrors.username ? { borderColor: '#F87171' } : undefined}
               />
+              {formErrors.username && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.username}
+                </p>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
@@ -212,6 +331,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 className="input-premium"
                 value={formData.role_id}
                 onChange={(e) => setFormData({ ...formData, role_id: Number(e.target.value) })}
+                aria-label="Hak akses pengguna"
               >
                 <option value={1}>ADMIN (Administrator Superuser)</option>
                 <option value={2}>STAFF (Staf Operasional Lapangan)</option>
@@ -231,8 +351,19 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 placeholder="budi@antang.co.id"
                 className="input-premium"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  setFormErrors({ ...formErrors, email: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.email)}
+                aria-label="Alamat email resmi"
+                style={formErrors.email ? { borderColor: '#F87171' } : undefined}
               />
+              {formErrors.email && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.email}
+                </p>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
@@ -243,9 +374,45 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 placeholder="08115009876"
                 className="input-premium"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, phone: e.target.value });
+                  setFormErrors({ ...formErrors, phone: undefined });
+                }}
+                aria-invalid={Boolean(formErrors.phone)}
+                aria-label="Nomor telepon"
+                style={formErrors.phone ? { borderColor: '#F87171' } : undefined}
               />
+              {formErrors.phone && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                  {formErrors.phone}
+                </p>
+              )}
             </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Alamat Domisili / Kantor
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="Jl. Ahmad Yani KM 5, Banjarmasin"
+              className="input-premium"
+              value={formData.address}
+              onChange={(e) => {
+                setFormData({ ...formData, address: e.target.value });
+                setFormErrors({ ...formErrors, address: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.address)}
+              aria-label="Alamat"
+              style={formErrors.address ? { borderColor: '#F87171' } : undefined}
+            />
+            {formErrors.address && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                {formErrors.address}
+              </p>
+            )}
           </div>
 
           <div>
@@ -258,13 +425,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               className="input-premium"
               value={formData.company_name}
               onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+              aria-label="Nama instansi"
             />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
+              onClick={handleCloseModal}
               className="btn-secondary"
             >
               Batal
@@ -272,8 +440,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             <button
               type="submit"
               className="btn-primary"
+              disabled={isSubmitting}
+              style={isSubmitting ? { opacity: 0.6, cursor: 'wait' } : undefined}
             >
-              Simpan & Daftarkan Pengguna
+              {isSubmitting ? 'Mendaftarkan...' : 'Simpan & Daftarkan Pengguna'}
             </button>
           </div>
         </form>

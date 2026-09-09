@@ -1,19 +1,19 @@
 {
-  "cycle": 18,
-  "last_run": "2026-09-09T14:30:00Z",
-  "current_task_id": "T-0026",
+  "cycle": 19,
+  "last_run": "2026-09-09T16:30:00Z",
+  "current_task_id": "T-0005",
   "current_phase": "PENDING",
-  "session_summary": "Cycle 18: T-0030 — validasi ketersediaan unit (cegah double booking) rampung. Mesin murni src/lib/availability.ts + endpoint /api/rentals/availability & /api/rentals/bookable + validasi server pada POST /api/rentals dan PUT /api/rentals/:id/status + filter unit pada form rental (Admin & Portal Customer). Perbaikan stabilitas: uji API kini menyegarkan daftar unit setelah jadwal perawatan dibuat.",
+  "session_summary": "Cycle 19: T-0004 — CRUD master users & equipments rampung. Modul validasi terpusat src/lib/validators.ts dipakai dua arah (server + form Admin) agar pesan galat identik. POST /api/users (tanpa password, hash null), pemeriksaan keunikan username/email, whitelist field publik tanpa password_hash, POST/PUT/DELETE /api/equipments dengan validasi, cek kode unit unik, larangan hapus unit yang sedang disewa (409 EQUIPMENT_IN_USE), serta penolakan jenis pemeliharaan INSPECTION yang tidak ada di ENUM skema. Perbaikan: PUT /api/equipments kini memeriksa keberadaan unit SEBELUM validasi (404, bukan 400) dan hanya boleh ADMIN.",
   "quality_gate": {
     "type_check": "PASS",
     "build": "PASS",
     "test": "PASS"
   },
-  "test_suites": 12,
-  "commits": 13,
+  "test_suites": 13,
+  "commits": 14,
   "deploy": {
     "status": "READY",
     "note": "deploy:cloud sudah benar; deploy sungguhan butuh login Cloudflare"
   },
-  "next_focus": "T-0026: notifikasi stok suku cadang menipis pada modul maintenance (P2)"
+  "next_focus": "T-0005: dashboard admin — semua angka real dari DB (bukan mock)"
 }
