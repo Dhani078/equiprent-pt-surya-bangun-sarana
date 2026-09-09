@@ -8,7 +8,9 @@
       "status": "PENDING",
       "estimate_minutes": 40,
       "depends_on": [],
-      "files": ["src/lib/db.ts"],
+      "files": [
+        "src/lib/db.ts"
+      ],
       "acceptance_criteria": [
         "Helper query tunggal dipakai semua modul",
         "Semua query parameterized (tanpa concat string)",
@@ -24,8 +26,13 @@
       "priority": "P0",
       "status": "DONE",
       "estimate_minutes": 60,
-      "depends_on": ["T-0001"],
-      "files": ["scripts/migrate_to_tidb.js", "tidb_schema_and_data.sql"],
+      "depends_on": [
+        "T-0001"
+      ],
+      "files": [
+        "scripts/migrate_to_tidb.js",
+        "tidb_schema_and_data.sql"
+      ],
       "acceptance_criteria": [
         "9 tabel ter-create",
         "Seed: 50 users, 50 equipments, 50 rentals, 50 contracts, 50 payments, 25 maintenance, 55 gps, 20 reports",
@@ -41,8 +48,14 @@
       "priority": "P0",
       "status": "DONE",
       "estimate_minutes": 60,
-      "depends_on": ["T-0002"],
-      "files": ["src/pages/Login.tsx", "src/App.tsx", "src/server/index.ts"],
+      "depends_on": [
+        "T-0002"
+      ],
+      "files": [
+        "src/pages/Login.tsx",
+        "src/App.tsx",
+        "src/server/index.ts"
+      ],
       "acceptance_criteria": [
         "Login 3 role berbeda (admin/staff/user)",
         "Route admin/staff/customer terproteksi",
@@ -59,8 +72,13 @@
       "priority": "P1",
       "status": "PENDING",
       "estimate_minutes": 90,
-      "depends_on": ["T-0003"],
-      "files": ["src/pages/admin/UserManagement.tsx", "src/pages/admin/EquipmentManagement.tsx"],
+      "depends_on": [
+        "T-0003"
+      ],
+      "files": [
+        "src/pages/admin/UserManagement.tsx",
+        "src/pages/admin/EquipmentManagement.tsx"
+      ],
       "acceptance_criteria": [
         "Tambah/ubah/hapus user & unit berfungsi",
         "Validasi form client + server",
@@ -77,8 +95,12 @@
       "priority": "P1",
       "status": "PENDING",
       "estimate_minutes": 45,
-      "depends_on": ["T-0002"],
-      "files": ["src/pages/admin/AdminDashboard.tsx"],
+      "depends_on": [
+        "T-0002"
+      ],
+      "files": [
+        "src/pages/admin/AdminDashboard.tsx"
+      ],
       "acceptance_criteria": [
         "Stat card dari query agregat DB",
         "Ada loading skeleton & error state",
@@ -94,8 +116,12 @@
       "priority": "P1",
       "status": "PENDING",
       "estimate_minutes": 90,
-      "depends_on": ["T-0004"],
-      "files": ["src/pages/admin/RentalManagement.tsx"],
+      "depends_on": [
+        "T-0004"
+      ],
+      "files": [
+        "src/pages/admin/RentalManagement.tsx"
+      ],
       "acceptance_criteria": [
         "Perubahan status rental konsisten",
         "Unit unavailable tidak bisa dipilih",
@@ -111,8 +137,13 @@
       "priority": "P1",
       "status": "PENDING",
       "estimate_minutes": 75,
-      "depends_on": ["T-0006"],
-      "files": ["src/pages/admin/RentalManagement.tsx", "src/server/index.ts"],
+      "depends_on": [
+        "T-0006"
+      ],
+      "files": [
+        "src/pages/admin/RentalManagement.tsx",
+        "src/server/index.ts"
+      ],
       "acceptance_criteria": [
         "Kode kontrak format SBS/CONTRACT/YYYY/MM/SEQ",
         "Tanda tangan canvas tersimpan",
@@ -128,8 +159,13 @@
       "priority": "P1",
       "status": "PENDING",
       "estimate_minutes": 75,
-      "depends_on": ["T-0006"],
-      "files": ["src/pages/staff/StaffDashboard.tsx", "src/server/index.ts"],
+      "depends_on": [
+        "T-0006"
+      ],
+      "files": [
+        "src/pages/staff/StaffDashboard.tsx",
+        "src/server/index.ts"
+      ],
       "acceptance_criteria": [
         "Upload bukti bayar berfungsi",
         "Status pending → verified/rejected",
@@ -145,8 +181,12 @@
       "priority": "P1",
       "status": "DONE",
       "estimate_minutes": 60,
-      "depends_on": ["T-0004"],
-      "files": ["src/pages/admin/MaintenanceManagement.tsx"],
+      "depends_on": [
+        "T-0004"
+      ],
+      "files": [
+        "src/pages/admin/MaintenanceManagement.tsx"
+      ],
       "acceptance_criteria": [
         "Unit yang HM-nya lewat 250 tampil di 'Jadwal Servis'",
         "Log sparepart & biaya tersimpan",
@@ -162,8 +202,13 @@
       "priority": "P1",
       "status": "PENDING",
       "estimate_minutes": 60,
-      "depends_on": ["T-0002"],
-      "files": ["src/pages/admin/GpsTrackingPage.tsx", "src/components/LeafletMap.tsx"],
+      "depends_on": [
+        "T-0002"
+      ],
+      "files": [
+        "src/pages/admin/GpsTrackingPage.tsx",
+        "src/components/LeafletMap.tsx"
+      ],
       "acceptance_criteria": [
         "Marker per unit tampil",
         "Popup berisi status mesin, speed, fuel, timestamp",
@@ -179,8 +224,14 @@
       "priority": "P1",
       "status": "PENDING",
       "estimate_minutes": 90,
-      "depends_on": ["T-0007", "T-0008", "T-0010"],
-      "files": ["src/pages/customer/CustomerPortal.tsx"],
+      "depends_on": [
+        "T-0007",
+        "T-0008",
+        "T-0010"
+      ],
+      "files": [
+        "src/pages/customer/CustomerPortal.tsx"
+      ],
       "acceptance_criteria": [
         "Katalog hanya tampilkan unit available",
         "Pengajuan rental masuk ke antrean staff",
@@ -196,8 +247,15 @@
       "priority": "P1",
       "status": "PENDING",
       "estimate_minutes": 120,
-      "depends_on": ["T-0006", "T-0008", "T-0009"],
-      "files": ["src/pages/admin/ReportsPage.tsx", "src/server/index.ts"],
+      "depends_on": [
+        "T-0006",
+        "T-0008",
+        "T-0009"
+      ],
+      "files": [
+        "src/pages/admin/ReportsPage.tsx",
+        "src/server/index.ts"
+      ],
       "acceptance_criteria": [
         "11 laporan sesuai KODINGAN_UNTUK_LAPORAN/6_*.php",
         "Filter tanggal, unit, pelanggan, status",
@@ -211,10 +269,15 @@
       "title": "Export PDF: BAST IN, BAST OUT, Surat Jalan",
       "category": "REPORTING",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 90,
-      "depends_on": ["T-0012"],
-      "files": ["src/pages/admin/ReportsPage.tsx", "src/server/index.ts"],
+      "depends_on": [
+        "T-0012"
+      ],
+      "files": [
+        "src/pages/admin/ReportsPage.tsx",
+        "src/server/index.ts"
+      ],
       "acceptance_criteria": [
         "Cetak BAST OUT (unit keluar)",
         "Cetak BAST IN (unit kembali)",
@@ -231,8 +294,12 @@
       "priority": "P2",
       "status": "DONE",
       "estimate_minutes": 45,
-      "depends_on": ["T-0003"],
-      "files": ["src/server/index.ts"],
+      "depends_on": [
+        "T-0003"
+      ],
+      "files": [
+        "src/server/index.ts"
+      ],
       "acceptance_criteria": [
         "Setiap mutasi tercatat (user, aksi, entitas, waktu)",
         "Halaman audit bisa difilter"
@@ -247,8 +314,14 @@
       "priority": "P2",
       "status": "DONE",
       "estimate_minutes": 60,
-      "depends_on": ["T-0011"],
-      "files": ["README.md", "API_DOCUMENTATION.md", "PANDUAN_SIDANG_SKRIPSI.md"],
+      "depends_on": [
+        "T-0011"
+      ],
+      "files": [
+        "README.md",
+        "API_DOCUMENTATION.md",
+        "PANDUAN_SIDANG_SKRIPSI.md"
+      ],
       "acceptance_criteria": [
         "Semua endpoint terdokumentasi",
         "Panduan demo sidang step-by-step",
@@ -262,10 +335,20 @@
       "title": "Ekspor PDF dokumen BAST IN / BAST OUT / Surat Jalan siap cetak A4",
       "category": "REPORTING",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 90,
-      "depends_on": ["T-0025"],
-      "files": ["src/pages/admin/ReportsPage.tsx", "src/lib/documents.ts"],
+      "depends_on": [
+        "T-0025"
+      ],
+      "files": [
+        "src/lib/documents.ts",
+        "src/lib/documentPrinter.ts",
+        "src/components/DocumentPreview.tsx",
+        "src/components/DocumentPrintPanel.tsx",
+        "src/pages/admin/ReportsPage.tsx",
+        "src/index.css",
+        "tests/documents.test.mjs"
+      ],
       "acceptance_criteria": [
         "Tombol cetak tersedia pada tiap dokumen BAST IN / BAST OUT / Surat Jalan",
         "Layout kop surat PT SBS ukuran A4 siap cetak (@page + print CSS)",
@@ -281,7 +364,9 @@
       "priority": "P1",
       "status": "DONE",
       "estimate_minutes": 75,
-      "depends_on": ["T-0012"],
+      "depends_on": [
+        "T-0012"
+      ],
       "files": [
         "src/pages/admin/ReportsPage.tsx",
         "src/lib/reports.ts",
@@ -297,6 +382,115 @@
       ],
       "created_by": "agent",
       "created_at": "2026-09-09T10:00:00Z"
+    },
+    {
+      "id": "T-0026",
+      "title": "Notifikasi stok suku cadang menipis pada modul maintenance",
+      "category": "POLISH",
+      "priority": "P2",
+      "status": "PENDING",
+      "estimate_minutes": 60,
+      "depends_on": [
+        "T-0009"
+      ],
+      "files": [
+        "src/pages/admin/MaintenanceManagement.tsx",
+        "src/lib/businessRules.ts"
+      ],
+      "acceptance_criteria": [
+        "Daftar suku cadang dengan stok di bawah ambang tampil sebagai peringatan",
+        "Ambang stok dapat diubah Admin (tersimpan, tidak di-hardcode)",
+        "Ada badge warna mengikuti design system & empty state"
+      ],
+      "created_by": "agent",
+      "created_at": "2026-09-09T12:00:00Z"
+    },
+    {
+      "id": "T-0027",
+      "title": "Ringkasan utilitas armada (utilization rate) pada dashboard admin",
+      "category": "CORE",
+      "priority": "P2",
+      "status": "PENDING",
+      "estimate_minutes": 60,
+      "depends_on": [
+        "T-0005"
+      ],
+      "files": [
+        "src/pages/admin/AdminDashboard.tsx"
+      ],
+      "acceptance_criteria": [
+        "Persentase unit tersewa vs total unit dihitung dari data nyata",
+        "Distribusi status unit tampil sebagai badge/bar",
+        "Ada loading & empty state; tanpa import mockData"
+      ],
+      "created_by": "agent",
+      "created_at": "2026-09-09T12:00:00Z"
+    },
+    {
+      "id": "T-0028",
+      "title": "Pencarian & penyaringan global pada tabel laporan operasional",
+      "category": "REPORTING",
+      "priority": "P2",
+      "status": "PENDING",
+      "estimate_minutes": 45,
+      "depends_on": [
+        "T-0025"
+      ],
+      "files": [
+        "src/components/ReportAnalyticsPanel.tsx"
+      ],
+      "acceptance_criteria": [
+        "Kotak pencarian menyaring baris tanpa mengubah sumber data",
+        "Jumlah baris hasil penyaringan ditampilkan",
+        "Ekspor CSV mengikuti hasil penyaringan"
+      ],
+      "created_by": "agent",
+      "created_at": "2026-09-09T12:00:00Z"
+    },
+    {
+      "id": "T-0029",
+      "title": "Pratinjau kontrak digital siap cetak A4 (mengikuti pola BAST)",
+      "category": "REPORTING",
+      "priority": "P2",
+      "status": "PENDING",
+      "estimate_minutes": 60,
+      "depends_on": [
+        "T-0007",
+        "T-0024"
+      ],
+      "files": [
+        "src/pages/admin/RentalManagement.tsx",
+        "src/lib/documents.ts"
+      ],
+      "acceptance_criteria": [
+        "Kontrak dapat dicetak pada kertas A4 dengan kop surat",
+        "Tanda tangan digital tersemat pada hasil cetak",
+        "Memakai helper render/print yang sudah ada (tanpa duplikasi)"
+      ],
+      "created_by": "agent",
+      "created_at": "2026-09-09T12:00:00Z"
+    },
+    {
+      "id": "T-0030",
+      "title": "Validasi unavailability unit pada form rental (cegah double booking)",
+      "category": "CORE",
+      "priority": "P1",
+      "status": "PENDING",
+      "estimate_minutes": 60,
+      "depends_on": [
+        "T-0006"
+      ],
+      "files": [
+        "src/pages/admin/RentalManagement.tsx",
+        "src/server/index.ts"
+      ],
+      "acceptance_criteria": [
+        "Unit yang bentrok tidak bisa dipilih di form rental",
+        "Validasi ulang di sisi server (bukan hanya client)",
+        "Pesan galat berbahasa Indonesia & jelas"
+      ],
+      "created_by": "agent",
+      "created_at": "2026-09-09T12:00:00Z"
     }
   ]
 }

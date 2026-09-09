@@ -305,3 +305,51 @@ Menyusun salah satu dari **11 laporan operasional** secara agregat di sisi serve
 ```json
 { "success": false, "error": { "code": "VALIDATION_ERROR", "message": "Jenis laporan tidak dikenal." } }
 ```
+
+
+---
+
+## Modul Dokumen Operasional (Cetak A4)
+
+Selain 11 laporan operasional, sistem dapat menerbitkan tiga dokumen resmi
+siap cetak pada kertas **A4 portrait**:
+
+| Jenis | Kode Nomor | Keterangan |
+|---|---|---|
+| BAST OUT | `REP-BASTOUT-<YYYYMMDD>-<SEQ>` | Berita acara penyerahan unit keluar ke pelanggan |
+| BAST IN | `REP-BASTIN-<YYYYMMDD>-<SEQ>` | Berita acara pengembalian unit ke perusahaan |
+| Surat Jalan | `REP-SJ-<YYYYMMDD>-<SEQ>` | Dokumen pengantar pengiriman unit ke site |
+
+Dokumen **tidak** dihasilkan oleh endpoint API. Penyusunan dan perenderan
+dilakukan seluruhnya di sisi klien agar:
+
+1. tidak ada lalu lintas data yang tidak perlu,
+2. hasil cetak tetap tersedia walau koneksi ke edge worker terputus, dan
+3. berkas HTML yang dikirim ke dialog cetak berdiri sendiri (CSS inline).
+
+**Modul terkait:**
+
+| Berkas | Peran |
+|---|---|
+| `src/lib/documents.ts` | Mesin murni: menyusun `OfficialDocument` & merender HTML A4. Tidak menyentuh DOM/DB. |
+| `src/lib/documentPrinter.ts` | Satu-satunya tempat yang menyentuh DOM: membuka jendela cetak. |
+| `src/components/DocumentPreview.tsx` | Pratinjau di layar — isi identik dengan hasil cetak. |
+| `src/components/DocumentPrintPanel.tsx` | Panel penerbitan dokumen pada halaman Laporan. |
+
+**Aturan bisnis yang diterapkan:**
+
+- Denda keterlambatan **hanya** dihitung pada BAST IN, dari selisih tanggal
+  pengembalian terhadap `end_date` dikali `LATE_PENALTY_PER_DAY`.
+  BAST OUT dan Surat Jalan selalu bernilai 0.
+- Nomor dokumen mengikuti penomoran arsip pada tabel `reports`.
+- Semua teks yang disisipkan ke HTML di-escape (`escapeHtml`), sehingga nama
+  pelanggan yang mengandung karakter HTML tidak dapat merusak dokumen.
+- Data tidak lengkap (unit hilang, tanggal rusak) diganti `-`, tidak pernah
+  menghasilkan `NaN` atau `undefined`.
+- Hanya transaksi berstatus `APPROVED`, `ON_GOING`, atau `COMPLETED` yang
+  dapat diterbitkan dokumennya — `PENDING` dan `REJECTED` disaring di tingkat
+  data, bukan sekadar disembunyikan di UI.
+
+**Cara mencetak:** pilih transaksi pada panel *Dokumen Operasional Siap Cetak*,
+pilih jenis dokumen, lalu tekan **Cetak / Simpan PDF**. Pada dialog cetak
+peramban, pilih tujuan *Simpan sebagai PDF* untuk memperoleh berkas PDF A4.

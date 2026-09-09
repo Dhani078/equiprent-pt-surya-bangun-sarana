@@ -290,6 +290,73 @@ table.data-table tbody tr:hover {
   animation: fadeInUp 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
+/* ==========================================================================
+   Cetak — dokumen operasional (BAST IN / BAST OUT / Surat Jalan)
+   Ukuran A4 portrait; navigasi & kontrol tidak ikut tercetak.
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm 14mm;
+  }
+
+  body {
+    background-color: #FFFFFF;
+  }
+
+  /* Bilah sisi, navbar, tombol, dan filter tidak relevan di atas kertas. */
+  nav,
+  aside,
+  .btn-primary,
+  .btn-secondary,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  /* Pratinjau dokumen di dalam modal harus tetap tercetak utuh. */
+  .modal-overlay {
+    position: static;
+    display: block !important;
+    background: none;
+    backdrop-filter: none;
+    padding: 0;
+  }
+  .modal-box {
+    max-width: 100%;
+    max-height: none;
+    overflow: visible;
+    box-shadow: none;
+    border: none;
+    animation: none;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .card-premium {
+    border: none;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  table.data-table {
+    font-size: 10.5pt;
+  }
+  table.data-table th,
+  table.data-table td {
+    padding: 6px 8px;
+  }
+
+  /* Hindari baris tabel terpotong di tengah kertas. */
+  tr,
+  td,
+  th {
+    break-inside: avoid;
+  }
+}
+
 /* Leaflet Map Styling */
 .map-container {
   width: 100%;

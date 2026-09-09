@@ -275,3 +275,47 @@ perlu dipelihara setiap hari.
 - `tests/api.test.mjs`: 13 pemeriksaan baru untuk endpoint analytics
   (default, id sah, id palsu → 400, rentang rusak → 200, customer → 403).
 **Verifikasi:** typecheck PASS · build PASS (508 KB) · `npm test` 10/10 suite PASS
+
+---
+
+## [CYCLE 16] 2026-09-09T11:58:00Z — T-0024 — P1 — DONE
+**Judul:** Ekspor dokumen BAST IN / BAST OUT / Surat Jalan siap cetak A4 (F3.2)
+**Fitur baru:**
+- `src/lib/documents.ts` (BARU) — mesin dokumen MURNI (tanpa DOM/DB):
+  DOCUMENT_KINDS, isDocumentKind, documentKindFromReportType, getDocumentTitle,
+  getDocumentKindLabel, buildDocumentCode, buildDocumentFilename, buildDocument,
+  escapeHtml, renderDocumentHtml.
+  Nomor dokumen: REP-<BASTOUT|BASTIN|SJ>-<YYYYMMDD>-<SEQ-3digit>.
+- `src/lib/documentPrinter.ts` (BARU) — satu-satunya tempat yang menyentuh DOM:
+  membuka jendela baru, menulis HTML, lalu print(). Mengembalikan discriminated
+  union {ok:true} | {ok:false,message}, tidak pernah melempar.
+- `src/components/DocumentPreview.tsx` (BARU) — pratinjau di layar yang isinya
+  identik dengan berkas cetak (kop surat, rincian, catatan, tanda tangan).
+- `src/components/DocumentPrintPanel.tsx` (BARU) — panel penerbitan: pilih
+  transaksi, pilih jenis dokumen, pratinjau, lalu cetak. Transaksi PENDING /
+  REJECTED disaring di tingkat data; empty state bila tidak ada yang layak.
+- `src/pages/admin/ReportsPage.tsx` — panel dokumen + tombol "Cetak A4" pada
+  setiap baris arsip; pratinjau arsip menyusun ulang dokumen dari transaksi
+  aslinya. FINANCIAL_SUMMARY jatuh ke window.print() (bukan dokumen BAST).
+- `src/index.css` — blok @media print dengan @page { size: A4 portrait;
+  margin: 15mm 14mm }; navbar/sidebar/tombol disembunyikan, modal pratinjau
+  tetap utuh, break-inside: avoid agar baris tabel tidak terpotong.
+- `src/App.tsx` — ReportsPage kini menerima prop equipments.
+**Perilaku yang dijaga:**
+- Denda hanya dihitung pada BAST IN, dari tanggal pengembalian vs end_date
+  (LATE_PENALTY_PER_DAY per hari) — BAST OUT & Surat Jalan selalu 0.
+- Semua teks yang disisipkan ke HTML di-escape, sehingga nama pelanggan
+  berbahaya tidak dapat menyisipkan tag.
+- Tanggal rusak / unit tidak ditemukan tidak pernah menghasilkan NaN atau
+  undefined — diganti "-" agar dokumen tetap bisa dicetak.
+- Berkas HTML berdiri sendiri (CSS inline) agar hasil cetak identik di semua
+  browser, tanpa bergantung stylesheet aplikasi.
+**Pengujian:**
+- `tests/documents.test.mjs` (BARU): 121 pemeriksaan — penomoran & nama berkas,
+  perbedaan rincian tiap jenis dokumen, denda 3 hari = Rp 1.500.000, kasus
+  kembali tepat waktu, ketahanan data kosong/rusak, escaping HTML, struktur
+  @page A4, serta render SSR pratinjau & panel (termasuk empty state dan
+  penolakan status PENDING).
+- `tests/run-tests.mjs` — menambahkan bundle .tmp_documents.mjs,
+  .tmp_preview.mjs, .tmp_printpanel.mjs dan suite baru.
+**Verifikasi:** typecheck PASS · build PASS (529 KB) · npm test 11/11 suite PASS
