@@ -184,3 +184,33 @@ awal bersih.
 karena rental #1 memang bentrok — validasi baru bekerja sesuai desain. Test
 diperbaiki agar memilih rental `PENDING` yang unitnya sedang tidak disewa.
 **Verifikasi:** 7/7 suite lulus (47/47 API) · typecheck + build PASS (468 KB)
+
+---
+
+## [CYCLE 11] 2026-09-09T08:35:00Z — T-0021 — P1 — DONE
+**Judul:** Amankan alur verifikasi pembayaran & tanda tangan kontrak
+**Bug ditemukan:**
+1. `verifyPayment` mengubah status jadi `PAID` **tanpa mengecek** status
+   sebelumnya — staf bisa mengesahkan pembayaran yang belum pernah dibayar
+2. `verifyPayment` tidak mewajibkan bukti transfer
+3. `signContract` menimpa `signed_at` setiap dipanggil → audit trail rusak
+4. `seedGenerator` **tidak pernah mengisi** `payment_proof_path` — dengan
+   aturan baru, antrean verifikasi staf tidak bisa diproses sama sekali
+**Perubahan:** validasi status + bukti di `db.ts`, penolakan tanda tangan
+ulang, endpoint menangkap error aturan jadi `409` (bukan 500), seed mengisi
+bukti transfer dengan ~1 dari 4 sengaja belum upload agar realistis.
+**Verifikasi:** 7/7 suite lulus · 16 pemeriksaan baru · typecheck + build PASS
+
+---
+
+## [CYCLE 12] 2026-09-09T08:50:00Z — T-0002 — P1 — DONE
+**Judul:** Diagnosis & perbaiki kegagalan deploy Cloudflare
+**Root cause:** Log Cloudflare menunjukkan "No dependencies detected to cache",
+lalu `npx wrangler deploy` dijalankan. Karena dependensi tidak ter-install,
+`npm run build` gagal → `dist/` tidak pernah dibuat → wrangler melaporkan
+"Could not detect a directory containing static files".
+**Perbaikan:** tambah skrip `deploy:cloud` = `npm install && npm run build &&
+wrangler deploy` agar dependensi terpasang sebelum build.
+**Verifikasi:** `wrangler deploy --dry-run` berhasil membaca 4 berkas dari
+`dist/` (147 KiB / gzip 37 KiB) dengan binding `env.ASSETS`.
+**Status:** Konfigurasi valid. Deploy sungguhan butuh login Cloudflare.
