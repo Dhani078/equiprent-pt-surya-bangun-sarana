@@ -36,6 +36,7 @@ import {
   REPORT_CATALOG,
 } from '../lib/reports';
 import type { ReportDataSource } from '../lib/reports';
+import { buildDashboardStats } from '../lib/dashboard';
 
 /** Laporan yang tampil pertama kali saat halaman dibuka. */
 const DEFAULT_REPORT_ID: ReportId = REPORT_CATALOG[0].id;
@@ -252,29 +253,26 @@ app.post('/api/auth/login', async (c) => {
   });
 });
 
-// Dashboard Stats Route
+/**
+ * Dashboard Stats Route — agregat eksekutif Administrator.
+ *
+ * Perhitungan TIDAK lagi ditulis di sini: seluruh rumus hidup di
+ * `src/lib/dashboard.ts`, modul yang sama dipakai klien sebagai fallback.
+ * Dengan begitu angka dari API dan angka dari perhitungan lokal tidak bisa
+ * menyimpang satu sama lain.
+ */
 app.get('/api/dashboard/stats', async (c) => {
-  const payments = await db.getPayments();
-  const equipments = await db.getEquipments();
-  const rentals = await db.getRentals();
-  const users = await db.getUsers();
+  const [payments, equipments, rentals, users, maintenance] = await Promise.all([
+    db.getPayments(),
+    db.getEquipments(),
+    db.getRentals(),
+    db.getUsers(),
+    db.getMaintenance(),
+  ]);
 
-  const totalRevenue = payments
-    .filter(p => p.status === 'PAID')
-    .reduce((sum, p) => sum + Number(p.amount), 0);
+  const stats = buildDashboardStats({ equipments, rentals, maintenance, payments, users });
 
-  const totalCustomers = users.filter(u => u.role_id === 3).length;
-
-  return c.json({
-    totalRevenue,
-    totalEquipments: equipments.length,
-    availableEquipments: equipments.filter(e => e.status === 'AVAILABLE').length,
-    rentedEquipments: equipments.filter(e => e.status === 'RENTED').length,
-    maintenanceEquipments: equipments.filter(e => e.status === 'MAINTENANCE').length,
-    totalRentals: rentals.length,
-    activeRentals: rentals.filter(r => r.status === 'ON_GOING' || r.status === 'APPROVED').length,
-    totalCustomers
-  });
+  return c.json({ success: true, data: stats });
 });
 
 /**

@@ -441,3 +441,114 @@ perlu dipelihara setiap hari.
 - `tests/run-tests.mjs` — menambahkan bundle `.tmp_validators.mjs` & suite
   baru (total 13 suite).
 **Verifikasi:** typecheck PASS · build PASS (545 KB) · npm test 13/13 suite PASS
+
+
+## [CYCLE 20] 2026-09-09T18:10:00Z — T-0005 — P1 — DONE
+**Judul:** Dashboard Admin — semua angka real dari DB (bukan mock)
+**Perubahan:**
+-  (BARU) — mesin agregat MURNI (tanpa React, tanpa
+  jaringan).  menghitung 19 metrik dari sumber data
+  yang diberikan: pendapatan (hanya PAID), piutang menunggu verifikasi,
+  distribusi armada (AVAILABLE/RENTED/MAINTENANCE/UNAVAILABLE), sewa aktif
+  (APPROVED + ON_GOING), pengajuan PENDING, sewa selesai, jumlah pelanggan,
+  unit jatuh tempo & mendekati servis 250 HM, serta tabel turunan
+  (5 transaksi terbaru + 4 antrean servis). Termasuk .
+  Anti-NaN:  berbentuk string (umum pada driver MySQL) dikonversi,
+  nilai tidak valid diabaikan;  kosong jatuh ke .
+-  (BARU) — klien dengan strategi API → lokal,
+  mengikuti pola . Respons JSON divalidasi type guard
+   (17 field angka wajib) sebelum dipakai, dan
+  kegagalan tidak pernah melempar (dikembalikan sebagai ).
+-  —  tidak lagi menulis
+  rumusnya sendiri: cukup memanggil . Respons kini
+  konsisten . Pengambilan 5 tabel dibuat paralel
+  dengan  (sebelumnya berurutan).
+-  — ditulis ulang. Kini mandiri
+  mengambil datanya sendiri (tidak lagi menerima props array), dengan
+  loading skeleton berukuran sesuai layout, error + tombol coba ulang,
+  empty state per panel, tombol Muat Ulang, dan badge sumber data
+  (Edge API / Perhitungan lokal). Tambahan 4 stat card: menunggu verifikasi,
+  pelanggan terdaftar, pengajuan masuk, tingkat utilisasi armada.
+  Tanggal antrean servis kini diformat .
+-  — pemanggilan  disederhanakan menjadi
+   saja.
+-  — tambah ,
+  ,  (pusat, bukan file baru).
+**Perilaku yang dijaga:**
+- Angka dari API dan angka dari fallback lokal dijamin identik karena
+  keduanya memanggil SATU modul yang sama — menghilangkan kelas bug
+  "dashboard berbeda antara server dan klien".
+- Endpoint tetap terproteksi: tanpa token 401; STAFF diizinkan
+  (role CUSTOMER ditolak oleh matriks RBAC yang sudah ada).
+- Tidak ada , tidak ada concat SQL, tidak ada import mockData.
+**Pengujian:**
+-  (BARU) — 50 pemeriksaan: sumber kosong,
+  agregat keuangan (PAID vs UNPAID/FAILED, amount string, amount rusak),
+  distribusi armada, status sewa, servis 250 HM (unit MAINTENANCE
+  tidak diperingatkan), antrean servis, transaksi terbaru (urutan, batas 5,
+  pelanggan tak dikenal → "-"), jumlah pelanggan (baris tanpa role_name
+  tetap terhitung via role_id), fuzzing ringan, dan konsistensi terhadap
+  data seed nyata (50 unit, 42 pelanggan).
+-  — 9 pemeriksaan baru: envelope ,
+  distribusi armada menjumlahkan total, batas 5 transaksi terbaru,
+  akses STAFF 200, dan tanpa token 401.
+-  — bundle  + suite baru (14 suite).
+**Verifikasi:** typecheck PASS · build PASS (553 KB) · npm test 14/14 suite PASS
+**Catatan:** Menyelesaikan pula T-0027 (ringkasan utilisasi armada) karena
+seluruh kriteria penerimaannya terpenuhi oleh kartu "Tingkat Utilisasi
+Armada" pada dashboard yang sama.
+
+## [CYCLE 20] 2026-09-09T18:10:00Z — T-0005 — P1 — DONE
+**Judul:** Dashboard Admin — semua angka real dari DB (bukan mock)
+**Perubahan:**
+- `src/lib/dashboard.ts` (BARU) — mesin agregat MURNI (tanpa React, tanpa
+  jaringan). `buildDashboardStats()` menghitung 19 metrik dari sumber data
+  yang diberikan: pendapatan (hanya PAID), piutang menunggu verifikasi,
+  distribusi armada (AVAILABLE/RENTED/MAINTENANCE/UNAVAILABLE), sewa aktif
+  (APPROVED + ON_GOING), pengajuan PENDING, sewa selesai, jumlah pelanggan,
+  unit jatuh tempo & mendekati servis 250 HM, serta tabel turunan
+  (5 transaksi terbaru + 4 antrean servis). Termasuk `emptyDashboardStats()`.
+  Anti-NaN: `amount` berbentuk string (umum pada driver MySQL) dikonversi,
+  nilai tidak valid diabaikan; `booking_date` kosong jatuh ke `start_date`.
+- `src/lib/dashboardClient.ts` (BARU) — klien dengan strategi API → lokal,
+  mengikuti pola `reportsClient.ts`. Respons JSON divalidasi type guard
+  `isAdminDashboardStats()` (17 field angka wajib) sebelum dipakai, dan
+  kegagalan tidak pernah melempar (dikembalikan sebagai `{ ok: false }`).
+- `src/server/index.ts` — `GET /api/dashboard/stats` tidak lagi menulis
+  rumusnya sendiri: cukup memanggil `buildDashboardStats()`. Respons kini
+  konsisten `{ success: true, data }`. Pengambilan 5 tabel dibuat paralel
+  dengan `Promise.all` (sebelumnya berurutan).
+- `src/pages/admin/AdminDashboard.tsx` — ditulis ulang. Kini mandiri
+  mengambil datanya sendiri (tidak lagi menerima props array), dengan
+  loading skeleton berukuran sesuai layout, error + tombol coba ulang,
+  empty state per panel, tombol Muat Ulang, dan badge sumber data
+  (Edge API / Perhitungan lokal). Tambahan 4 stat card: menunggu verifikasi,
+  pelanggan terdaftar, pengajuan masuk, tingkat utilisasi armada.
+  Tanggal antrean servis kini diformat `04 September 2026`.
+- `src/App.tsx` — pemanggilan `AdminDashboard` disederhanakan menjadi
+  `onNavigate` saja.
+- `src/types/index.ts` — tambah `AdminDashboardStats`, `DashboardRentalRow`,
+  `DashboardServiceRow` (pusat, bukan file baru).
+**Perilaku yang dijaga:**
+- Angka dari API dan angka dari fallback lokal dijamin identik karena
+  keduanya memanggil SATU modul yang sama — menghilangkan kelas bug
+  "dashboard berbeda antara server dan klien".
+- Endpoint tetap terproteksi: tanpa token 401; STAFF diizinkan
+  (role CUSTOMER ditolak oleh matriks RBAC yang sudah ada).
+- Tidak ada `any`, tidak ada concat SQL, tidak ada import mockData.
+**Pengujian:**
+- `tests/dashboard.test.mjs` (BARU) — 50 pemeriksaan: sumber kosong,
+  agregat keuangan (PAID vs UNPAID/FAILED, amount string, amount rusak),
+  distribusi armada, status sewa, servis 250 HM (unit MAINTENANCE
+  tidak diperingatkan), antrean servis, transaksi terbaru (urutan, batas 5,
+  pelanggan tak dikenal → "-"), jumlah pelanggan (baris tanpa role_name
+  tetap terhitung via role_id), fuzzing ringan, dan konsistensi terhadap
+  data seed nyata (50 unit, 42 pelanggan).
+- `tests/api.test.mjs` — 9 pemeriksaan baru: envelope `{ success, data }`,
+  distribusi armada menjumlahkan total, batas 5 transaksi terbaru,
+  akses STAFF 200, dan tanpa token 401.
+- `tests/run-tests.mjs` — bundle `dashboard.ts` + suite baru (14 suite).
+**Verifikasi:** typecheck PASS · build PASS (553 KB) · npm test 14/14 suite PASS
+**Catatan:** Menyelesaikan pula T-0027 (ringkasan utilisasi armada) karena
+seluruh kriteria penerimaannya terpenuhi oleh kartu "Tingkat Utilisasi
+Armada" pada dashboard yang sama.

@@ -104,13 +104,21 @@
       "title": "Dashboard Admin — semua angka real dari DB (bukan mock)",
       "category": "CORE",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 45,
       "depends_on": [
         "T-0002"
       ],
       "files": [
-        "src/pages/admin/AdminDashboard.tsx"
+        "src/pages/admin/AdminDashboard.tsx",
+        "src/lib/dashboard.ts",
+        "src/lib/dashboardClient.ts",
+        "src/server/index.ts",
+        "src/types/index.ts",
+        "src/App.tsx",
+        "tests/dashboard.test.mjs",
+        "tests/api.test.mjs",
+        "tests/run-tests.mjs"
       ],
       "acceptance_criteria": [
         "Stat card dari query agregat DB",
@@ -118,14 +126,16 @@
         "Tidak ada import dari mockData.ts"
       ],
       "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
+      "created_at": "2026-09-04T19:00:00Z",
+      "completed_at": "2026-09-09T11:26:14.406Z",
+      "completed_cycle": 20
     },
     {
       "id": "T-0006",
       "title": "Manajemen Rental: alur ajukan → approve → aktif → selesai",
       "category": "CORE",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "estimate_minutes": 90,
       "depends_on": [
         "T-0004"
@@ -421,13 +431,16 @@
       "title": "Ringkasan utilitas armada (utilization rate) pada dashboard admin",
       "category": "CORE",
       "priority": "P2",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 60,
       "depends_on": [
         "T-0005"
       ],
       "files": [
-        "src/pages/admin/AdminDashboard.tsx"
+        "src/pages/admin/AdminDashboard.tsx",
+        "src/lib/dashboard.ts",
+        "src/lib/dashboardClient.ts",
+        "tests/dashboard.test.mjs"
       ],
       "acceptance_criteria": [
         "Persentase unit tersewa vs total unit dihitung dari data nyata",
@@ -435,7 +448,9 @@
         "Ada loading & empty state; tanpa import mockData"
       ],
       "created_by": "agent",
-      "created_at": "2026-09-09T12:00:00Z"
+      "created_at": "2026-09-09T12:00:00Z",
+      "completed_at": "2026-09-09T11:26:26.033Z",
+      "completed_cycle": 20
     },
     {
       "id": "T-0028",

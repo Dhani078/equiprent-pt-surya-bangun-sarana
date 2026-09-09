@@ -1,19 +1,19 @@
 {
-  "cycle": 19,
-  "last_run": "2026-09-09T16:30:00Z",
-  "current_task_id": "T-0005",
+  "cycle": 20,
+  "last_run": "2026-09-09T18:10:00Z",
+  "current_task_id": "T-0006",
   "current_phase": "PENDING",
-  "session_summary": "Cycle 19: T-0004 — CRUD master users & equipments rampung. Modul validasi terpusat src/lib/validators.ts dipakai dua arah (server + form Admin) agar pesan galat identik. POST /api/users (tanpa password, hash null), pemeriksaan keunikan username/email, whitelist field publik tanpa password_hash, POST/PUT/DELETE /api/equipments dengan validasi, cek kode unit unik, larangan hapus unit yang sedang disewa (409 EQUIPMENT_IN_USE), serta penolakan jenis pemeliharaan INSPECTION yang tidak ada di ENUM skema. Perbaikan: PUT /api/equipments kini memeriksa keberadaan unit SEBELUM validasi (404, bukan 400) dan hanya boleh ADMIN.",
+  "session_summary": "Cycle 20: T-0005 — Dashboard Admin kini sepenuhnya digerakkan agregat nyata. Rumus agregat dipusatkan di modul murni baru src/lib/dashboard.ts (buildDashboardStats) sehingga edge API GET /api/dashboard/stats dan fallback klien memakai rumus yang IDENTIK — tidak ada lagi dua versi perhitungan yang bisa menyimpang. Endpoint kini mengembalikan { success, data } dan menghitung 19 metrik (pendapatan, piutang menunggu verifikasi, distribusi armada, servis jatuh tempo/mendekati 250 HM, pengajuan masuk, utilisasi armada) plus tabel turunan (5 transaksi terbaru, 4 antrean servis). Halaman AdminDashboard ditulis ulang: loading skeleton, error + tombol coba ulang, dan empty state per panel; badge menunjukkan sumber data (Edge API vs perhitungan lokal). Tidak ada lagi import mockData. T-0027 (ringkasan utilisasi armada) ikut terpenuhi di siklus yang sama. Pengujian baru: tests/dashboard.test.mjs (50 pemeriksaan) + 9 pemeriksaan baru pada tests/api.test.mjs.",
   "quality_gate": {
     "type_check": "PASS",
     "build": "PASS",
     "test": "PASS"
   },
-  "test_suites": 13,
-  "commits": 14,
+  "test_suites": 14,
+  "commits": 15,
   "deploy": {
     "status": "READY",
     "note": "deploy:cloud sudah benar; deploy sungguhan butuh login Cloudflare"
   },
-  "next_focus": "T-0005: dashboard admin — semua angka real dari DB (bukan mock)"
+  "next_focus": "T-0006: Manajemen Rental — alur ajukan → approve → aktif → selesai (termasuk denda keterlambatan; perlu nilai tarif dari settings, lihat BLOCKER-B002)"
 }

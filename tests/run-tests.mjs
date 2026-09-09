@@ -38,6 +38,7 @@ bundle('src/lib/reports.ts', '.tmp_reports.mjs');
 bundle('src/lib/documents.ts', '.tmp_documents.mjs');
 bundle('src/server/index.ts', '.tmp_server.mjs');
 bundle('src/lib/validators.ts', '.tmp_validators.mjs');
+bundle('src/lib/dashboard.ts', '.tmp_dashboard.mjs');
 
 // Panel laporan butuh JSX → sertakan loader .tsx dan jadikan React eksternal
 // agar modul react/react-dom tidak ikut ter-bundle (cukup satu instans).
@@ -71,6 +72,7 @@ const suites = [
   'documents.test.mjs',
   'smokeRender.test.mjs',
   'api.test.mjs',
+  'dashboard.test.mjs',
   'codeQuality.test.mjs',
 ];
 
@@ -94,7 +96,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }
