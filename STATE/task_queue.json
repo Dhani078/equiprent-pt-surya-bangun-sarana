@@ -279,7 +279,7 @@
       "title": "Panel 11 laporan operasional: pemilih, filter tanggal, ekspor CSV",
       "category": "REPORTING",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "estimate_minutes": 75,
       "depends_on": ["T-0012"],
       "files": [

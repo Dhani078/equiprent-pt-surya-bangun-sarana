@@ -33,7 +33,15 @@ function bundle(entry, out) {
 console.log('Menyiapkan bundle modul untuk pengujian...');
 bundle('src/lib/businessRules.ts', '.tmp_businessRules.mjs');
 bundle('src/lib/db.ts', '.tmp_db.mjs');
+bundle('src/lib/reports.ts', '.tmp_reports.mjs');
 bundle('src/server/index.ts', '.tmp_server.mjs');
+
+// Panel laporan butuh JSX → sertakan loader .tsx dan jadikan React eksternal
+// agar modul react/react-dom tidak ikut ter-bundle (cukup satu instans).
+execSync(
+  `npx esbuild "${join(root, 'src/components/ReportAnalyticsPanel.tsx')}" --bundle --format=esm --outfile="${join(root, '.tmp_panel.mjs')}" --platform=neutral --external:react --external:react-dom --external:@tidbcloud/serverless --loader:.tsx=tsx --jsx=automatic`,
+  { cwd: root, stdio: 'ignore' }
+);
 
 const suites = [
   'businessRules.test.mjs',
@@ -42,6 +50,8 @@ const suites = [
   'lateFee.test.mjs',
   'consistency.test.mjs',
   'dueNotifications.test.mjs',
+  'reports.test.mjs',
+  'smokeRender.test.mjs',
   'api.test.mjs',
   'codeQuality.test.mjs',
 ];
@@ -66,7 +76,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_server.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_reports.mjs', '.tmp_panel.mjs', '.tmp_server.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }

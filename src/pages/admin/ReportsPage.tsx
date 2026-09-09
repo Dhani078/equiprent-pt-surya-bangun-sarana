@@ -1,16 +1,69 @@
-import React, { useState, useMemo } from 'react';
-import { ReportItem, Rental } from '../../types';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { ReportItem, Rental, ReportId, ReportResult, DateRangeFilter } from '../../types';
 import { FileText, Download, Printer, Eye, CheckCircle2, ShieldCheck, TrendingUp, Wallet, AlertCircle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { ReportAnalyticsPanel } from '../../components/ReportAnalyticsPanel';
 import { formatRupiah, LATE_PENALTY_PER_DAY } from '../../lib/businessRules';
+import { REPORT_CATALOG } from '../../lib/reports';
+import { fetchReport } from '../../lib/reportsClient';
 
 interface ReportsPageProps {
   reports: ReportItem[];
   rentals: Rental[];
 }
 
+/** Laporan yang tampil pertama kali saat halaman dibuka. */
+const DEFAULT_REPORT_ID: ReportId = REPORT_CATALOG[0].id;
+
 export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) => {
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+
+  // --- State panel 11 laporan operasional -----------------------------------
+  const [activeId, setActiveId] = useState<ReportId>(DEFAULT_REPORT_ID);
+  const [range, setRange] = useState<DateRangeFilter>({ from: '', to: '' });
+  const [result, setResult] = useState<ReportResult | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<'API' | 'LOKAL' | null>(null);
+  /** Nilai ini sengaja dipakai sebagai pemicu tombol "Coba Ulang". */
+  const [attempt, setAttempt] = useState<number>(0);
+
+  useEffect(() => {
+    // AbortController membatalkan permintaan lama bila pengguna berpindah
+    // laporan dengan cepat, sehingga hasil yang kedaluwarsa tidak menimpa
+    // hasil terbaru.
+    const controller = new AbortController();
+    let aktif = true;
+
+    setLoading(true);
+    setError(null);
+
+    void fetchReport(activeId, range, controller.signal).then((hasil) => {
+      if (!aktif) return;
+      if (hasil.ok) {
+        setResult(hasil.result);
+        setSource(hasil.source);
+        setError(null);
+      } else if (hasil.message !== 'PERMINTAAN_DIBATALKAN') {
+        setResult(null);
+        setError(hasil.message);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      aktif = false;
+      controller.abort();
+    };
+  }, [activeId, range, attempt]);
+
+  const handleSelectReport = useCallback((id: ReportId) => {
+    setActiveId(id);
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setAttempt((n) => n + 1);
+  }, []);
 
   /**
    * Ringkasan finansial dari seluruh transaksi sewa.
@@ -112,6 +165,19 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) =>
           </div>
         </div>
       </div>
+
+      {/* Panel 11 Laporan Operasional */}
+      <ReportAnalyticsPanel
+        result={result}
+        loading={loading}
+        error={error}
+        source={source}
+        activeId={activeId}
+        onSelectReport={handleSelectReport}
+        range={range}
+        onRangeChange={setRange}
+        onRetry={handleRetry}
+      />
 
       {/* Reports Table */}
       <div className="table-container">
