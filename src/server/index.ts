@@ -10,6 +10,7 @@ import {
 } from '../lib/auth';
 import type { RoleName } from '../types';
 import type { Equipment, Rental, Maintenance } from '../types';
+import { isEquipmentAvailable } from '../lib/businessRules';
 
 type Bindings = {
   ASSETS: { fetch: (req: Request) => Promise<Response> };
@@ -306,6 +307,57 @@ app.post('/api/rentals', async (c) => {
   const body = await readJsonBody<Omit<Rental, 'id' | 'rental_code'>>(c);
   if (body === null) return c.json(BAD_JSON, 400);
 
+  // Validasi field wajib.
+  const equipmentId = Number((body as { equipment_id?: unknown }).equipment_id);
+  const startDate = (body as { start_date?: unknown }).start_date;
+  const endDate = (body as { end_date?: unknown }).end_date;
+
+  if (!Number.isInteger(equipmentId) || equipmentId <= 0) {
+    return c.json(
+      { success: false, error: { code: 'VALIDATION_ERROR', message: 'Unit (equipment_id) wajib dipilih.' } },
+      400
+    );
+  }
+
+  if (typeof startDate !== 'string' || typeof endDate !== 'string' ||
+      !Number.isFinite(new Date(startDate).getTime()) || !Number.isFinite(new Date(endDate).getTime())) {
+    return c.json(
+      { success: false, error: { code: 'VALIDATION_ERROR', message: 'Tanggal mulai dan selesai tidak valid.' } },
+      400
+    );
+  }
+
+  if (new Date(endDate) < new Date(startDate)) {
+    return c.json(
+      { success: false, error: { code: 'VALIDATION_ERROR', message: 'Tanggal selesai tidak boleh sebelum tanggal mulai.' } },
+      400
+    );
+  }
+
+  // Pastikan unit ada.
+  const unit = (await db.getEquipments()).find(e => e.id === equipmentId);
+  if (!unit) {
+    return c.json(
+      { success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } },
+      404
+    );
+  }
+
+  // Cegah double-booking: unit tidak boleh disewa pada rentang yang bentrok.
+  const semuaRental = await db.getRentals();
+  if (!isEquipmentAvailable(equipmentId, startDate, endDate, semuaRental)) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'EQUIPMENT_UNAVAILABLE',
+          message: `Unit ${unit.equipment_code} sudah disewa pada rentang tanggal tersebut.`,
+        },
+      },
+      409
+    );
+  }
+
   const newItem = await db.addRental(body);
   return c.json({ success: true, item: newItem }, 201);
 });
@@ -324,6 +376,37 @@ app.put('/api/rentals/:id/status', async (c) => {
       { success: false, error: { code: 'VALIDATION_ERROR', message: `Status harus salah satu dari: ${STATUS_VALID.join(', ')}.` } },
       400
     );
+  }
+
+  // Bila rental akan mengunci unit (APPROVED / ON_GOING), pastikan unit
+  // tidak bentrok dengan rental aktif lain. Mencegah double-booking dari
+  // jalur persetujuan staf.
+  if (body.status === 'APPROVED' || body.status === 'ON_GOING') {
+    const target = (await db.getRentals()).find(r => r.id === id);
+    if (!target) {
+      return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Rental tidak ditemukan.' } }, 404);
+    }
+
+    const bentrok = (await db.getRentals()).some(r =>
+      r.id !== id &&
+      r.equipment_id === target.equipment_id &&
+      r.status !== 'REJECTED' && r.status !== 'COMPLETED' &&
+      new Date(target.start_date) <= new Date(r.end_date) &&
+      new Date(target.end_date) >= new Date(r.start_date)
+    );
+
+    if (bentrok) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'EQUIPMENT_UNAVAILABLE',
+            message: 'Unit sudah disewa pada rentang tanggal tersebut. Persetujuan dibatalkan.',
+          },
+        },
+        409
+      );
+    }
   }
 
   const updated = await db.updateRentalStatus(id, body.status as typeof STATUS_VALID[number]);

@@ -144,3 +144,23 @@ dari rental ON_GOING yang sudah lewat `end_date`.
 **Verifikasi:** 6/6 suite lulus (42/42 API test) · typecheck + build PASS
 
 ---
+
+## [CYCLE 9] 2026-09-09T07:45:00Z — T-0019 — P2 — DONE
+**Judul:** Pusatkan formatter Rupiah + audit kualitas kode
+**Bug ditemukan:**
+- Dropdown unit di `RentalManagement.tsx` menampilkan "Rp Rp 100.000"
+  (formatRupiah sudah menyertakan awalan "Rp", lalu ditambahi "Rp" lagi)
+**Perubahan:**
+- Hapus 4 formatter `Intl.NumberFormat(... IDR ...)` lokal di
+  `CustomerPortal.tsx`, `StaffDashboard.tsx`, `RentalManagement.tsx`,
+  `EquipmentManagement.tsx` — kini semua memakai `formatRupiah()` dari
+  `src/lib/businessRules.ts` (7 file menggunakannya)
+- `tests/codeQuality.test.mjs` (BARU): audit 25 file sumber — mendeteksi
+  formatter lokal, awalan "Rp" ganda, impor yang hilang, `console.log`,
+  dan penanda TODO/FIXME pada komentar
+**Catatan:** Pemeriksaan TODO/FIXME hanya menghitung penanda dalam komentar
+(`// TODO`, `/* FIXME */`) agar teks contoh seperti "0811500XXXX" tidak
+terbaca sebagai false positive.
+**Verifikasi:** 7/7 suite lulus · typecheck + build PASS (467 KB)
+
+---

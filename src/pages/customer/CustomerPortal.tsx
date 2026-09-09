@@ -3,7 +3,7 @@ import { Equipment, Rental, Contract, Payment, User } from '../../types';
 import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
-import { formatRupiah } from '../../lib/businessRules';
+import { formatRupiah, isEquipmentAvailable } from '../../lib/businessRules';
 
 interface CustomerPortalProps {
   currentUser: User;
@@ -42,6 +42,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10));
   const [notes, setNotes] = useState('Pekerjaan proyek penataan lahan di wilayah Kalimantan Selatan');
+  const [rentError, setRentError] = useState<string | null>(null);
 
   const myRentals = rentals.filter(r => r.customer_id === currentUser.id || r.customer_name?.includes(currentUser.full_name));
   const myContracts = contracts.filter(c => c.customer_id === currentUser.id);
@@ -54,6 +55,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
   const handleOpenRent = (eq: Equipment) => {
     setSelectedEquipment(eq);
+    setRentError(null);
     setIsRentModalOpen(true);
   };
 
@@ -62,6 +64,22 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     if (!selectedEquipment) return;
 
     const days = calculateDays(startDate, endDate);
+
+    // Validasi dasar sebelum mengirim ke server.
+    if (days <= 0) {
+      setRentError('Tanggal selesai harus setelah tanggal mulai.');
+      return;
+    }
+
+    // Cegah double-booking di sisi klien (server tetap memvalidasi ulang).
+    if (!isEquipmentAvailable(selectedEquipment.id, startDate, endDate, rentals)) {
+      setRentError(
+        `Unit ${selectedEquipment.equipment_code} sudah disewa pada rentang tanggal tersebut. Silakan pilih tanggal lain.`
+      );
+      return;
+    }
+
+    setRentError(null);
     const subtotal = days * Number(selectedEquipment.rental_price_per_day);
 
     await onAddRental({
@@ -653,6 +671,24 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 placeholder="Contoh: Pekerjaan cut & fill Pelabuhan Trisakti Banjarmasin"
               />
             </div>
+
+            {/* Peringatan: unit tidak tersedia pada rentang tanggal dipilih */}
+            {rentError && (
+              <div
+                role="alert"
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  background: 'rgba(220, 38, 38, 0.08)',
+                  border: '1px solid rgba(220, 38, 38, 0.3)',
+                  color: '#dc2626',
+                  fontSize: '12.5px',
+                  fontWeight: 600
+                }}
+              >
+                {rentError}
+              </div>
+            )}
 
             <div style={{ padding: '12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--color-secondary)' }}>

@@ -1,0 +1,8 @@
+feat: cegah double-booking di level aplikasi (server + UI)
+
+- POST /api/rentals: tolak 409 bila unit bentrok dengan sewa aktif (APPROVED/ON_GOING)
+- PUT /api/rentals/:id/status: tolak 409 bila approval/aktivasi membuat bentrok
+- validasi tanggal: end_date harus setelah start_date (400)
+- validasi unit ada (404) sebelum sewa dibuat
+- CustomerPortal: cek ketersediaan sebelum submit + pesan error di modal
+- test: 5 pemeriksaan baru untuk pencegahan double-booking
