@@ -251,6 +251,39 @@ r = await req('POST', '/api/payments/999999/verify', { token: T_STAFF, body: {} 
 t('verifikasi pembayaran tidak ada → 404', r.status === 404);
 
 // ---------------------------------------------------------------------------
+console.log('\n== Laporan Operasional (/api/reports/analytics) ==');
+r = await req('GET', '/api/reports/analytics', { token: T_ADMIN });
+t('laporan default → 200', r.status === 200);
+t('laporan default = RENTAL_BULANAN', r.body?.data?.id === 'RENTAL_BULANAN');
+t('laporan punya kolom & baris', Array.isArray(r.body?.data?.columns) && Array.isArray(r.body?.data?.rows));
+t('meta.total sama dengan jumlah baris', r.body?.meta?.total === r.body?.data?.totalRows);
+
+r = await req('GET', '/api/reports/analytics?id=UTILISASI_HM', { token: T_ADMIN });
+t('laporan utilisasi → 200', r.status === 200);
+t('laporan utilisasi mencakup 50 unit', r.body?.data?.totalRows === 50);
+
+r = await req('GET', '/api/reports/analytics?id=LAPORAN_PALSU', { token: T_ADMIN });
+t('jenis laporan tidak dikenal → 400', r.status === 400);
+t('kode error VALIDATION_ERROR', r.body?.error?.code === 'VALIDATION_ERROR');
+
+// Rentang tanggal tidak valid tidak boleh membuat server error.
+r = await req('GET', '/api/reports/analytics?from=kemarin&to=besok', { token: T_ADMIN });
+t('rentang tanggal rusak → 200 (diabaikan)', r.status === 200);
+
+r = await req('GET', '/api/reports/analytics?id=PENDAPATAN_BERSIH&from=1990-01-01&to=1990-01-31', { token: T_ADMIN });
+t('rentang tanpa data → 200 dengan 0 baris', r.status === 200 && r.body?.data?.totalRows === 0);
+
+// Endpoint laporan berada di bawah /api/reports → hanya ADMIN & STAFF.
+r = await req('GET', '/api/reports/analytics', { token: T_CUST });
+t('customer DILARANG akses laporan → 403', r.status === 403);
+
+r = await req('GET', '/api/reports/analytics', { token: T_STAFF });
+t('staff boleh akses laporan → 200', r.status === 200);
+
+r = await req('GET', '/api/reports/analytics', {});
+t('laporan tanpa token → 401', r.status === 401);
+
+// ---------------------------------------------------------------------------
 console.log('\n== Dashboard Stats ==');
 r = await req('GET', '/api/dashboard/stats', { token: T_ADMIN });
 t('stats → 200', r.status === 200);

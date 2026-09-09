@@ -7,6 +7,9 @@ dist
 .wrangler
 *.log
 
+# Artefak bundle sementara untuk pengujian (dibuat tests/run-tests.mjs).
+.tmp_*.mjs
+
 # PENTING: STATE/ TIDAK boleh di-ignore.
 # Folder ini berisi memori agent (task_queue, changelog, blockers).
 # Jika ter-ignore, agent kehilangan state setiap clone/session baru.

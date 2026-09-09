@@ -240,3 +240,68 @@ Mengambil koordinat geospasial real-time seluruh armada alat berat yang sedang a
 
 ### `GET /api/reports`
 Mengambil log penerbitan Berita Acara Serah Terima (BAST) dan Surat Jalan Mobilisasi Alat.
+
+---
+
+### `GET /api/reports/analytics`
+Menyusun salah satu dari **11 laporan operasional** secara agregat di sisi server.
+
+**Hak akses:** `ADMIN`, `STAFF` (role `CUSTOMER` ditolak `403`).
+
+| Query | Wajib | Format | Keterangan |
+|---|---|---|---|
+| `id` | tidak | salah satu `ReportId` | Default `RENTAL_BULANAN`. Nilai tidak dikenal → `400 VALIDATION_ERROR`. |
+| `from` | tidak | `YYYY-MM-DD` | Batas awal periode. Format rusak diabaikan (tidak difilter). |
+| `to` | tidak | `YYYY-MM-DD` | Batas akhir periode. Bila `from > to`, keduanya ditukar otomatis. |
+
+**Daftar `id` laporan:**
+
+| `id` | Nama Laporan | Filter tanggal |
+|---|---|---|
+| `RENTAL_BULANAN` | Laporan Rental Bulanan | ya (tanggal mulai sewa) |
+| `PEMBAYARAN_PIUTANG` | Laporan Pembayaran & Piutang | ya (tanggal pembayaran) |
+| `PENDAPATAN_BERSIH` | Laporan Pendapatan Bersih | ya (digabung per bulan) |
+| `MAINTENANCE_SERVIS` | Laporan Maintenance & Servis | ya (tanggal jadwal) |
+| `UTILISASI_HM` | Laporan Utilisasi & Hour Meter | tidak (snapshot armada) |
+| `KERUSAKAN_UNIT` | Laporan Kerusakan Unit | ya (tanggal jadwal) |
+| `TELEMETRI_GPS` | Laporan Histori Telemetri GPS | ya (waktu rekam) |
+| `KINERJA_STAF` | Laporan Kinerja Staf & Operator | ya (waktu verifikasi/servis) |
+| `SUKU_CADANG` | Laporan Pemakaian Suku Cadang | ya (tanggal ganti) |
+| `KEPUASAN_PELANGGAN` | Laporan Kepuasan & Umpan Balik Pelanggan | ya (tanggal mulai sewa) |
+| `AUDIT_TRAIL` | Laporan Audit Trail & Log Sistem | ya (waktu terbit dokumen) |
+
+**Respons sukses:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "RENTAL_BULANAN",
+    "title": "Laporan Rental Bulanan",
+    "description": "Seluruh transaksi sewa berdasarkan tanggal mulai sewa.",
+    "periodLabel": "Semua periode",
+    "columns": [
+      { "key": "rental_code", "label": "Kode Sewa" },
+      { "key": "subtotal", "label": "Nilai Sewa", "align": "right", "format": "currency" }
+    ],
+    "rows": [["RNT-SBS-20260501-001", "PT. Tambang Sejahtera", "Excavator EX-200", "2026-05-01", "2026-05-07", 7, 87500000, "Selesai"]],
+    "summaries": [
+      { "label": "Total Transaksi", "value": "50 sewa" },
+      { "label": "Total Nilai Sewa", "value": "Rp 3.270.150.000", "tone": "positive" }
+    ],
+    "totalRows": 50
+  },
+  "meta": { "total": 50 }
+}
+```
+
+**Catatan format:**
+- `rows` menyimpan **nilai mentah** (angka tanpa titik ribuan) agar ekspor CSV
+  langsung dapat dijumlahkan di Excel.
+- Kolom dengan `format: "currency"` ditampilkan sebagai Rupiah oleh klien
+  (`src/lib/reports.ts → formatCell`).
+- `periodLabel` bernilai `Semua periode` bila tidak ada filter tanggal.
+
+**Respons gagal:**
+```json
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "Jenis laporan tidak dikenal." } }
+```

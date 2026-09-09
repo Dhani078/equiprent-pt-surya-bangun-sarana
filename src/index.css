@@ -85,6 +85,16 @@ body {
   animation: fadeInUp 0.45s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
+/* Skeleton loading untuk tabel laporan & panel data */
+@keyframes sbs-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
 /* Micro-interactions */
 .hover-lift {
   transition: var(--transition-base);

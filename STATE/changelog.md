@@ -240,3 +240,38 @@ wrangler deploy` agar dependensi terpasang sebelum build.
 **Catatan:** Tanggal acuan dibuat dinamis (`new Date()`) agar test tidak
 perlu dipelihara setiap hari.
 **Verifikasi:** 8/8 suite lulus · typecheck + build PASS (477 KB)
+
+---
+
+## [CYCLE 15] 2026-09-09T10:15:00Z — T-0025 — P1 — DONE
+**Judul:** Panel 11 laporan operasional (pemilih, filter periode, ekspor CSV)
+**Fitur baru:**
+- `src/lib/reports.ts` — mesin 11 laporan (sudah ada di working tree dari siklus
+  sebelumnya, kini terverifikasi penuh oleh test). Termasuk `REPORT_CATALOG`,
+  `buildReport`, `normalizeRange`, `formatCell`, `buildCsv`, `buildCsvFilename`.
+- `src/lib/reportsClient.ts` (BARU) — klien data: coba edge API
+  `/api/reports/analytics`, bila gagal jatuh ke perhitungan lokal dari state
+  agar demo tidak pernah menampilkan halaman kosong. Mengembalikan
+  discriminated union `{ok:true,...} | {ok:false,...}`, tidak pernah melempar.
+- `src/components/ReportAnalyticsPanel.tsx` (BARU) — pemilih 11 laporan,
+  filter rentang tanggal (disembunyikan untuk laporan snapshot `UTILISASI_HM`),
+  tabel dinamis mengikuti definisi kolom, ringkasan agregat, tombol Ekspor CSV.
+- `src/pages/admin/ReportsPage.tsx` — memuat panel; `useEffect` + `AbortController`
+  membatalkan permintaan lama agar hasil kedaluwarsa tidak menimpa yang baru.
+- `src/server/index.ts` — endpoint `GET /api/reports/analytics` (id/from/to),
+  RBAC mewarisi prefix `/api/reports` → hanya ADMIN & STAFF.
+- `src/index.css` — keyframe `sbs-shimmer` untuk skeleton loading.
+**Perilaku yang dijaga:**
+- Angka diekspor mentah ke CSV (tanpa "Rp" & tanpa titik ribuan) agar bisa
+  dijumlahkan di Excel; pemisah `;` dan BOM UTF-8 untuk locale Indonesia.
+- Nama berkas: `Laporan_<Jenis>_<YYYY-MM-DD>.csv`.
+- Filter tanggal rusak diabaikan, `from > to` ditukar otomatis.
+**Pengujian:**
+- `tests/reports.test.mjs` (BARU): 89 pemeriksaan — struktur 11 laporan, filter
+  periode, format sel, escape CSV (titik koma, kutip ganda, baris baru),
+  nama berkas, ketahanan terhadap sumber data kosong.
+- `tests/smokeRender.test.mjs` (BARU): 26 pemeriksaan render SSR — loading,
+  error + retry, empty state, semua 11 laporan, atribut aksesibilitas.
+- `tests/api.test.mjs`: 13 pemeriksaan baru untuk endpoint analytics
+  (default, id sah, id palsu → 400, rentang rusak → 200, customer → 403).
+**Verifikasi:** typecheck PASS · build PASS (508 KB) · `npm test` 10/10 suite PASS
