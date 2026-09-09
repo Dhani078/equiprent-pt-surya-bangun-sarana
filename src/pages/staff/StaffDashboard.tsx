@@ -3,6 +3,7 @@ import { Rental, Contract, Payment, Maintenance, User, Equipment } from '../../t
 import { ClipboardCheck, CreditCard, FileCheck, Check, Clock, AlertCircle, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { Modal } from '../../components/Modal';
+import { formatRupiah } from '../../lib/businessRules';
 
 interface StaffDashboardProps {
   rentals: Rental[];
@@ -28,10 +29,6 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
   const pendingPayments = payments.filter(p => p.status === 'PENDING_VERIFICATION');
   const pendingRentals = rentals.filter(r => r.status === 'PENDING');
-
-  const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
-  };
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

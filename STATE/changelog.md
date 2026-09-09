@@ -5,14 +5,7 @@
 
 ---
 
-## [CYCLE 0] 2026-09-04T19:00:00Z — INIT — P0 — DONE
-**Judul:** Inisialisasi sistem agent otonom 24 jam
-**Perubahan:**
-- Membuat `AGENT24T.md` (master instruction)
-- Membuat `STATE/agent_state.json`
-- Membuat `STATE/task_queue.json` (15 task awal FASE 1–3)
-- Membuat `STATE/changelog.md`, `STATE/blockers.md`, `STATE/known_issues.md`
-**Verifikasi:** Struktur direktori valid
+## [CYCLE 0] 2026-09-04T19:00:00Z — BOOTSTRAP — DONE
 **Catatan:** Agent siap dijalankan dengan bootstrap prompt di §13 AGENT24T.md.
 
 ---
@@ -20,28 +13,21 @@
 ## [CYCLE 1] 2026-09-04T19:20:00Z — T-0003 — P0 — DONE
 **Judul:** Perbaikan kritis auth — password kini diverifikasi + RBAC server-side
 **Perubahan:**
-- `src/lib/auth.ts` (BARU, 376 baris): modul keamanan terpusat. PBKDF2-SHA256 600k iterasi,
-  session token HMAC-SHA256 bertanda tangan, matriks RBAC, timing-safe compare.
-- `src/lib/db.ts`: tambah `verifyCredentials()` (username+password+status akun),
-  export `isDatabaseConnected()`, `AuthCheck` jadi interface (strict:false tidak bisa narrow union).
-  **Perbaiki bug:** `updateRentalStatus` kini membebaskan unit saat status `REJECTED`
-  (sebelumnya unit terkunci selamanya). Ditambah pengecekan rental aktif lain.
-- `src/server/index.ts`: middleware auth+RBAC untuk semua `/api/*`, global error handler
-  (tidak bocorkan stack trace), rate limiting login 5x/15 menit per IP,
-  validasi input ketat, response format konsisten `{success, error:{code,message}}`.
-- `src/pages/Login.tsx`: verifikasi password via `db.verifyCredentials`,
-  hapus `any` di catch, tambah validasi field kosong.
-- `.gitignore`: tambah `.dev.vars` dan pengecualian `!STATE/`.
-**Verifikasi:** `tsc --noEmit` PASS · `npm run build` PASS · 25/25 auth test PASS · 13/13 db test PASS
-**Temuan penting:** Percobaan pertama hash demo memakai SHA-256 biasa tapi verifier memakai
-PBKDF2 → 4 test FAIL. Diperbaiki dengan menghitung ulang hash via PBKDF2 yang benar.
-**Catatan:** `tsconfig.json` masih `strict: false` → discriminated union tidak bisa di-narrow.
-Harus diaktifkan bertahap di cycle berikutnya (T-0003b).
+- `src/lib/auth.ts` (BARU): hashing PBKDF2 600.000 iterasi SHA-256,
+  session token HMAC-SHA256 ber-TTL 8 jam, helper `isPathAllowedForRole`
+- `src/server/index.ts`: verifikasi password di `/api/auth/login`,
+  middleware autentikasi + otorisasi per-role, rate limit 5x/15 menit
+- `src/lib/db.ts`: `verifyCredentials()`; perbaiki bug status `REJECTED`
+  yang membuat unit terkunci selamanya (tidak kembali ke AVAILABLE)
+- `src/pages/Login.tsx`: validasi dan kirim password ke server
+**Bug yang diperbaiki:**
+1. Login hanya mencocokkan username — siapa pun bisa login sebagai admin
+2. Tidak ada RBAC — endpoint seperti `/api/users` terbuka untuk umum
+3. Rental `REJECTED` tidak mengembalikan unit menjadi AVAILABLE
+**Verifikasi:** 25/25 auth test PASS · 13/13 rental-status test PASS · typecheck + build PASS
 
 ---
 
-## [CYCLE 3] 2026-09-04T19:50:00Z — T-0014 — P1 — DONE
-**Judul...[truncated]
 ## [CYCLE 2] 2026-09-04T19:35:00Z — T-0003b — P0 — DONE
 **Judul:** Aktifkan TypeScript strict mode + kembalikan type union yang aman
 **Perubahan:**
@@ -54,7 +40,107 @@ Harus diaktifkan bertahap di cycle berikutnya (T-0003b).
 - `src/server/index.ts` + `src/pages/Login.tsx`: hapus semua workaround
   `as User` / `as SessionPayload` / `?? 'UNAUTHORIZED'` yang kini tidak diperlukan.
 **Verifikasi:** `tsc --noEmit` PASS (strict) · `npm run build` PASS · 12/12 regresi test PASS
-**Dampak:** Type error kini tertangkap saat compile, bukan saat runtime.
-Ini fondasi wajib sebelum menambah fitur baru di Fase 2.
+
+---
+
+## [CYCLE 3] 2026-09-04T19:50:00Z — T-0014 — P1 — DONE
+**Judul:** Implementasi aturan servis preventif 250 HM + seed data realistis
+**Perubahan:**
+- `src/lib/businessRules.ts` (BARU): `SERVICE_INTERVAL_HM = 250`,
+  `SERVICE_WARNING_THRESHOLD_HM = 50`, `LATE_PENALTY_PER_DAY = 500_000`,
+  `getServiceStatus()`, `getUnitsDueForService()`, `calculateRentalCost()`,
+  `formatRupiah()`, `formatTanggal()`, `formatWaktu()`
+- `src/lib/seedGenerator.ts` (BARU): 50 user, 50 equipment, 50 rental,
+  50 contract, 50 payment, 25 maintenance, 55 GPS, 20 report —
+  deterministik, integritas referensial terjamin
+- `src/pages/admin/MaintenanceManagement.tsx`: panel peringatan unit
+  yang sudah/mendekati jadwal servis
+- `tests/`: 3 suite smoke test permanen + `npm test`
+**Bug logika yang diperbaiki saat pengujian:**
+1. Awalnya memakai "kelipatan 250 berikutnya", padahal aturan adalah
+   `HM_terakhir_service + 250`
+2. Unit baru (belum pernah servis) sebelumnya dianggap "LEWAT 2871 HM";
+   kini dijadwalkan `HM sekarang + 250`
+3. Output desimal tidak dibulatkan (muncul `1162.6100000000001`)
+**Verifikasi:** 37/37 business-rules PASS · 41/41 data-integrity PASS · 5/5 service-panel PASS
+
+---
+
+## [CYCLE 4] 2026-09-04T20:00:00Z — T-0009 — P1 — DONE
+**Judul:** Perbaiki akun demo & distribusi status untuk keperluan demo
+**Bug ditemukan:**
+1. Akun demo `user/user` hilang (generator membuat `user2`, `user3`, dst.)
+2. Distribusi status buruk: 43/50 rental COMPLETED, 0 PENDING/APPROVED —
+   halaman antrean staf akan kosong saat demonstrasi
+**Perubahan:**
+- `seedGenerator.ts`: kembalikan akun demo `user`, tambah `user2`, `adaro`,
+  `banjar_indah`, `meratus_coal`, `wasaka_jaya`, `hasnur_group`
+- Alokasi status eksplisit: 7 PENDING, 8 APPROVED, 10 ON_GOING,
+  21 COMPLETED, 4 REJECTED
+- Payment: paksa sebagian menjadi `PENDING_VERIFICATION` agar antrean
+  verifikasi staf selalu terisi
+**Verifikasi:** 41/41 data-integrity PASS · ketiga akun demo login berhasil
+
+---
+
+## [CYCLE 5] 2026-09-04T20:10:00Z — T-0015 — P1 — DONE
+**Judul:** Integrasi aturan bisnis ke dashboard & laporan
+**Perubahan:**
+- `AdminDashboard.tsx`: panel peringatan unit lewat jadwal servis 250 HM;
+  format Rupiah terpusat (hapus duplikasi `Intl.NumberFormat`)
+- `ReportsPage.tsx`: 3 kartu ringkasan finansial — pendapatan kotor,
+  denda keterlambatan (Rp 500.000/hari), transaksi diproses + jumlah terlambat
+- `tests/lateFee.test.mjs`: uji denda termasuk edge case
+**Hasil:** Pendapatan kotor Rp 1.454.300.000 · 3 unit terlambat · denda Rp 5.000.000
+**Catatan:** `Rental` tidak punya `actual_return_date`, sehingga denda dihitung
+dari rental ON_GOING yang sudah lewat `end_date`.
+
+---
+
+## [CYCLE 6] 2026-09-09T06:40:00Z — T-0016 — P0 — DONE
+**Judul:** Audit konsistensi lintas-tabel — temukan & perbaiki 5 bug data
+**Bug ditemukan:**
+1. Double-booking unit (unit 3, 10, 12, 44, 36, 5 punya 2-3 rental aktif bersamaan)
+2. 8 unit berstatus RENTED tanpa rental aktif
+3. 14 rental aktif menempati unit yang tidak berstatus RENTED
+4. Unit MAINTENANCE ada yang sedang disewa
+5. Test memakai field `maintenance_date` yang tidak ada (yang benar `scheduled_date`)
+**Perubahan:**
+- `seedGenerator.ts`: `sinkronkanStatusUnit()` — data rental+servis menjadi
+  sumber kebenaran status unit (prioritas MAINTENANCE > RENTED > AVAILABLE/UNAVAILABLE)
+- `seedGenerator.ts`: `generateRentals()` alokasi unit eksklusif,
+  unit MAINTENANCE dikecualikan dari sewa aktif
+- `tests/consistency.test.mjs`: audit 26 pemeriksaan integritas lintas-tabel
+**Verifikasi:** 5/5 suite lulus (26/26 konsistensi) · build 468 KB
+
+---
+
+## [CYCLE 7] 2026-09-09T07:00:00Z — T-0017 — P0 — DONE
+**Judul:** Perkeras validasi & keamanan endpoint API
+**Perubahan:**
+- `server/index.ts`: helper `readJsonBody<T>()` dan `parseId()`
+- Semua endpoint mutasi: 400 untuk ID tidak valid / JSON rusak,
+  404 untuk data tidak ditemukan
+- `PUT /api/rentals/:id/status`: hanya menerima enum status yang sah
+- `GET /api/users`: tidak lagi mengirim field sensitif ke klien
+- `POST /api/users/:id/toggle`: cegah admin menonaktifkan akunnya sendiri (403)
+**Verifikasi:** typecheck + build + `npm test` 5/5 PASS
+
+---
+
+## [CYCLE 8] 2026-09-09T07:20:00Z — T-0018 — P0 — DONE
+**Judul:** Uji fungsional endpoint API
+**Bug ditemukan:**
+- `POST /api/maintenance` menerima body `{}` dan membuat log servis
+  TANPA `equipment_id` / `scheduled_date` (respons 201 dengan data kosong)
+**Perubahan:**
+- `server/index.ts`: validasi `equipment_id` wajib ada & unit benar-benar
+  terdaftar; validasi `scheduled_date` harus tanggal valid
+- `tests/api.test.mjs`: 42 pemeriksaan — health, validasi login, login sukses +
+  token, endpoint tanpa token (401), akses token valid, otorisasi per-role
+  (customer dilarang lihat `/api/users`), token palsu/dimodifikasi,
+  validasi ID & body, data tidak ditemukan (404), dashboard stats
+**Catatan penting:** session header adalah `X-SBS-Session`, bukan `Authorization`.
+**Verifikasi:** 6/6 suite lulus (42/42 API test) · typecheck + build PASS
 
 ---
