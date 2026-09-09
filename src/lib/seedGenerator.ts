@@ -289,36 +289,60 @@ function generateRentals(equipments: readonly Equipment[], customerIds: readonly
   const rentals: Rental[] = [];
   const today = new Date('2026-09-04');
 
+  /**
+   * Alokasi status ditentukan di awal agar setiap halaman punya data saat demo:
+   *   PENDING   → antrean persetujuan staf
+   *   APPROVED  → menunggu berjalan
+   *   ON_GOING  → sedang beroperasi (tracking GPS)
+   *   COMPLETED → riwayat & laporan pendapatan
+   *   REJECTED  → riwayat penolakan
+   */
+  const STATUS_ALOKASI: readonly Rental['status'][] = [
+    ...Array<Rental['status']>(7).fill('PENDING'),
+    ...Array<Rental['status']>(8).fill('APPROVED'),
+    ...Array<Rental['status']>(10).fill('ON_GOING'),
+    ...Array<Rental['status']>(21).fill('COMPLETED'),
+    ...Array<Rental['status']>(4).fill('REJECTED'),
+  ];
+
+  /**
+   * Unit yang sedang disewa dilacak agar TIDAK terjadi double-booking.
+   * Setiap unit hanya boleh punya SATU rental aktif (APPROVED / ON_GOING).
+   */
+  const unitTerpakai = new Set<number>();
+
+  // Unit yang boleh dipakai untuk rental AKTIF: tidak dalam perawatan.
+  const kandidatAktif = equipments.filter(e => e.status !== 'MAINTENANCE');
+
+  // Antrian unit dialokasikan bergilir agar penyebaran merata.
+  let putaranAktif = 0;
+
   for (let i = 1; i <= 50; i += 1) {
     const customerId = pick(customerIds);
+    const status: Rental['status'] = STATUS_ALOKASI[i - 1] ?? 'COMPLETED';
+    const butuhUnitAktif = status === 'ON_GOING' || status === 'APPROVED';
 
-    // Pilih unit: 70% mengikuti status unit (RENTED → sedang berjalan),
-    // 30% acak agar ada variasi riwayat masa lalu.
     let eq: Equipment;
-    if (rng() < 0.7) {
-      const rented = equipments.filter(e => e.status === 'RENTED');
-      eq = rented.length > 0 ? pick(rented) : pick(equipments);
+
+    if (butuhUnitAktif) {
+      // Cari unit yang belum dipakai rental aktif lain.
+      let ditemukan: Equipment | undefined;
+      for (let percobaan = 0; percobaan < kandidatAktif.length; percobaan += 1) {
+        const calon = kandidatAktif[(putaranAktif + percobaan) % kandidatAktif.length];
+        if (calon && !unitTerpakai.has(calon.id)) {
+          ditemukan = calon;
+          putaranAktif = (putaranAktif + percobaan + 1) % kandidatAktif.length;
+          break;
+        }
+      }
+      // Bila semua unit sudah terpakai, pakai kandidat berikutnya apa adanya
+      // (sangat jarang; hanya bila rental aktif melebihi jumlah unit).
+      eq = ditemukan ?? kandidatAktif[putaranAktif % kandidatAktif.length];
+      unitTerpakai.add(eq.id);
     } else {
+      // Riwayat / pengajuan: bebas memilih unit apa pun.
       eq = pick(equipments);
     }
-
-    /**
-     * Distribusi status dirancang agar SETIAP halaman punya data saat demo:
-     *   PENDING   → antrean persetujuan staf
-     *   APPROVED  → menunggu berjalan
-     *   ON_GOING  → sedang beroperasi (tracking GPS)
-     *   COMPLETED → riwayat & laporan pendapatan
-     *   REJECTED  → riwayat penolakan
-     * Alokasi eksplisit (bukan acak) agar hasilnya pasti dan seimbang.
-     */
-    const STATUS_ALOKASI: readonly Rental['status'][] = [
-      ...Array< Rental['status']>(7).fill('PENDING'),
-      ...Array<Rental['status']>(8).fill('APPROVED'),
-      ...Array<Rental['status']>(10).fill('ON_GOING'),
-      ...Array<Rental['status']>(21).fill('COMPLETED'),
-      ...Array<Rental['status']>(4).fill('REJECTED'),
-    ];
-    const status: Rental['status'] = STATUS_ALOKASI[i - 1] ?? 'COMPLETED';
 
     const durasi = intBetween(3, 30);
 
@@ -519,6 +543,54 @@ const CUSTOMER_IDS = USERS.filter(u => u.role_id === 3).map(u => u.id);
 const EQUIPMENTS = generateEquipments();
 const MAINTENANCE = generateMaintenance(EQUIPMENTS);
 const RENTALS = generateRentals(EQUIPMENTS, CUSTOMER_IDS);
+
+/**
+ * Sinkronisasi status unit dengan data rental & servis.
+ *
+ * Ini adalah SUMBER KEBENARAN untuk status unit. Status acak di
+ * generateEquipments() hanya titik awal; setelah rental diketahui,
+ * status disesuaikan agar tidak ada inkonsistensi:
+ *   - unit dengan rental AKTIF (APPROVED/ON_GOING) → RENTED
+ *   - unit yang sedang diservis (IN_PROGRESS) → MAINTENANCE
+ *   - unit lainnya → AVAILABLE (atau UNAVAILABLE bila ditandai demikian)
+ *
+ * Prioritas: MAINTENANCE > RENTED > AVAILABLE/UNAVAILABLE.
+ */
+function sinkronkanStatusUnit(
+  equipments: Equipment[],
+  rentals: readonly Rental[],
+  maintenance: readonly Maintenance[]
+): Equipment[] {
+  const unitSedangDisewa = new Set<number>();
+  for (const r of rentals) {
+    if (r.status === 'ON_GOING' || r.status === 'APPROVED') {
+      unitSedangDisewa.add(r.equipment_id);
+    }
+  }
+
+  // Unit dengan servis yang belum selesai (sedang berjalan).
+  const unitDalamServis = new Set<number>();
+  for (const m of maintenance) {
+    if (m.status === 'IN_PROGRESS') unitDalamServis.add(m.equipment_id);
+  }
+
+  for (const eq of equipments) {
+    if (unitDalamServis.has(eq.id)) {
+      eq.status = 'MAINTENANCE';
+    } else if (unitSedangDisewa.has(eq.id)) {
+      eq.status = 'RENTED';
+    } else if (eq.status === 'RENTED') {
+      // Tidak ada rental aktif lagi → kembalikan ke tersedia.
+      eq.status = 'AVAILABLE';
+    }
+    // UNAVAILABLE dipertahankan apa adanya.
+  }
+
+  return equipments;
+}
+
+sinkronkanStatusUnit(EQUIPMENTS, RENTALS, MAINTENANCE);
+
 const CONTRACTS = generateContracts(RENTALS, USERS);
 const PAYMENTS = generatePayments(CONTRACTS, RENTALS);
 const GPS = generateGps(EQUIPMENTS);
