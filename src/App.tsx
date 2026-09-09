@@ -197,6 +197,7 @@ export const App: React.FC = () => {
                 <ReportsPage
                   reports={reports}
                   rentals={rentals}
+                  equipments={equipments}
                 />
               )}
               {activeTab === 'users' && (
@@ -256,6 +257,7 @@ export const App: React.FC = () => {
                 <ReportsPage
                   reports={reports}
                   rentals={rentals}
+                  equipments={equipments}
                 />
               )}
               {activeTab === 'settings' && (

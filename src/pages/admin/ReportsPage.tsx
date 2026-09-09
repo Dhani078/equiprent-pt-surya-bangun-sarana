@@ -1,22 +1,33 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { ReportItem, Rental, ReportId, ReportResult, DateRangeFilter } from '../../types';
-import { FileText, Download, Printer, Eye, CheckCircle2, ShieldCheck, TrendingUp, Wallet, AlertCircle } from 'lucide-react';
+import { ReportItem, Rental, Equipment, ReportId, ReportResult, DateRangeFilter } from '../../types';
+import { FileText, Download, Printer, Eye, CheckCircle2, ShieldCheck, TrendingUp, Wallet, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { ReportAnalyticsPanel } from '../../components/ReportAnalyticsPanel';
+import { DocumentPrintPanel } from '../../components/DocumentPrintPanel';
 import { formatRupiah, LATE_PENALTY_PER_DAY } from '../../lib/businessRules';
 import { REPORT_CATALOG } from '../../lib/reports';
 import { fetchReport } from '../../lib/reportsClient';
+import { documentKindFromReportType, buildDocument, type DocumentKind, type OfficialDocument } from '../../lib/documents';
+import { printDocument } from '../../lib/documentPrinter';
+import { DocumentPreview } from '../../components/DocumentPreview';
 
 interface ReportsPageProps {
   reports: ReportItem[];
   rentals: Rental[];
+  /** Daftar unit — dipakai untuk melengkapi rincian dokumen yang dicetak. */
+  equipments: Equipment[];
 }
 
 /** Laporan yang tampil pertama kali saat halaman dibuka. */
 const DEFAULT_REPORT_ID: ReportId = REPORT_CATALOG[0].id;
 
-export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) => {
+export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equipments }) => {
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+
+  /** Dokumen arsip yang sedang dibuka pratinjaunya (BAST / Surat Jalan). */
+  const [previewDocument, setPreviewDocument] = useState<OfficialDocument | null>(null);
+  /** Pesan galat saat pencetakan gagal (misal popup diblokir peramban). */
+  const [cetakError, setCetakError] = useState<string | null>(null);
 
   // --- State panel 11 laporan operasional -----------------------------------
   const [activeId, setActiveId] = useState<ReportId>(DEFAULT_REPORT_ID);
@@ -107,6 +118,89 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) =>
     window.print();
   };
 
+  /**
+   * Mencetak berkas A4 mandiri untuk dokumen operasional (BAST IN/OUT,
+   * Surat Jalan). Dokumen disusun ulang dari transaksi aslinya agar nomor
+   * dan rincian unit selalu mengikuti data terbaru.
+   */
+  const handlePrintDocument = useCallback(
+    (laporan: ReportItem) => {
+      const jenis: DocumentKind | null = documentKindFromReportType(laporan.report_type);
+
+      if (jenis === null) {
+        // FINANCIAL_SUMMARY bukan dokumen serah terima → cukup cetak halaman.
+        window.print();
+        return;
+      }
+
+      const rental =
+        rentals.find((r) => r.id === laporan.rental_id) ??
+        rentals.find((r) => r.rental_code === laporan.rental_code) ??
+        null;
+
+      if (!rental) {
+        setCetakError(
+          `Transaksi untuk dokumen ${laporan.report_code} tidak ditemukan, sehingga dokumen tidak dapat diterbitkan.`
+        );
+        return;
+      }
+
+      const unit = equipments.find((e) => e.id === rental.equipment_id) ?? null;
+
+      const dokumen = buildDocument({
+        kind: jenis,
+        rental,
+        equipment: unit,
+        issuedBy: laporan.generated_by_name,
+        issuedAt: laporan.generated_at,
+      });
+
+      const hasil = printDocument(dokumen, new Date());
+      setCetakError(hasil.ok ? null : hasil.message);
+    },
+    [rentals, equipments]
+  );
+
+  /** Pratinjau arsip dokumen: susun ulang dari transaksi, lalu tampilkan. */
+  const handlePreviewDocument = useCallback(
+    (laporan: ReportItem): boolean => {
+      const jenis = documentKindFromReportType(laporan.report_type);
+
+      if (jenis === null) {
+        // FINANCIAL_SUMMARY tidak punya format BAST → pakai pratinjau generik.
+        setSelectedReport(laporan);
+        return false;
+      }
+
+      const rental =
+        rentals.find((r) => r.id === laporan.rental_id) ??
+        rentals.find((r) => r.rental_code === laporan.rental_code) ??
+        null;
+
+      if (!rental) {
+        setCetakError(
+          `Transaksi untuk dokumen ${laporan.report_code} tidak ditemukan, sehingga pratinjau tidak dapat ditampilkan.`
+        );
+        return false;
+      }
+
+      const unit = equipments.find((e) => e.id === rental.equipment_id) ?? null;
+
+      setPreviewDocument(
+        buildDocument({
+          kind: jenis,
+          rental,
+          equipment: unit,
+          issuedBy: laporan.generated_by_name,
+          issuedAt: laporan.generated_at,
+        })
+      );
+      setCetakError(null);
+      return true;
+    },
+    [rentals, equipments]
+  );
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
@@ -179,6 +273,29 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) =>
         onRetry={handleRetry}
       />
 
+      {/* Panel Dokumen Siap Cetak (BAST OUT / BAST IN / Surat Jalan) */}
+      <DocumentPrintPanel rentals={rentals} equipments={equipments} />
+
+      {cetakError && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 16px',
+            background: 'rgba(220, 38, 38, 0.08)',
+            border: '1px solid rgba(220, 38, 38, 0.25)',
+            borderRadius: '8px',
+            color: '#dc2626',
+            fontSize: '13px',
+          }}
+        >
+          <AlertTriangle size={16} />
+          <span>{cetakError}</span>
+        </div>
+      )}
+
       {/* Reports Table */}
       <div className="table-container">
         <table className="data-table">
@@ -213,14 +330,26 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) =>
                   {rep.generated_at}
                 </td>
                 <td>
-                  <button
-                    onClick={() => setSelectedReport(rep)}
-                    className="btn-secondary"
-                    style={{ padding: '6px 12px', fontSize: '12px' }}
-                  >
-                    <Eye size={13} />
-                    <span>Buka Dokumen</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => handlePreviewDocument(rep)}
+                      className="btn-secondary"
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                      aria-label={`Buka pratinjau dokumen ${rep.report_code}`}
+                    >
+                      <Eye size={13} />
+                      <span>Buka Dokumen</span>
+                    </button>
+                    <button
+                      onClick={() => handlePrintDocument(rep)}
+                      className="btn-primary"
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                      aria-label={`Cetak dokumen ${rep.report_code} ke kertas A4`}
+                    >
+                      <Printer size={13} />
+                      <span>Cetak A4</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -326,6 +455,38 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals }) =>
               type="button"
               onClick={handlePrint}
               className="btn-primary"
+            >
+              <Printer size={15} />
+              <span>Cetak / Simpan PDF</span>
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Pratinjau Dokumen BAST / Surat Jalan — isi identik dengan hasil cetak A4 */}
+      {previewDocument && (
+        <Modal
+          isOpen={true}
+          onClose={() => setPreviewDocument(null)}
+          title={`Dokumen Resmi: ${previewDocument.code}`}
+        >
+          <DocumentPreview doc={previewDocument} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+            <button
+              type="button"
+              onClick={() => setPreviewDocument(null)}
+              className="btn-secondary"
+            >
+              Tutup
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const hasil = printDocument(previewDocument, new Date());
+                setCetakError(hasil.ok ? null : hasil.message);
+              }}
+              className="btn-primary"
+              aria-label="Cetak dokumen ke kertas A4"
             >
               <Printer size={15} />
               <span>Cetak / Simpan PDF</span>
