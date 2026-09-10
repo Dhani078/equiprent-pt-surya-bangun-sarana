@@ -23,5 +23,11 @@ npx wrangler secret put DATABASE_URL
 **Dampak task:** T-0006
 **Workaround:** Nilai default disimpan di tabel `settings` dan bisa diubah Admin via UI
 **Cara manusia menyelesaikan:** Isi nilai default di halaman Settings → atau biarkan agent memakai default rasional
+**Catatan cycle 21:** T-0006 sudah DONE tanpa menunggu blocker ini. Tarif
+denda dibaca dari SATU konstanta `LATE_PENALTY_PER_DAY` di
+`src/lib/businessRules.ts`, sehingga mengubah nilai di satu tempat itu
+langsung berlaku di UI, API, dan laporan. Karena tarif belum dikonfirmasi,
+nilainya masih default rasional (Rp 500.000/hari) — ganti bila bisnis
+menetapkan angka resmi.
 
 ---
