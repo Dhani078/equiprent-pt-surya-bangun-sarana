@@ -434,14 +434,24 @@ function generatePayments(contracts: readonly Contract[], rentals: readonly Rent
      */
     let status: Payment['status'];
     if (rental?.status === 'COMPLETED') status = 'PAID';
-    else if (rental?.status === 'ON_GOING') status = rng() < 0.8 ? 'PAID' : 'PENDING_VERIFICATION';
+    // Sewa yang SEDANG BEROPERASI pasti sudah lunas: gerbang pembayaran
+    // (§4.3 poin 4) tidak mengizinkan unit beroperasi sebelum uang
+    // diterima. `rng()` tetap dipanggil agar aliran angka acak — dan
+    // karenanya seluruh data turunan berikutnya — tidak bergeser.
+    else if (rental?.status === 'ON_GOING') {
+      rng();
+      status = 'PAID';
+    }
     else if (rental?.status === 'APPROVED') status = rng() < 0.5 ? 'PAID' : 'PENDING_VERIFICATION';
     else if (rental?.status === 'REJECTED') status = 'FAILED';
     else status = 'UNPAID';
 
     // Paksa sebagian menjadi PENDING_VERIFICATION supaya antrean verifikasi
-    // staf selalu terisi saat demonstrasi sidang.
-    if (idx % 9 === 3 && status !== 'FAILED') status = 'PENDING_VERIFICATION';
+    // staf selalu terisi saat demonstrasi sidang. Sewa yang sudah berjalan
+    // dikecualikan — statusnya tidak boleh turun dari PAID.
+    if (idx % 9 === 3 && status !== 'FAILED' && rental?.status !== 'ON_GOING') {
+      status = 'PENDING_VERIFICATION';
+    }
 
     const paid = status === 'PAID';
     const verified = paid && rng() < 0.9;

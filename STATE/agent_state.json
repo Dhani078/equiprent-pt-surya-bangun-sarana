@@ -1,22 +1,22 @@
 {
-  "cycle": 22,
-  "last_run": "2026-09-10T11:30:00Z",
-  "current_task_id": "T-0008",
+  "cycle": 23,
+  "last_run": "2026-09-10T12:35:00Z",
+  "current_task_id": "T-0011",
   "current_phase": "PENDING",
   "completed_this_cycle": [
-    "T-0007"
+    "T-0008"
   ],
-  "session_summary": "Cycle 22: T-0007 — Kontrak digital kini lengkap end-to-end dan terhubung ke SELURUH peran. Siklus kontrak hidup di satu modul murni src/lib/contracts.ts: penomoran SBS/CONTRACT/<YYYY>/<MM>/<SEQ-4digit> (urut per periode, memakai maksimum+1 agar nomor tidak dipakai ulang setelah kontrak dihapus), syarat & ketentuan baku yang memakai tarif dari LATE_PENALTY_PER_DAY (tidak ada angka denda hardcode), status penandatanganan, pratinjau kontrak, serta render HTML cetak A4 dengan escape HTML dan penolakan data URL berbahaya. Penerbitan kontrak (db.createContract) menolak duplikasi per transaksi lewat KONTRAK_SUDAH_ADA; penandatanganan (db.signContract) menyimpan nama penandatangan + goresan PNG dan menolak tanda tangan ulang (KONTRAK_SUDAH_DITANDATANGANI) agar bukti waktu audit tidak tertimpa. API memverifikasi kepemilikan: pelanggan hanya boleh menandatangani kontrak MILIKNYA (403 FORBIDDEN), dan pelanggan dilarang menerbitkan kontrak (403). Panel kontrak ContractPanel kini dipakai di tiga tempat — Admin (sub-tab baru di Manajemen Transaksi Penyewaan), Staf (menggantikan tabel kontrak pasif), dan Pelanggan — dengan prop canIssue/canSign yang menyembunyikan aksi di luar wewenang. Kanvas tanda tangan memakai Pointer Events + skala DPR agar stylus/tablet bekerja dan goresan tidak pecah. Empat `Promise<any>` pada props StaffDashboard diganti `Promise<void>`.",
+  "session_summary": "Cycle 23: T-0008 — Manajemen Pembayaran kini lengkap end-to-end. Seluruh aturan pembayaran hidup di satu modul murni baru src/lib/paymentWorkflow.ts (tanpa DOM, tanpa jaringan, tanpa akses data): matriks transisi status (UNPAID→PENDING_VERIFICATION→PAID|FAILED, FAILED→PENDING_VERIFICATION, PAID akhir), validasi deskriptor bukti transfer (ekstensi .png/.jpg/.jpeg/.webp/.pdf, maksimal 255 karakter, menolak path traversal, jalur absolut, backslash Windows, dan skema javascript:/data:), RBAC (mayTouchPayment — pelanggan hanya boleh menyentuh tagihannya sendiri; mayVerifyPayment — hanya ADMIN/STAFF), serta gerbang pembayaran checkPaymentGate yang mengunci status ON_GOING sampai tagihan PAID kecuali ada override ADMIN eksplisit. db.ts memakai modul itu sebagai satu sumber kebenaran: verifyPayment menolak verifikasi tanpa bukti (BUKTI_TRANSFER_BELUM_ADA) dan verifikasi ulang (STATUS_PEMBAYARAN_TIDAK_VALID); rejectPayment baru menurunkan PENDING_VERIFICATION→FAILED; addPaymentProof membersihkan jejak verifikator lama bila bukti diganti agar peninjauan usang tidak melekat pada berkas baru; updateRentalStatus kini menerima options.overrideUnpaid dan menjalankan gerbang pembayaran. API bertambah tiga endpoint RBAC-ketat: POST /api/payments/:id/proof (unggah bukti), /verify (sahkan), /reject (tolak), dengan pemetaan kode galat terpusat; GET /api/payments kini ber-envelope {success,data,meta:{total,queue}} berisi ringkasan antrean (siap diverifikasi vs menunggu bukti). Antarmuka mengikuti: panel verifikasi staf di StaffDashboard mendapat pencarian, ringkasan antrean, aksi Tolak, pratinjau bukti, dan penanda siap/belum; portal pelanggan memakai label status Indonesia, menyembunyikan unggah pada tagihan final, dan menampilkan peringatan 'Bukti ditolak — silakan lampirkan ulang'. Seed diperbaiki agar sewa ON_GOING selalu lunas (status pembayaran tidak lagi bertentangan dengan gerbang bisnis). Suite baru tests/paymentWorkflow.test.mjs (121 pengujian) + 43 pengujian API baru.",
   "quality_gate": {
     "type_check": "PASS",
     "build": "PASS",
     "test": "PASS"
   },
-  "test_suites": 17,
-  "commits": 17,
+  "test_suites": 18,
+  "commits": 18,
   "deploy": {
     "status": "READY",
     "note": "deploy:cloud sudah benar; deploy sungguhan butuh login Cloudflare"
   },
-  "next_focus": "T-0008: Manajemen Pembayaran — unggah bukti bayar + verifikasi staf (sewa hanya aktif bila pembayaran terverifikasi)"
+  "next_focus": "T-0011: Portal Customer — katalog, pengajuan, kontrak, pembayaran, transaksi (lanjutan penyempurnaan portal)"
 }

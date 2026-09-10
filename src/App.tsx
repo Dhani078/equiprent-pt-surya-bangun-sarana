@@ -138,6 +138,11 @@ export const App: React.FC = () => {
     refreshData();
   };
 
+  const handleRejectPayment = async (paymentId: number, staffId: number, staffName: string) => {
+    await db.rejectPayment(paymentId, staffId, staffName);
+    refreshData();
+  };
+
   const handleUploadPaymentProof = async (paymentId: number, proofPath: string) => {
     await db.addPaymentProof(paymentId, proofPath);
     refreshData();
@@ -250,9 +255,11 @@ export const App: React.FC = () => {
                   users={users}
                   currentUser={currentUser}
                   onVerifyPayment={handleVerifyPayment}
+                  onRejectPayment={handleRejectPayment}
                   onUpdateRentalStatus={handleUpdateRentalStatus}
                   onCreateContract={handleCreateContract}
                   onSignContract={handleSignContract}
+                  onNotify={notify}
                 />
               )}
               {activeTab === 'maintenance' && (

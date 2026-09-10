@@ -2,6 +2,7 @@ import { connect } from '@tidbcloud/serverless';
 import { User, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from '../types';
 import { verifyPassword } from './auth';
 import { getTransitionEffect } from './rentalWorkflow';
+import { canChangePaymentStatus, summarizeRentalPayment } from './paymentWorkflow';
 import { CONTRACT_TERMS_TEXT, generateContractCode } from './contracts';
 import {
   GENERATED_USERS,
@@ -196,9 +197,28 @@ export const db = {
    *
    * Unit hanya dibebaskan bila tidak sedang beroperasi di rental lain.
    */
-  updateRentalStatus: async (id: number, status: Rental['status']) => {
+  updateRentalStatus: async (
+    id: number,
+    status: Rental['status'],
+    options: { overrideUnpaid?: boolean } = {}
+  ) => {
     const r = stateStore.rentals.find(x => x.id === id);
     if (!r) return undefined;
+
+    // GERBANG PEMBAYARAN (§4.3 poin 4): sewa hanya boleh BEROPERASI
+    // (ON_GOING) bila tagihannya sudah terverifikasi lunas.
+    // `overrideUnpaid` adalah wewenang ADMIN dan diteruskan apa adanya
+    // dari lapisan API — bukan sesuatu yang bisa diminta klien sembarangan.
+    if (status === 'ON_GOING' && !options.overrideUnpaid) {
+      const kontrakIds = stateStore.contracts
+        .filter(c => c.rental_id === r.id)
+        .map(c => c.id);
+      const statusBayar = summarizeRentalPayment(stateStore.payments, kontrakIds);
+
+      if (statusBayar !== 'PAID') {
+        throw new Error('TAGIHAN_BELUM_LUNAS');
+      }
+    }
 
     r.status = status;
 
@@ -298,17 +318,28 @@ export const db = {
 
   // Payments
   getPayments: async () => stateStore.payments,
+
+  /**
+   * Mengesahkan pembayaran menjadi PAID.
+   *
+   * Penjaga aturan bisnis (satu sumber kebenaran: `src/lib/paymentWorkflow.ts`):
+   *   1. Transisi status harus sah (PENDING_VERIFICATION → PAID);
+   *   2. Bukti transfer wajib sudah dilampirkan.
+   *
+   * Tanpa dua pemeriksaan ini, staf dapat mengesahkan tagihan yang belum
+   * pernah dibayar — pendapatan pada laporan keuangan lalu fiktif.
+   */
   verifyPayment: async (paymentId: number, staffUserId: number, staffName: string) => {
     const p = stateStore.payments.find(x => x.id === paymentId);
     if (!p) return undefined;
 
+    const transisi = canChangePaymentStatus(p.status, 'PAID');
+    if (!transisi.allowed) throw new Error(transisi.code);
+
     // Hanya pembayaran yang menunggu verifikasi DAN sudah melampirkan bukti
-    // transfer yang boleh ditandai PAID. Tanpa ini, staf bisa mengesahkan
-    // pembayaran yang belum pernah dibayar atau belum upload bukti.
-    if (p.status !== 'PENDING_VERIFICATION') {
-      throw new Error('STATUS_PEMBAYARAN_TIDAK_VALID');
-    }
-    if (!p.payment_proof_path) {
+    // transfer yang boleh ditandai PAID.
+    const adaBukti = typeof p.payment_proof_path === 'string' && p.payment_proof_path.trim() !== '';
+    if (!adaBukti) {
       throw new Error('BUKTI_TRANSFER_BELUM_ADA');
     }
 
@@ -318,11 +349,56 @@ export const db = {
     p.verified_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
     return p;
   },
+
+  /**
+   * Menolak bukti transfer yang tidak sah (PENDING_VERIFICATION → FAILED).
+   *
+   * Tagihan yang ditolak dapat dilampiri ulang bukti oleh pelanggan,
+   * sehingga statusnya kembali PENDING_VERIFICATION (bukan status akhir).
+   *
+   * Kolom `verified_by*` dipakai sebagai jejak peninjau (bukan "verifikator"
+   * semata): UI merender "Ditolak oleh …" untuk status FAILED, sehingga
+   * tidak perlu menambah kolom baru pada skema yang sudah dimigrasi.
+   */
+  rejectPayment: async (paymentId: number, staffUserId: number, staffName: string) => {
+    const p = stateStore.payments.find(x => x.id === paymentId);
+    if (!p) return undefined;
+
+    const transisi = canChangePaymentStatus(p.status, 'FAILED');
+    if (!transisi.allowed) throw new Error(transisi.code);
+
+    p.status = 'FAILED';
+    p.verified_by = staffUserId;
+    p.verified_by_name = staffName;
+    p.verified_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    return p;
+  },
+
+  /**
+   * Melampirkan bukti transfer (UNPAID / FAILED → PENDING_VERIFICATION).
+   *
+   * `proofPath` sudah divalidasi oleh `validatePaymentProofPath()` di
+   * lapisan API sebelum sampai ke sini.
+   */
   addPaymentProof: async (paymentId: number, proofPath: string) => {
     const p = stateStore.payments.find(x => x.id === paymentId);
-    if (p) {
-      p.payment_proof_path = proofPath;
-      p.status = 'PENDING_VERIFICATION';
+    if (!p) return undefined;
+
+    const transisi = canChangePaymentStatus(p.status, 'PENDING_VERIFICATION');
+    if (!transisi.allowed) throw new Error(transisi.code);
+
+    // Lampiran baru membatalkan peninjauan lama: nama & waktu pemeriksa
+    // sebelumnya tidak lagi menggambarkan berkas yang sedang ditinjau.
+    const buktiBerubah = (p.payment_proof_path ?? '') !== proofPath;
+
+    p.payment_proof_path = proofPath;
+    p.status = 'PENDING_VERIFICATION';
+    p.payment_date = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+    if (buktiBerubah) {
+      p.verified_by = null;
+      p.verified_by_name = undefined;
+      p.verified_at = null;
     }
     return p;
   },

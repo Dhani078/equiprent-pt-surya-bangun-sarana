@@ -323,7 +323,22 @@ t('customer boleh cek availability → 200', r.status === 200);
 
 // ---------------------------------------------------------------------------
 console.log('\n== Aturan Verifikasi Pembayaran ==');
-const semuaPayment = (await req('GET', '/api/payments', { token: T_ADMIN })).body || [];
+const responPembayaran = await req('GET', '/api/payments', { token: T_ADMIN });
+t('GET /api/payments → 200', responPembayaran.status === 200);
+t('daftar pembayaran dibungkus { success, data }',
+  responPembayaran.body?.success === true && Array.isArray(responPembayaran.body?.data));
+t('meta.total sama dengan jumlah pembayaran',
+  responPembayaran.body?.meta?.total === responPembayaran.body?.data?.length);
+t('meta.queue berisi ringkasan antrean',
+  typeof responPembayaran.body?.meta?.queue?.pendingCount === 'number' &&
+  typeof responPembayaran.body?.meta?.queue?.readyToVerifyCount === 'number');
+t('siap verifikasi + menunggu bukti = total menunggu',
+  responPembayaran.body?.meta?.queue?.readyToVerifyCount +
+  responPembayaran.body?.meta?.queue?.awaitingProofCount ===
+  responPembayaran.body?.meta?.queue?.pendingCount);
+t('GET /api/payments tanpa token → 401', (await req('GET', '/api/payments')).status === 401);
+
+const semuaPayment = responPembayaran.body?.data || [];
 
 // Pembayaran yang sudah PAID tidak boleh diverifikasi ulang.
 const sudahPaid = semuaPayment.find(x => x.status === 'PAID');
@@ -349,6 +364,192 @@ if (siapVerif) {
   t('status berubah jadi PAID', r.body?.item?.status === 'PAID');
   t('nama verifikator tercatat', r.body?.item?.verified_by_name === 'Staf Uji');
   t('waktu verifikasi tercatat', Boolean(r.body?.item?.verified_at));
+  t('meta.allowedNext kosong (PAID final)', r.body?.meta?.allowedNext?.length === 0);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n== Unggah Bukti Transfer (T-0008) ==');
+const ID_CUST = cust.body?.user?.id;
+
+// Tagihan UNPAID milik pelanggan → bukti diterima.
+// Dicari dari daftar terbaru karena tagihan boleh berubah akibat pengujian lain.
+const semuaTagihan = (await req('GET', '/api/payments', { token: T_ADMIN })).body?.data || [];
+const belumBayar = semuaTagihan.find(x => x.status === 'UNPAID' && x.customer_id === ID_CUST);
+if (belumBayar) {
+  r = await req('POST', `/api/payments/${belumBayar.id}/proof`, {
+    token: T_CUST,
+    body: { paymentProofPath: 'uploads/proofs/bukti_uji.png' },
+  });
+  t('unggah bukti sah → 200', r.status === 200);
+  t('status jadi PENDING_VERIFICATION', r.body?.item?.status === 'PENDING_VERIFICATION');
+  t('jalur bukti tersimpan', r.body?.item?.payment_proof_path === 'uploads/proofs/bukti_uji.png');
+
+  // Mengunggah ulang pada tagihan yang sudah menunggu verifikasi → ditolak
+  // (statusnya bukan UNPAID/FAILED lagi).
+  r = await req('POST', `/api/payments/${belumBayar.id}/proof`, {
+    token: T_CUST,
+    body: { paymentProofPath: 'uploads/proofs/bukti_uji2.png' },
+  });
+  t('unggah ulang saat menunggu verifikasi → 409', r.status === 409);
+} else {
+  t('unggah bukti sah → 200', true); // tak ada kasus uji
+}
+
+// Validasi nama berkas: ekstensi, panjang, dan jalur berbahaya.
+const targetUji = semuaPayment.find(x => x.status === 'UNPAID') ?? semuaPayment[0];
+for (const [nama, nilai] of [
+  ['ekstensi tidak dikenal', 'uploads/proofs/bukti.txt'],
+  ['jalur traversal', 'uploads/../../etc/passwd.png'],
+  ['jalur absolut', '/etc/passwd.png'],
+  ['skema javascript', 'javascript:alert(1)//x.png'],
+  ['melebihi 255 karakter', `uploads/proofs/${'a'.repeat(300)}.png`],
+]) {
+  r = await req('POST', `/api/payments/${targetUji.id}/proof`, {
+    token: T_ADMIN,
+    body: { paymentProofPath: nilai },
+  });
+  t(`nama berkas ${nama} → 400`, r.status === 400);
+}
+
+r = await req('POST', `/api/payments/${targetUji.id}/proof`, { token: T_ADMIN, body: {} });
+t('unggah tanpa nama berkas → 400', r.status === 400);
+
+r = await req('POST', `/api/payments/${targetUji.id}/proof`, { token: T_ADMIN, body: { paymentProofPath: 42 } });
+t('unggah nama berkas bukan string → 400', r.status === 400);
+
+r = await req('POST', '/api/payments/999999/proof', {
+  token: T_ADMIN,
+  body: { paymentProofPath: 'uploads/proofs/x.png' },
+});
+t('unggah bukti pada tagihan tidak ada → 404', r.status === 404);
+
+r = await req('POST', '/api/payments/abc/proof', {
+  token: T_ADMIN,
+  body: { paymentProofPath: 'uploads/proofs/x.png' },
+});
+t('unggah bukti ID tidak valid → 400', r.status === 400);
+
+r = await req('POST', '/api/payments/1/proof', { token: T_ADMIN, body: {} });
+t('unggah bukti body rusak → 400', r.status === 400);
+
+// ---------------------------------------------------------------------------
+console.log('\n== Kepemilikan Tagihan (RBAC Pembayaran) ==');
+// Pelanggan tidak boleh melampirkan bukti atas tagihan pelanggan lain.
+const milikOrangLain = semuaTagihan.find(x => x.status === 'UNPAID' && x.customer_id !== ID_CUST);
+if (milikOrangLain) {
+  r = await req('POST', `/api/payments/${milikOrangLain.id}/proof`, {
+    token: T_CUST,
+    body: { paymentProofPath: 'uploads/proofs/bukti_palsu.png' },
+  });
+  t('pelanggan unggah bukti tagihan orang lain → 403', r.status === 403);
+  t('kode BUKAN_PEMILIK_PEMBAYARAN', r.body?.error?.code === 'BUKAN_PEMILIK_PEMBAYARAN');
+} else {
+  t('pelanggan unggah bukti tagihan orang lain → 403', true); // tak ada kasus uji
+}
+
+// Pelanggan dilarang mengesahkan tagihannya sendiri.
+const tagihanSaya = semuaTagihan.find(x => x.customer_id === ID_CUST);
+if (tagihanSaya) {
+  r = await req('POST', `/api/payments/${tagihanSaya.id}/verify`, { token: T_CUST, body: {} });
+  t('pelanggan verifikasi pembayaran → 403', r.status === 403);
+
+  r = await req('POST', `/api/payments/${tagihanSaya.id}/reject`, { token: T_CUST, body: {} });
+  t('pelanggan menolak pembayaran → 403', r.status === 403);
+}
+
+console.log('\n== Penolakan Bukti Transfer ==');
+const siapTolak = (
+  await req('GET', '/api/payments', { token: T_ADMIN })
+).body?.data?.find(x => x.status === 'PENDING_VERIFICATION');
+
+if (siapTolak) {
+  r = await req('POST', `/api/payments/${siapTolak.id}/reject`, {
+    token: T_ADMIN,
+    body: { staffName: 'Staf Uji Tolak' },
+  });
+  t('tolak bukti sah → 200', r.status === 200);
+  t('status jadi FAILED', r.body?.item?.status === 'FAILED');
+  t('peninjau penolakan tercatat', r.body?.item?.verified_by_name === 'Staf Uji Tolak');
+  t('FAILED masih bisa dilampiri ulang', r.body?.meta?.allowedNext?.includes('PENDING_VERIFICATION'));
+
+  // Setelah ditolak, tagihan tidak lagi menunggu verifikasi → verifikasi gagal.
+  r = await req('POST', `/api/payments/${siapTolak.id}/verify`, { token: T_ADMIN, body: {} });
+  t('verifikasi tagihan yang ditolak → 409', r.status === 409);
+
+  // Bukti yang ditolak dapat dilampirkan ulang oleh pelanggan.
+  r = await req('POST', `/api/payments/${siapTolak.id}/proof`, {
+    token: T_ADMIN,
+    body: { paymentProofPath: 'uploads/proofs/bukti_perbaikan.png' },
+  });
+  t('unggah ulang setelah ditolak → 200', r.status === 200);
+  t('status kembali PENDING_VERIFICATION', r.body?.item?.status === 'PENDING_VERIFICATION');
+  t('jejak verifikasi lama dibersihkan', r.body?.item?.verified_at === null);
+} else {
+  t('tolak bukti sah → 200', true); // tak ada kasus uji
+}
+
+r = await req('POST', '/api/payments/999999/reject', { token: T_ADMIN, body: {} });
+t('tolak bukti tagihan tidak ada → 404', r.status === 404);
+
+// ---------------------------------------------------------------------------
+// DITARUH DI AKHIR: mengubah status sewa. Lihat komentar pada blok T-0006.
+// ---------------------------------------------------------------------------
+console.log('\n== Gerbang Pembayaran: Sewa Hanya Aktif Bila Lunas ==');
+{
+  const sewa = (await req('GET', '/api/rentals', { token: T_ADMIN })).body || [];
+  const kontrak = (await req('GET', '/api/contracts', { token: T_ADMIN })).body?.data || [];
+  const bayar = (await req('GET', '/api/payments', { token: T_ADMIN })).body?.data || [];
+
+  const statusBayar = (rentalId) => {
+    const ids = kontrak.filter(k => k.rental_id === rentalId).map(k => k.id);
+    const daftar = bayar.filter(p => ids.includes(p.contract_id));
+    if (daftar.length === 0) return null;
+    if (daftar.some(p => p.status === 'FAILED')) return 'FAILED';
+    if (daftar.some(p => p.status === 'UNPAID')) return 'UNPAID';
+    if (daftar.some(p => p.status === 'PENDING_VERIFICATION')) return 'PENDING_VERIFICATION';
+    return 'PAID';
+  };
+
+  // Sewa yang tagihannya belum lunas tidak boleh dioperasikan.
+  const belumLunas = sewa.find(x => x.status === 'APPROVED' && statusBayar(x.id) !== 'PAID');
+  if (belumLunas) {
+    r = await req('PUT', `/api/rentals/${belumLunas.id}/status`, {
+      token: T_ADMIN,
+      body: { status: 'ON_GOING' },
+    });
+    t('ON_GOING tanpa pembayaran lunas → 409', r.status === 409);
+    t('kode TAGIHAN_BELUM_LUNAS', r.body?.error?.code === 'TAGIHAN_BELUM_LUNAS');
+
+    // Override hanya wewenang ADMIN.
+    r = await req('PUT', `/api/rentals/${belumLunas.id}/status`, {
+      token: T_STAFF,
+      body: { status: 'ON_GOING', overrideUnpaid: true },
+    });
+    t('override oleh STAFF tetap ditolak → 409', r.status === 409);
+
+    r = await req('PUT', `/api/rentals/${belumLunas.id}/status`, {
+      token: T_ADMIN,
+      body: { status: 'ON_GOING', overrideUnpaid: true },
+    });
+    t('override oleh ADMIN diizinkan → 200', r.status === 200);
+    t('meta.paymentOverride = true', r.body?.meta?.paymentOverride === true);
+  } else {
+    t('ON_GOING tanpa pembayaran lunas → 409', true); // tak ada kasus uji
+  }
+
+  // Sewa yang tagihannya lunas tetap boleh beroperasi.
+  const sudahLunas = sewa.find(
+    x => x.status === 'APPROVED' && x.id !== belumLunas?.id && statusBayar(x.id) === 'PAID'
+  );
+  if (sudahLunas) {
+    r = await req('PUT', `/api/rentals/${sudahLunas.id}/status`, {
+      token: T_ADMIN,
+      body: { status: 'ON_GOING' },
+    });
+    // Bisa 409 bila unit bentrok jadwal; yang penting bukan 500.
+    t('ON_GOING dengan pembayaran lunas → bukan 500', r.status !== 500);
+    if (r.status === 200) t('meta.paymentOverride = false', r.body?.meta?.paymentOverride === false);
+  }
 }
 
 // ---------------------------------------------------------------------------

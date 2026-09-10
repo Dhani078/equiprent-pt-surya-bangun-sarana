@@ -6,6 +6,7 @@ import { ContractPanel } from '../../components/ContractPanel';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { formatRupiah } from '../../lib/businessRules';
 import { buildEquipmentAvailability, describeBlockedReason } from '../../lib/availability';
+import { getPaymentStatusLabel, isPaymentFinal, validatePaymentProofPath } from '../../lib/paymentWorkflow';
 
 interface CustomerPortalProps {
   currentUser: User;
@@ -13,9 +14,9 @@ interface CustomerPortalProps {
   rentals: Rental[];
   contracts: Contract[];
   payments: Payment[];
-  onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<any>;
+  onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<void>;
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
-  onUploadPaymentProof: (paymentId: number, proofPath: string) => Promise<any>;
+  onUploadPaymentProof: (paymentId: number, proofPath: string) => Promise<void>;
 }
 
 export const CustomerPortal: React.FC<CustomerPortalProps> = ({
@@ -35,6 +36,10 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   // Payment Upload Modal
   const [uploadingPayment, setUploadingPayment] = useState<Payment | null>(null);
   const [proofFile, setProofFile] = useState('uploads/proofs/transfer_mandiri_resmi.png');
+  /** Pesan galat validasi bukti (aturan sama dengan server). */
+  const [proofError, setProofError] = useState<string | null>(null);
+  /** Menandai berkas bukti sedang dikirim — mencegah klik ganda. */
+  const [sendingProof, setSendingProof] = useState(false);
 
   // Rent Booking Form State
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
@@ -55,6 +60,33 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     setSelectedEquipment(eq);
     setRentError(null);
     setIsRentModalOpen(true);
+  };
+
+  /**
+   * Mengirim bukti transfer setelah divalidasi dengan aturan yang SAMA
+   * dengan server (`validatePaymentProofPath`). Validasi ganda seperti ini
+   * membuat pelanggan langsung melihat kesalahan tanpa menunggu respons,
+   * sekaligus tetap aman bila klien dimodifikasi.
+   */
+  const kirimBuktiTransfer = async (): Promise<void> => {
+    if (!uploadingPayment || sendingProof) return;
+
+    const hasil = validatePaymentProofPath(proofFile, { required: true });
+    if (!hasil.ok) {
+      setProofError(hasil.message);
+      return;
+    }
+
+    setProofError(null);
+    setSendingProof(true);
+    try {
+      await onUploadPaymentProof(uploadingPayment.id, hasil.value);
+      setUploadingPayment(null);
+    } catch {
+      setProofError('Bukti transfer gagal dikirim. Periksa status tagihan, lalu coba lagi.');
+    } finally {
+      setSendingProof(false);
+    }
   };
 
   const handleConfirmRent = async (e: React.FormEvent) => {
@@ -511,7 +543,12 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  myPayments.map((p) => (
+                  myPayments.map((p) => {
+                    // Tagihan yang sudah final (lunas) tidak bisa dilampiri
+                    // ulang buktinya — tombol unggah karenanya disembunyikan.
+                    const bisaUnggah = !isPaymentFinal(p.status);
+
+                    return (
                     <tr key={p.id}>
                       <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
                         {p.payment_code}
@@ -527,19 +564,28 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       </td>
                       <td>
                         <span className={`badge badge-${p.status.toLowerCase()}`}>
-                          {p.status}
+                          {getPaymentStatusLabel(p.status)}
                         </span>
+                        {p.status === 'FAILED' && (
+                          <div style={{ fontSize: '10.5px', color: '#991B1B', marginTop: '3px', fontWeight: 600 }}>
+                            Bukti ditolak — silakan lampirkan ulang
+                          </div>
+                        )}
                       </td>
                       <td>
-                        {p.status !== 'PAID' ? (
+                        {bisaUnggah ? (
                           <button
                             type="button"
-                            onClick={() => setUploadingPayment(p)}
+                            onClick={() => {
+                              setProofError(null);
+                              setUploadingPayment(p);
+                            }}
                             className="btn-primary"
                             style={{ padding: '6px 12px', fontSize: '12px' }}
+                            aria-label={`Unggah bukti transfer ${p.payment_code}`}
                           >
                             <Upload size={13} />
-                            <span>Unggah Bukti Transfer</span>
+                            <span>{p.status === 'FAILED' ? 'Unggah Ulang Bukti' : 'Unggah Bukti Transfer'}</span>
                           </button>
                         ) : (
                           <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
@@ -548,7 +594,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                         )}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -704,33 +751,50 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Lokasi / Nama Berkas Bukti Transfer
+                Nama Berkas Bukti Transfer
               </label>
               <input
                 type="text"
                 className="input-premium"
                 value={proofFile}
                 onChange={(e) => setProofFile(e.target.value)}
+                aria-label="Nama berkas bukti transfer"
+                aria-invalid={proofError !== null}
+                aria-describedby="petunjuk-bukti-transfer"
               />
-              <div style={{ fontSize: '11px', color: 'var(--color-secondary)', marginTop: '4px' }}>
-                Unggah bukti mutasi bank transfer atau struk setor resmi.
+              <div id="petunjuk-bukti-transfer" style={{ fontSize: '11px', color: 'var(--color-secondary)', marginTop: '4px' }}>
+                Unggah bukti mutasi bank transfer atau struk setor resmi (PNG, JPG, WebP, atau PDF).
               </div>
+              {/* Pesan galat divalidasi dengan aturan yang SAMA dengan server,
+                  sehingga pelanggan tidak mengirim berkas yang pasti ditolak. */}
+              {proofError && (
+                <div role="alert" style={{ fontSize: '11.5px', color: '#DC2626', fontWeight: 600, marginTop: '6px' }}>
+                  {proofError}
+                </div>
+              )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button type="button" onClick={() => setUploadingPayment(null)} className="btn-secondary">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadingPayment(null);
+                  setProofError(null);
+                }}
+                className="btn-secondary"
+              >
                 Batal
               </button>
               <button
                 type="button"
-                onClick={async () => {
-                  await onUploadPaymentProof(uploadingPayment.id, proofFile);
-                  setUploadingPayment(null);
-                }}
+                disabled={sendingProof}
+                onClick={kirimBuktiTransfer}
                 className="btn-primary"
+                style={{ opacity: sendingProof ? 0.6 : 1 }}
+                aria-label="Kirim bukti pembayaran untuk diverifikasi"
               >
                 <Upload size={14} />
-                <span>Kirim Bukti Pembayaran</span>
+                <span>{sendingProof ? 'Mengirim…' : 'Kirim Bukti Pembayaran'}</span>
               </button>
             </div>
           </div>

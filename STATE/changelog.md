@@ -666,3 +666,68 @@ SEBELUM blok tersebut agar hasilnya tetap deterministik.
 **Catatan:** Pratinjau cetak A4 kontrak (T-0029) kini sudah terpenuhi oleh
 `ContractViewer` + `renderContractHtml()`; T-0029 dapat ditandai DONE pada
 pemeriksaan berikutnya.
+
+
+---
+
+## Cycle 23 — 2026-09-10 · T-0008: Manajemen Pembayaran (unggah bukti + verifikasi staf)
+
+**Status:** DONE · P1 · CORE
+
+**Ringkasan:**
+Mesin verifikasi pembayaran kini menjadi satu sumber kebenaran bagi server,
+basis data, dan antarmuka. Sewa tidak dapat dioperasikan sebelum tagihannya
+lunas, pelanggan dapat melampirkan bukti transfer, dan staf dapat mengesahkan
+atau menolak bukti tersebut.
+
+**Berkas baru:**
+- `src/lib/paymentWorkflow.ts` (BARU, 409 baris) — modul MURNI: tidak menyentuh
+  DOM, tidak mengambil data, tidak memanggil jaringan.
+  - Matriks transisi: `UNPAID → PENDING_VERIFICATION → PAID | FAILED`,
+    `FAILED → PENDING_VERIFICATION`, `PAID` adalah status akhir.
+  - `validatePaymentProofPath()` — ekstensi `.png/.jpg/.jpeg/.webp/.pdf`,
+    maksimal 255 karakter, menolak path traversal (`../../`), jalur absolut,
+    backslash Windows, serta skema `javascript:` dan `data:`.
+  - `mayTouchPayment()` — pelanggan hanya boleh menyentuh tagihannya sendiri;
+    `mayVerifyPayment()` — hanya ADMIN/STAFF yang boleh mengesahkan.
+  - `checkPaymentGate()` — mengunci `ON_GOING` sampai `PAID`; override hanya
+    sah bila `role === 'ADMIN'` dan dinyatakan eksplisit.
+  - `summarizeRentalPayment()` (status terburuk menang) dan
+    `summarizePaymentQueue()` (siap diverifikasi vs menunggu bukti).
+
+**Perubahan:**
+- `src/lib/db.ts` — `verifyPayment` menolak verifikasi tanpa bukti
+  (`BUKTI_TRANSFER_BELUM_ADA`) dan verifikasi ulang
+  (`STATUS_PEMBAYARAN_TIDAK_VALID`); `rejectPayment` (BARU) menurunkan
+  `PENDING_VERIFICATION → FAILED`; `addPaymentProof` membersihkan
+  `verified_at`/`verified_by_name` bila bukti diganti agar peninjauan usang
+  tidak melekat pada berkas baru; `updateRentalStatus` menerima
+  `{ overrideUnpaid }` dan menjalankan gerbang pembayaran.
+- `src/server/index.ts` — tiga endpoint RBAC-ketat baru:
+  `POST /api/payments/:id/proof`, `/verify`, `/reject`, dengan pemetaan kode
+  galat terpusat `toPaymentErrorResponse()`; `GET /api/payments` kini
+  ber-envelope `{ success, data, meta: { total, queue } }`; endpoint status
+  sewa meneruskan `overrideUnpaid` dan melaporkan `meta.paymentOverride`.
+- `src/pages/staff/StaffDashboard.tsx` — panel verifikasi: pencarian, ringkasan
+  antrean, penanda siap/belum bukti, aksi Tolak, pratinjau bukti yang lebih
+  informatif, dan empty state.
+- `src/pages/customer/CustomerPortal.tsx` — label status Bahasa Indonesia,
+  validasi nama berkas sebelum dikirim, tombol unggah disembunyikan pada
+  tagihan final, peringatan "Bukti ditolak — silakan lampirkan ulang".
+- `src/App.tsx` — `handleRejectPayment` baru, diteruskan ke StaffDashboard.
+- `src/lib/seedGenerator.ts` — sewa `ON_GOING` kini selalu `PAID` (status
+  pembayaran tidak lagi bertentangan dengan gerbang bisnis §4.3 poin 4);
+  `rng()` tetap dipanggil agar data turunan tidak bergeser.
+
+**Pengujian:**
+- `tests/paymentWorkflow.test.mjs` (BARU) — 121 pemeriksaan: matriks transisi,
+  validasi berkas (23 kasus), RBAC, gerbang pembayaran + override, ringkasan
+  status & antrean (aman pada `amount` rusak/`null`), konsistensi data nyata.
+- `tests/api.test.mjs` — 43 pemeriksaan baru: unggah bukti, penolakan berkas
+  berbahaya, kepemilikan tagihan (403), larangan pelanggan memverifikasi,
+  penolakan bukti, unggah ulang setelah ditolak, dan gerbang pembayaran
+  (409 `TAGIHAN_BELUM_LUNAS`, override STAFF ditolak, override ADMIN diizinkan).
+- `tests/run-tests.mjs` — bundle `paymentWorkflow.ts` + suite baru (18 suite).
+
+**Verifikasi:** typecheck PASS · build PASS (597,90 KB) · npm test 18/18 suite PASS
+**Catatan:** Nol `any`, nol penyambungan string SQL, tanpa kredensial pada berkas.

@@ -41,6 +41,7 @@ bundle('src/lib/validators.ts', '.tmp_validators.mjs');
 bundle('src/lib/dashboard.ts', '.tmp_dashboard.mjs');
 bundle('src/lib/rentalWorkflow.ts', '.tmp_rentalWorkflow.mjs');
 bundle('src/lib/contracts.ts', '.tmp_contracts.mjs');
+bundle('src/lib/paymentWorkflow.ts', '.tmp_paymentWorkflow.mjs');
 
 // Panel laporan butuh JSX → sertakan loader .tsx dan jadikan React eksternal
 // agar modul react/react-dom tidak ikut ter-bundle (cukup satu instans).
@@ -84,6 +85,7 @@ const suites = [
   'rentalWorkflow.test.mjs',
   'contracts.test.mjs',
   'contractPanel.test.mjs',
+  'paymentWorkflow.test.mjs',
   'codeQuality.test.mjs',
 ];
 
@@ -107,7 +109,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }
