@@ -6,8 +6,23 @@ import { ContractPanel } from '../../components/ContractPanel';
 import { LeafletMap } from '../../components/LeafletMap';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { formatRupiah, formatWaktu } from '../../lib/businessRules';
-import { buildEquipmentAvailability, describeBlockedReason } from '../../lib/availability';
 import { getPaymentStatusLabel, isPaymentFinal, validatePaymentProofPath } from '../../lib/paymentWorkflow';
+import {
+  buildCatalog,
+  buildRentalJourney,
+  checkRentalRequest,
+  summarizeBilling,
+  selectMyContracts,
+  selectMyPayments,
+  selectMyRentals,
+  CATALOG_AVAILABILITY_LABEL,
+  CATALOG_AVAILABILITY_TONE,
+  RENTAL_JOURNEY_LABEL,
+  RENTAL_JOURNEY_TONE,
+  RENTAL_NEXT_ACTION_LABEL,
+  DEFAULT_CATALOG_FILTER,
+} from '../../lib/customerPortal';
+import type { CatalogFilter } from '../../lib/customerPortal';
 import {
   buildFleetTelemetry,
   formatCoordinate,
@@ -58,9 +73,13 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   const [notes, setNotes] = useState('Pekerjaan proyek penataan lahan di wilayah Kalimantan Selatan');
   const [rentError, setRentError] = useState<string | null>(null);
 
-  const myRentals = rentals.filter(r => r.customer_id === currentUser.id || r.customer_name?.includes(currentUser.full_name));
-  const myContracts = contracts.filter(c => c.customer_id === currentUser.id);
-  const myPayments = payments.filter(p => p.customer_id === currentUser.id);
+  // Penentuan "milik siapa" dipusatkan di modul `customerPortal` dan DIUJI:
+  // basisnya `customer_id`, dengan cadangan pencocokan nama untuk baris
+  // impor lama yang kehilangan ID. Menulis ulang `==` di sini berisiko
+  // membocorkan data pelanggan lain bila satu kolom saja berbeda.
+  const myRentals = useMemo(() => selectMyRentals(rentals, currentUser), [rentals, currentUser]);
+  const myContracts = useMemo(() => selectMyContracts(contracts, currentUser), [contracts, currentUser]);
+  const myPayments = useMemo(() => selectMyPayments(payments, currentUser), [payments, currentUser]);
 
   /**
    * Pelacakan GPS HANYA untuk unit yang sedang pelanggan ini sewa.
@@ -88,10 +107,53 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
   const [selectedTrackedUnit, setSelectedTrackedUnit] = useState<number | null>(null);
 
-  const calculateDays = (start: string, end: string) => {
-    const diff = new Date(end).getTime() - new Date(start).getTime();
-    return Math.max(1, Math.round(diff / (1000 * 3600 * 24)));
-  };
+  // Penyaring katalog: kata kunci, kategori, dan urutan harga.
+  const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>(DEFAULT_CATALOG_FILTER);
+
+  /**
+   * Secara bawaan katalog hanya menampilkan unit yang bebas pada periode
+   * yang dipilih (kriteria penerimaan T-0011). Tombol pada kepala katalog
+   * dapat memunculkan unit yang sedang disewa — dengan badge "Sedang
+   * Disewa" dan tombol nonaktif — bila pelanggan ingin melihat seluruh
+   * armada. Unit dalam perawatan tetap tidak pernah ditampilkan.
+   */
+  const [tampilkanTerpesan, setTampilkanTerpesan] = useState(false);
+
+  /**
+   * Katalog yang hanya berisi unit yang BISA DISEWA pada periode yang
+   * sedang dipilih. Penyaringan dilakukan oleh modul `customerPortal`
+   * (satu definisi ketersediaan dengan API), bukan oleh `status === 'AVAILABLE'`
+   * yang hanya menggambarkan keadaan hari ini.
+   */
+  const katalog = useMemo(
+    () => buildCatalog(equipments, rentals, startDate, endDate, catalogFilter, {
+      includeBlocked: tampilkanTerpesan,
+    }),
+    [equipments, rentals, startDate, endDate, catalogFilter, tampilkanTerpesan]
+  );
+
+  /**
+   * Riwayat sewa lengkap dengan kontrak & tagihan terpasang.
+   * `buildRentalJourney` mengembalikan `rental` yang sama persis dengan
+   * `myRentals`, sehingga urutan & isi tabel tidak berubah.
+   */
+  const perjalananSewa = useMemo(
+    () => buildRentalJourney(myRentals, myContracts, myPayments),
+    [myRentals, myContracts, myPayments]
+  );
+
+  /** Ringkasan tab tagihan — dihitung oleh modul yang sama dengan API. */
+  const ringkasanTagihan = useMemo(() => summarizeBilling(myPayments), [myPayments]);
+
+  /**
+   * Estimasi biaya pada modal pengajuan — memakai pemeriksa yang sama
+   * dengan tombol "Ajukan Sewa", sehingga angka di layar tidak mungkin
+   * berbeda dengan nilai yang akhirnya tersimpan pada sewa.
+   */
+  const estimasi = useMemo(
+    () => checkRentalRequest(selectedEquipment, rentals, startDate, endDate),
+    [selectedEquipment, rentals, startDate, endDate]
+  );
 
   const handleOpenRent = (eq: Equipment) => {
     setSelectedEquipment(eq);
@@ -130,30 +192,18 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     e.preventDefault();
     if (!selectedEquipment) return;
 
-    const days = calculateDays(startDate, endDate);
-
-    // Validasi dasar sebelum mengirim ke server.
-    if (days <= 0) {
-      setRentError('Tanggal selesai harus setelah tanggal mulai.');
-      return;
-    }
-
-    // Cegah double-booking di sisi klien (server tetap memvalidasi ulang).
-    // Mesin yang sama dengan halaman admin agar pesannya konsisten.
-    const [availability] = buildEquipmentAvailability(
-      [selectedEquipment],
-      rentals,
-      startDate,
-      endDate
-    );
-
-    if (!availability.isBookable) {
-      setRentError(describeBlockedReason(availability));
+    // Satu pemeriksaan yang mencakup: unit ada, unit tidak dirawat, periode
+    // masuk akal, tidak bentrok dengan sewa lain, dan durasi wajar. Biaya
+    // dihitung oleh `calculateRentalCost` — rumus yang sama dengan dokumen
+    // cetak & laporan, sehingga estimasi di layar tidak bisa berbeda dengan
+    // angka pada tagihan.
+    const hasil = checkRentalRequest(selectedEquipment, rentals, startDate, endDate);
+    if (!hasil.ok) {
+      setRentError(hasil.message);
       return;
     }
 
     setRentError(null);
-    const subtotal = days * Number(selectedEquipment.rental_price_per_day);
 
     await onAddRental({
       customer_id: currentUser.id,
@@ -165,8 +215,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
       booking_date: new Date().toISOString(),
       start_date: startDate,
       end_date: endDate,
-      total_days: days,
-      subtotal,
+      total_days: hasil.rentalDays,
+      subtotal: hasil.subtotal,
       status: 'PENDING',
       notes
     });
@@ -275,7 +325,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               Katalog Alat
             </div>
             <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
-              {equipments.filter(e => e.status === 'AVAILABLE').length} Unit Siap Sewa
+              {katalog.summary.bookable} Unit Siap Sewa
             </div>
           </div>
         </button>
@@ -389,7 +439,9 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               Tagihan & Transfer
             </div>
             <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
-              {myPayments.length} Pembayaran
+              {ringkasanTagihan.belumBayarCount > 0
+                ? `${ringkasanTagihan.belumBayarCount} tagihan belum dibayar`
+                : `${myPayments.length} Pembayaran`}
             </div>
           </div>
         </button>
@@ -442,14 +494,151 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               Katalog Alat Berat Siap Mobilisasi
             </h3>
             <span style={{ fontSize: '12.5px', color: 'var(--color-secondary)' }}>
-              Armada standar pertambangan & konstruksi PT. SBS Banjarmasin
+              {katalog.summary.bookable} unit siap sewa dari {equipments.length} unit armada
             </span>
           </div>
 
+          {/* Penyaring katalog: periode, kata kunci, kategori, urutan harga.
+              Periode menentukan unit mana yang benar-benar bebas, sehingga
+              dipasang di sini bukan di dalam modal pengajuan. */}
+          <div
+            className="card-premium"
+            style={{
+              padding: '14px 16px',
+              marginBottom: '16px',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              alignItems: 'flex-end'
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label htmlFor="portal-cari" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-secondary)', textTransform: 'uppercase' }}>
+                Cari Unit
+              </label>
+              <input
+                id="portal-cari"
+                type="search"
+                value={catalogFilter.search}
+                onChange={(e) => setCatalogFilter((f) => ({ ...f, search: e.target.value }))}
+                placeholder="Nama, kode, merk, atau kategori"
+                className="form-input"
+                style={{ width: '220px' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label htmlFor="portal-kategori" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-secondary)', textTransform: 'uppercase' }}>
+                Kategori
+              </label>
+              <select
+                id="portal-kategori"
+                value={catalogFilter.category}
+                onChange={(e) => setCatalogFilter((f) => ({ ...f, category: e.target.value }))}
+                className="form-input"
+                style={{ width: '170px' }}
+              >
+                <option value="">Semua Kategori</option>
+                {katalog.categories.map((kategori) => (
+                  <option key={kategori} value={kategori}>{kategori}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label htmlFor="portal-urut" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-secondary)', textTransform: 'uppercase' }}>
+                Urutkan
+              </label>
+              <select
+                id="portal-urut"
+                value={catalogFilter.sort}
+                onChange={(e) =>
+                  setCatalogFilter((f) => ({
+                    ...f,
+                    sort: e.target.value as CatalogFilter['sort'],
+                  }))
+                }
+                className="form-input"
+                style={{ width: '150px' }}
+              >
+                <option value="TERMURAH">Tarif Terendah</option>
+                <option value="TERMAHAL">Tarif Tertinggi</option>
+                <option value="TERBARU">Unit Terbaru</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label htmlFor="portal-mulai" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-secondary)', textTransform: 'uppercase' }}>
+                Mulai Sewa
+              </label>
+              <input
+                id="portal-mulai"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="form-input"
+                style={{ width: '155px' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label htmlFor="portal-selesai" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-secondary)', textTransform: 'uppercase' }}>
+                Selesai Sewa
+              </label>
+              <input
+                id="portal-selesai"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="form-input"
+                style={{ width: '155px' }}
+              />
+            </div>
+
+            {(catalogFilter.search !== '' || catalogFilter.category !== '') && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ padding: '8px 14px', fontSize: '12.5px' }}
+                onClick={() => setCatalogFilter(DEFAULT_CATALOG_FILTER)}
+              >
+                Reset Filter
+              </button>
+            )}
+
+            {/* Unit yang bentrok disembunyikan secara bawaan; tombol ini
+                memunculkannya kembali tanpa membuka data perawatan. */}
+            {katalog.summary.blockedBySchedule > 0 && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ padding: '8px 14px', fontSize: '12.5px' }}
+                aria-pressed={tampilkanTerpesan}
+                onClick={() => setTampilkanTerpesan((v) => !v)}
+              >
+                {tampilkanTerpesan
+                  ? `Sembunyikan ${katalog.summary.blockedBySchedule} unit terpesan`
+                  : `Tampilkan ${katalog.summary.blockedBySchedule} unit terpesan`}
+              </button>
+            )}
+          </div>
+
+          {katalog.items.length === 0 ? (
+            <div className="card-premium" style={{ padding: '40px', textAlign: 'center' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '6px' }}>
+                Tidak ada unit yang sesuai
+              </div>
+              <div style={{ fontSize: '12.5px', color: 'var(--color-secondary)' }}>
+                {katalog.summary.blockedBySchedule > 0
+                  ? `${katalog.summary.blockedBySchedule} unit sedang disewa pada periode ini. Coba geser tanggal mulai atau selesai.`
+                  : 'Coba ubah kata kunci, kategori, atau periode sewa Anda.'}
+              </div>
+            </div>
+          ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-            {equipments.map((eq) => {
-              const isAvailable = eq.status === 'AVAILABLE';
+            {katalog.items.map(({ equipment: eq, isBookable, availability, blockedMessage }) => {
               const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
+              const nada = CATALOG_AVAILABILITY_TONE[availability];
 
               return (
                 <div key={eq.id} className="card-premium" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -460,8 +649,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                     <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
-                      <span className={`badge badge-${eq.status.toLowerCase()}`}>
-                        {isAvailable ? 'Tersedia' : eq.status === 'RENTED' ? 'Disewa' : eq.status}
+                      <span className={`badge badge-${nada}`}>
+                        {CATALOG_AVAILABILITY_LABEL[availability]}
                       </span>
                     </div>
                   </div>
@@ -491,22 +680,31 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
                         <button
                           type="button"
-                          disabled={!isAvailable}
+                          disabled={!isBookable}
                           onClick={() => handleOpenRent(eq)}
-                          className={isAvailable ? 'btn-primary' : 'btn-secondary'}
-                          style={{ padding: '7px 14px', fontSize: '12.5px', opacity: isAvailable ? 1 : 0.6 }}
+                          className={isBookable ? 'btn-primary' : 'btn-secondary'}
+                          style={{ padding: '7px 14px', fontSize: '12.5px', opacity: isBookable ? 1 : 0.6 }}
                         >
-                          {isAvailable ? 'Ajukan Sewa' : 'Tidak Tersedia'}
+                          {isBookable ? 'Ajukan Sewa' : 'Tidak Tersedia'}
                         </button>
                       </div>
+
+                      {/* Alasan penolakan ditampilkan di kartu — pelanggan tahu
+                          unit ini sedang dipakai, bukan sekadar hilang. */}
+                      {blockedMessage !== null && (
+                        <div style={{ fontSize: '11.5px', color: '#B45309', lineHeight: 1.4 }}>
+                          {blockedMessage}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               );
-            })}
-          </div>
-        </div>
-      )}
+              })}
+              </div>
+              )}
+              </div>
+              )}
 
       {/* Tab: My Rentals */}
       {activeTab === 'my_rentals' && (
@@ -524,17 +722,18 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                   <th>Durasi Proyek</th>
                   <th>Estimasi Biaya</th>
                   <th>Status Sewa</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myRentals.length === 0 ? (
+                  <th>Tahap Berikutnya</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  {perjalananSewa.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-secondary)' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-secondary)' }}>
                       Belum ada transaksi sewa. Silakan pilih alat pada menu Katalog Alat.
                     </td>
                   </tr>
-                ) : (
-                  myRentals.map((r) => {
+                  ) : (
+                  perjalananSewa.map(({ rental: r, statusLabel, statusTone, stage, stageLabel, stageTone, nextAction }) => {
                     const imgUrl = getEquipmentImage(r.equipment_code);
                     return (
                       <tr key={r.id}>
@@ -560,15 +759,47 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                           {formatRupiah(Number(r.subtotal))}
                         </td>
                         <td>
-                          <span className={`badge badge-${r.status.toLowerCase()}`}>
-                            {r.status}
+                          <span className={`badge badge-${statusTone}`}>
+                            {statusLabel}
                           </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span className={`badge badge-${stageTone}`} style={{ fontSize: '11px' }}>
+                              {stageLabel}
+                            </span>
+                            {/* Tindakan berikutnya hanya ditampilkan bila
+                                giliran pelanggan bertindak. */}
+                            {nextAction !== null && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActiveTab(
+                                    nextAction === 'TANDA_TANGAN_KONTRAK' ? 'contracts' : 'payments'
+                                  )
+                                }
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  fontSize: '11.5px',
+                                  fontWeight: 700,
+                                  color: 'var(--color-primary)',
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                {RENTAL_NEXT_ACTION_LABEL[nextAction]}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
                   })
-                )}
-              </tbody>
+                  )}
+                  </tbody>
             </table>
           </div>
         </div>
@@ -599,6 +830,53 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 16px 0' }}>
             Tagihan Pembayaran Sewa & Bukti Transfer
           </h3>
+
+          {/* Ringkasan tagihan. Sengaja dihitung oleh modul (bukan inline)
+              agar angkanya tidak pernah berbeda dengan yang dihitung API. */}
+          {myPayments.length > 0 && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+              <div style={{ padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Total Tagihan</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'monospace' }}>
+                  {formatRupiah(ringkasanTagihan.totalAmount)}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{ringkasanTagihan.total} tagihan</div>
+              </div>
+
+              <div style={{ padding: '12px 14px', backgroundColor: '#F0FDF4', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Sudah Lunas</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#059669', fontFamily: 'monospace' }}>
+                  {formatRupiah(ringkasanTagihan.lunasAmount)}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{ringkasanTagihan.lunasCount} tagihan</div>
+              </div>
+
+              <div style={{ padding: '12px 14px', backgroundColor: '#FFFBEB', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Menunggu Verifikasi</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#B45309', fontFamily: 'monospace' }}>
+                  {formatRupiah(ringkasanTagihan.menungguVerifikasiAmount)}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{ringkasanTagihan.menungguVerifikasiCount} tagihan</div>
+              </div>
+
+              <div style={{ padding: '12px 14px', backgroundColor: '#FEF2F2', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Belum Dibayar</div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#DC2626', fontFamily: 'monospace' }}>
+                  {formatRupiah(ringkasanTagihan.belumBayarAmount)}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
+                  {ringkasanTagihan.belumBayarCount} tagihan
+                  {ringkasanTagihan.ditolakCount > 0 && ` (${ringkasanTagihan.ditolakCount} bukti ditolak)`}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="table-container">
             <table className="data-table">
               <thead>
@@ -843,12 +1121,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
             <div style={{ padding: '12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--color-secondary)' }}>
-                <span>Durasi: <strong>{calculateDays(startDate, endDate)} Hari</strong></span>
+                <span>Durasi: <strong>{estimasi.ok ? `${estimasi.rentalDays} Hari` : '-'}</strong></span>
                 <span>Tarif: <strong>{formatRupiah(Number(selectedEquipment.rental_price_per_day))}</strong>/hari</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)' }}>
                 <span>Total Estimasi Biaya Sewa:</span>
-                <span style={{ fontFamily: 'monospace' }}>{formatRupiah(calculateDays(startDate, endDate) * Number(selectedEquipment.rental_price_per_day))}</span>
+                <span style={{ fontFamily: 'monospace' }}>
+                  {estimasi.ok ? formatRupiah(estimasi.subtotal) : '-'}
+                </span>
               </div>
             </div>
 
