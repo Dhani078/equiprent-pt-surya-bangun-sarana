@@ -280,4 +280,17 @@ export interface ReportResult {
   rows: ReportCellValue[][];
   summaries: ReportSummary[];
   totalRows: number;
+  /**
+   * Jumlah baris SEMUA entitas pada periode ini, sebelum laporan
+   * menyaringnya menjadi baris yang relevan.
+   *
+   * Hanya diisi oleh laporan yang ringkasannya berupa rasio terhadap
+   * keseluruhan (misal "Cakupan Umpan Balik" = transaksi ber-umpan balik ÷
+   * seluruh transaksi). Tanpa nilai ini, penyaringan kata kunci akan
+   * membandingkan baris hasil saringan dengan dirinya sendiri sehingga
+   * persentasenya selalu 100%.
+   *
+   * `undefined` bila laporan tidak memakai metrik rasio.
+   */
+  baselineRows?: number;
 }

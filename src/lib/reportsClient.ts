@@ -12,7 +12,7 @@
  */
 
 import type { DateRangeFilter, ReportId, ReportResult } from '../types';
-import { buildReport, normalizeRange } from './reports';
+import { applyKeywordFilter, buildReport, normalizeKeyword, normalizeRange } from './reports';
 import type { ReportDataSource } from './reports';
 import { db } from './db';
 
@@ -50,11 +50,13 @@ function isReportResult(value: unknown): value is ReportResult {
 async function fetchFromApi(
   id: ReportId,
   range: DateRangeFilter,
+  keyword: string,
   signal: AbortSignal
 ): Promise<ReportResult> {
   const params = new URLSearchParams({ id });
   if (range.from !== '') params.set('from', range.from);
   if (range.to !== '') params.set('to', range.to);
+  if (normalizeKeyword(keyword) !== '') params.set('q', keyword);
 
   const res = await fetch(`/api/reports/analytics?${params.toString()}`, {
     headers: { Accept: 'application/json' },
@@ -72,7 +74,11 @@ async function fetchFromApi(
 }
 
 /** Menyusun laporan dari state aplikasi (fallback tanpa API). */
-async function buildLocally(id: ReportId, range: DateRangeFilter): Promise<ReportResult> {
+async function buildLocally(
+  id: ReportId,
+  range: DateRangeFilter,
+  keyword: string
+): Promise<ReportResult> {
   const source: ReportDataSource = {
     rentals: await db.getRentals(),
     equipments: await db.getEquipments(),
@@ -82,7 +88,7 @@ async function buildLocally(id: ReportId, range: DateRangeFilter): Promise<Repor
     gps: await db.getGpsTracking(),
     reports: await db.getReports(),
   };
-  return buildReport(id, source, range);
+  return applyKeywordFilter(buildReport(id, source, range), keyword);
 }
 
 /**
@@ -94,14 +100,15 @@ async function buildLocally(id: ReportId, range: DateRangeFilter): Promise<Repor
 export async function fetchReport(
   id: ReportId,
   range: DateRangeFilter,
-  signal: AbortSignal
+  signal: AbortSignal,
+  keyword: string = ''
 ): Promise<ReportFetchResult> {
   // Rentang dinormalisasi di sini supaya nilai dari input <input type="date">
   // yang rusak tidak pernah sampai ke mesin laporan.
   const safeRange = normalizeRange(range.from, range.to);
 
   try {
-    return { ok: true, result: await fetchFromApi(id, safeRange, signal), source: 'API' };
+    return { ok: true, result: await fetchFromApi(id, safeRange, keyword, signal), source: 'API' };
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       return { ok: false, message: 'PERMINTAAN_DIBATALKAN' };
@@ -109,7 +116,7 @@ export async function fetchReport(
   }
 
   try {
-    return { ok: true, result: await buildLocally(id, safeRange), source: 'LOKAL' };
+    return { ok: true, result: await buildLocally(id, safeRange, keyword), source: 'LOKAL' };
   } catch {
     return { ok: false, message: 'Gagal memuat data laporan. Periksa koneksi basis data Anda.' };
   }

@@ -1,17 +1,18 @@
 {
-  "cycle": 25,
-  "last_run": "2026-09-10T18:34:12.500Z",
+  "cycle": 26,
+  "last_run": "2026-09-10T21:05:28.745Z",
   "current_task_id": "T-0012",
   "current_phase": "FASE 3: Fitur Inti",
   "completed_this_cycle": [
-    "T-0011"
+    "T-0011",
+    "T-0012"
   ],
-  "session_summary": "T-0011 Portal Customer: modul murni customerPortal.ts (katalog, pengajuan, perjalanan sewa, ringkasan tagihan) + 55 pengujian; kriteria penerimaan terverifikasi pada data seed.",
+  "session_summary": "T-0012: 11 laporan operasional lengkap dengan filter rentang tanggal, pencarian global, dan ekspor CSV. API /api/reports/analytics mendukung parameter q (keyword). Laporan: RENTAL_BULANAN, PEMBAYARAN_PIUTANG, PENDAPATAN_BERSIH, MAINTENANCE_SERVIS, UTILISASI_HM, KERUSAKAN_UNIT, TELEMETRI_GPS, KINERJA_STAF, SUKU_CADANG, KEPUASAN_PELANGGAN, AUDIT_TRAIL. Ringkasan dihitung dari baris terfilter (bukan sumber asli) agar angka konsisten saat mencari.",
   "quality_gate": {
     "type_check": "PASS",
-    "test": "PASS (21/21 suite, 55 kasus baru)",
+    "test": "PASS (21/21 suite)",
     "build": "PASS",
-    "verified_at": "2026-09-10T18:34:12.501Z"
+    "verified_at": "2026-09-10T21:05:28.746Z"
   },
   "test_suites": 21,
   "commits": 19,
@@ -19,5 +20,5 @@
     "status": "READY",
     "note": "deploy:cloud sudah benar; deploy sungguhan butuh login Cloudflare"
   },
-  "next_focus": "T-0012 — 11 jenis laporan + filter rentang tanggal"
+  "next_focus": "T-0013 — API: pencarian global pada tabel laporan (q parameter)"
 }
