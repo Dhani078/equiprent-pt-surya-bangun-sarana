@@ -552,3 +552,50 @@ Armada" pada dashboard yang sama.
 **Catatan:** Menyelesaikan pula T-0027 (ringkasan utilisasi armada) karena
 seluruh kriteria penerimaannya terpenuhi oleh kartu "Tingkat Utilisasi
 Armada" pada dashboard yang sama.
+
+---
+
+## [CYCLE 21] 2026-09-09T19:40:00Z — T-0006 — P1 — DONE
+**Judul:** Manajemen Rental — mesin alur status + denda keterlambatan terpusat
+**Perubahan:**
+- `src/lib/rentalWorkflow.ts` (BARU) — mesin transisi MURNI (tanpa React,
+  tanpa DB, tanpa jaringan) sebagai SATU sumber kebenaran: matriks transisi
+  status rental, efek samping per transisi (penalti & status unit),
+  pelabelan status, dan helper `countLateDays`.
+- `src/lib/businessRules.ts` — ekstrak `countLateDays()` sebagai helper
+  bersama; `calculateRentalCost` mengembalikan `subtotal`, `penalty`, dan
+  `durationDays` sekaligus menjadi sumber denda tunggal.
+- `src/server/index.ts` — `PUT /api/rentals/:id/status` kini memakai mesin
+  transisi: tolak lompatan status & status akhir dengan `409
+  INVALID_STATUS_TRANSITION` (beserta daftar transisi yang diizinkan),
+  `404` bila rental tak ada, dan kembalikan `meta { lateDays, penalty,
+  allowedNext }` agar UI bisa menampilkan denda tanpa menebak.
+- `src/lib/db.ts` — `updateRentalStatus` diselaraskan ke matriks yang sama
+  (ON_GOING mengunci unit RENTED; COMPLETED/REJECTED membebaskan unit).
+- `src/pages/admin/RentalManagement.tsx` — ditulis ulang: filter status,
+  pencarian, kartu ringkasan total denda keterlambatan, penanda visual
+  keterlambatan, tombol aksi hanya untuk transisi yang sah, konfirmasi
+  sebelum menyelesaikan, serta penanganan pesan error 409 yang jelas.
+- `src/pages/staff/StaffDashboard.tsx` — `aria-label` pada tombol
+  Setujui/Tolak (aksesibilitas).
+**Perilaku yang dijaga:**
+- Denda keterlambatan kini dihitung IDENTIK di UI, server, dan laporan
+  karena ketiganya memanggil helper yang sama — menutup inkonsistensi
+  lama (UI memakai tarif tetap 10% vs server memakai `LATE_PENALTY_PER_DAY`).
+- Status akhir (COMPLETED, REJECTED) terkunci: tidak bisa dibuka lagi,
+  mencegah unit "terpakai" setelah sewa selesai.
+- Endpoint tetap terproteksi: tanpa token -> 401.
+- Tidak ada `any`, tidak ada concat SQL (seluruhnya parameter `?`).
+**Pengujian:**
+- `tests/rentalWorkflow.test.mjs` (BARU) — 67 pemeriksaan: matriks
+  transisi (jalur sah, lompatan ditolak, status akhir terkunci, transisi
+  ke status sama ditolak), konsistensi denda terhadap `calculateRentalCost`,
+  efek unit per transisi, agregat `summarizeLatePenalties`, dan konsistensi
+  terhadap 50 rental seed nyata.
+- `tests/api.test.mjs` — 12 pemeriksaan baru untuk alur status.
+- `tests/run-tests.mjs` — bundle `rentalWorkflow.ts` + suite baru (15 suite).
+**Verifikasi:** typecheck PASS · build PASS (560 KB) · npm test 15/15 suite PASS
+**Catatan:** Blok uji alur status sengaja diletakkan PALING AKHIR di
+`tests/api.test.mjs` karena bersifat mutasi (mengubah status rental).
+Bila nanti ditambah uji yang bergantung pada status seed, letakkan
+SEBELUM blok tersebut agar hasilnya tetap deterministik.

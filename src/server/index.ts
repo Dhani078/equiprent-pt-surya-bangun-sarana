@@ -37,6 +37,15 @@ import {
 } from '../lib/reports';
 import type { ReportDataSource } from '../lib/reports';
 import { buildDashboardStats } from '../lib/dashboard';
+import {
+  canTransition,
+  getAllowedNextStatuses,
+  getLateReturnInfo,
+  getTransitionEffect,
+  isRentalStatus,
+  RENTAL_STATUSES,
+} from '../lib/rentalWorkflow';
+import type { RentalStatus } from '../lib/rentalWorkflow';
 
 /** Laporan yang tampil pertama kali saat halaman dibuka. */
 const DEFAULT_REPORT_ID: ReportId = REPORT_CATALOG[0].id;
@@ -671,30 +680,46 @@ app.put('/api/rentals/:id/status', async (c) => {
   const body = await readJsonBody<{ status?: unknown }>(c);
   if (body === null) return c.json(BAD_JSON, 400);
 
-  // Validasi status agar tidak ada nilai sembarang yang masuk ke data.
-  const STATUS_VALID = ['PENDING', 'APPROVED', 'ON_GOING', 'COMPLETED', 'REJECTED'] as const;
-  if (typeof body.status !== 'string' || !STATUS_VALID.includes(body.status as typeof STATUS_VALID[number])) {
+  // Status harus salah satu ENUM yang diakui skema tabel `rentals`.
+  if (!isRentalStatus(body.status)) {
     return c.json(
-      { success: false, error: { code: 'VALIDATION_ERROR', message: `Status harus salah satu dari: ${STATUS_VALID.join(', ')}.` } },
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: `Status harus salah satu dari: ${RENTAL_STATUSES.join(', ')}.`,
+        },
+      },
       400
     );
   }
 
-  // Bila rental akan mengunci unit (APPROVED / ON_GOING), pastikan unit
-  // tidak bentrok dengan rental aktif lain. Mencegah double-booking dari
-  // jalur persetujuan staf.
-  if (body.status === 'APPROVED' || body.status === 'ON_GOING') {
-    const semuaRental = await db.getRentals();
-    const target = semuaRental.find(r => r.id === id);
-    if (!target) {
-      return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Rental tidak ditemukan.' } }, 404);
-    }
+  const targetStatus: RentalStatus = body.status;
 
-    const unit = (await db.getEquipments()).find(e => e.id === target.equipment_id);
-    if (!unit) {
-      return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
-    }
+  const semuaRental = await db.getRentals();
+  const target = semuaRental.find(r => r.id === id);
+  if (!target) {
+    return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Rental tidak ditemukan.' } }, 404);
+  }
 
+  // Alur wajib mengikuti matriks transisi terpusat: mencegah lompatan status
+  // (misal PENDING → COMPLETED) yang bisa memalsukan laporan pendapatan.
+  const transisi = canTransition(target.status, targetStatus);
+  if (!transisi.allowed) {
+    return c.json(
+      { success: false, error: { code: 'INVALID_STATUS_TRANSITION', message: transisi.reason } },
+      409
+    );
+  }
+
+  const unit = (await db.getEquipments()).find(e => e.id === target.equipment_id);
+  if (!unit) {
+    return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
+  }
+
+  // Transisi yang mengunci unit wajib lolos uji bentrokan jadwal.
+  // Mencegah double-booking dari jalur persetujuan staf.
+  if (getTransitionEffect(targetStatus).equipmentStatus === 'RENTED') {
     // Mesin yang sama dengan POST /api/rentals — rental ini dikecualikan agar
     // tidak bentrok dengan dirinya sendiri.
     const [availability] = buildEquipmentAvailability(
@@ -711,7 +736,7 @@ app.put('/api/rentals/:id/status', async (c) => {
           success: false,
           error: {
             code: 'EQUIPMENT_UNAVAILABLE',
-            message: `${describeBlockedReason(availability)} Persetujuan dibatalkan.`,
+            message: `${describeBlockedReason(availability)} Perubahan status dibatalkan.`,
           },
         },
         409
@@ -719,10 +744,22 @@ app.put('/api/rentals/:id/status', async (c) => {
     }
   }
 
-  const updated = await db.updateRentalStatus(id, body.status as typeof STATUS_VALID[number]);
+  const updated = await db.updateRentalStatus(id, targetStatus);
   if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Rental tidak ditemukan.' } }, 404);
 
-  return c.json({ success: true, item: updated });
+  // Denda keterlambatan dihitung oleh modul yang sama dengan UI & dokumen
+  // cetak, sehingga angka di API tidak bisa menyimpang dari layar.
+  const denda = getLateReturnInfo(updated, { referenceAt: new Date() });
+
+  return c.json({
+    success: true,
+    item: updated,
+    meta: {
+      lateDays: denda.lateDays,
+      penalty: denda.penalty,
+      allowedNext: getAllowedNextStatuses(targetStatus),
+    },
+  });
 });
 
 // Contracts API

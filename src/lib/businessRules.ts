@@ -135,6 +135,27 @@ export interface RentalCost {
 }
 
 /**
+ * Menghitung jumlah hari keterlambatan pengembalian.
+ *
+ * Konvensi: jatuh tempo adalah pukul 00:00 UTC pada `endDate`. Unit yang
+ * kembali pada hari yang sama dengan jatuh tempo TIDAK dihitung terlambat.
+ * Nilai tanggal yang rusak tidak pernah menghasilkan denda (dikembalikan 0)
+ * agar satu baris data yang tidak valid tidak memunculkan tagihan fiktif.
+ */
+export function countLateDays(endDate: string, returnDate: string | null): number {
+  if (typeof returnDate !== 'string' || returnDate === '') return 0;
+
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const end = new Date(endDate).getTime();
+  const returned = new Date(returnDate).getTime();
+
+  if (!Number.isFinite(end) || !Number.isFinite(returned)) return 0;
+  if (returned <= end) return 0;
+
+  return Math.ceil((returned - end) / MS_PER_DAY);
+}
+
+/**
  * Menghitung biaya sewa + denda keterlambatan.
  *
  * @param dailyRate  Tarif sewa per hari (Rupiah).
@@ -158,13 +179,7 @@ export function calculateRentalCost(
 
   const subtotal = days * dailyRate;
 
-  let lateDays = 0;
-  if (actualReturnDate) {
-    const returned = new Date(actualReturnDate).getTime();
-    if (returned > end) {
-      lateDays = Math.ceil((returned - end) / MS_PER_DAY);
-    }
-  }
+  const lateDays = countLateDays(endDate, actualReturnDate);
 
   const penalty = lateDays * LATE_PENALTY_PER_DAY;
 

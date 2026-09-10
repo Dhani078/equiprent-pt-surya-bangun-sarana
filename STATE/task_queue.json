@@ -135,13 +135,18 @@
       "title": "Manajemen Rental: alur ajukan → approve → aktif → selesai",
       "category": "CORE",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "estimate_minutes": 90,
       "depends_on": [
         "T-0004"
       ],
       "files": [
-        "src/pages/admin/RentalManagement.tsx"
+        "src/pages/admin/RentalManagement.tsx",
+        "src/lib/rentalWorkflow.ts",
+        "src/lib/businessRules.ts",
+        "src/server/index.ts",
+        "src/lib/db.ts",
+        "src/pages/staff/StaffDashboard.tsx"
       ],
       "acceptance_criteria": [
         "Perubahan status rental konsisten",
@@ -149,7 +154,9 @@
         "Hitung denda keterlambatan otomatis"
       ],
       "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
+      "created_at": "2026-09-04T19:00:00Z",
+      "completed_at": "2026-09-09T19:40:00Z",
+      "completed_cycle": 21
     },
     {
       "id": "T-0007",

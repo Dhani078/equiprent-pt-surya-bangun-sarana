@@ -1,14 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { Rental, Equipment, User } from '../../types';
-import { Plus, Search, CheckCircle, XCircle, CalendarX2, TriangleAlert } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, Truck, CircleCheck, TriangleAlert, Hourglass } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
-import { formatRupiah } from '../../lib/businessRules';
+import { formatRupiah, formatTanggal, LATE_PENALTY_PER_DAY } from '../../lib/businessRules';
 import {
   buildEquipmentAvailability,
   describeBlockedReason,
   summarizeAvailability,
 } from '../../lib/availability';
+import {
+  getAllowedNextStatuses,
+  getLateReturnInfo,
+  getRentalStatusLabel,
+  getRentalStatusTone,
+  summarizeLatePenalties,
+} from '../../lib/rentalWorkflow';
+import type { RentalStatus } from '../../lib/rentalWorkflow';
 
 interface RentalManagementProps {
   rentals: Rental[];
@@ -17,6 +25,30 @@ interface RentalManagementProps {
   onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<void>;
   onUpdateRentalStatus: (id: number, status: Rental['status']) => Promise<void>;
 }
+
+/** Warna badge mengikuti design system §7 (hijau=aktif, kuning=pending, dst). */
+const TONE_STYLE: Record<string, { backgroundColor: string; color: string; borderColor: string }> = {
+  success: { backgroundColor: '#ECFDF5', color: '#065F46', borderColor: '#A7F3D0' },
+  info: { backgroundColor: '#EFF6FF', color: '#1D4ED8', borderColor: '#BFDBFE' },
+  warning: { backgroundColor: '#FFFBEB', color: '#92400E', borderColor: '#FDE68A' },
+  danger: { backgroundColor: '#FEF2F2', color: '#991B1B', borderColor: '#FECACA' },
+  neutral: { backgroundColor: '#F1F5F9', color: '#475569', borderColor: '#E2E8F0' },
+};
+
+/** Label & ikon untuk tombol aksi — mengikuti matriks transisi terpusat. */
+const ACTION_META: Record<string, { label: string; tone: 'success' | 'danger' | 'info' | 'neutral' }> = {
+  APPROVED: { label: 'Setujui', tone: 'success' },
+  REJECTED: { label: 'Tolak', tone: 'danger' },
+  ON_GOING: { label: 'Mobilisasi', tone: 'info' },
+  COMPLETED: { label: 'Selesai', tone: 'success' },
+};
+
+const TOMBOL_STYLE: Record<string, React.CSSProperties> = {
+  success: { backgroundColor: '#10B981', borderColor: '#10B981', color: '#FFFFFF' },
+  danger: { backgroundColor: '#FFFFFF', borderColor: '#FECACA', color: '#EF4444' },
+  info: { backgroundColor: 'var(--color-primary)', borderColor: 'var(--color-primary)', color: '#FFFFFF' },
+  neutral: {},
+};
 
 export const RentalManagement: React.FC<RentalManagementProps> = ({
   rentals,
@@ -30,6 +62,11 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   /** Pesan galat form: unit bentrok, unit dirawat, atau rentang tidak valid. */
   const [formError, setFormError] = useState<string | null>(null);
+  /** Rental yang sedang menunggu konfirmasi (approve/reject/mobilisasi/selesai). */
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    rental: Rental;
+    next: RentalStatus;
+  } | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -58,6 +95,21 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
     () => availability.find(a => a.equipment.id === Number(formData.equipment_id)),
     [availability, formData.equipment_id]
   );
+
+  /**
+   * Ringkasan denda keterlambatan berjalan.
+   * Modul yang sama dipakai server & dokumen cetak — angkanya tidak bisa beda.
+   */
+  const dendaBerjalan = useMemo(() => summarizeLatePenalties(rentals), [rentals]);
+
+  /** Peta keterlambatan per rental, dipakai kolom tabel. */
+  const petaDenda = useMemo(() => {
+    const peta = new Map<number, ReturnType<typeof getLateReturnInfo>>();
+    for (const r of rentals) {
+      peta.set(r.id, getLateReturnInfo(r));
+    }
+    return peta;
+  }, [rentals]);
 
   const calculateDays = (start: string, end: string) => {
     const diff = new Date(end).getTime() - new Date(start).getTime();
@@ -103,6 +155,18 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
     setIsAddModalOpen(false);
   };
 
+  /** Meminta konfirmasi sebelum perubahan status yang mengunci/menyelesaikan. */
+  const mintaKonfirmasi = (rental: Rental, next: RentalStatus) => {
+    setPendingConfirm({ rental, next });
+  };
+
+  const jalankanPerubahan = async () => {
+    if (!pendingConfirm) return;
+    const { rental, next } = pendingConfirm;
+    setPendingConfirm(null);
+    await onUpdateRentalStatus(rental.id, next);
+  };
+
   const filteredRentals = rentals.filter((r) => {
     const matchesSearch = r.rental_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.customer_name && r.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -111,6 +175,56 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
     const matchesStatus = filterStatus === 'ALL' || r.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  /** Baris status + tombol aksi untuk satu rental. */
+  const renderAksi = (r: Rental) => {
+    const tujuan = getAllowedNextStatuses(r.status);
+
+    if (tujuan.length === 0) {
+      return (
+        <span
+          style={{
+            fontSize: '12px',
+            fontWeight: 600,
+            color: r.status === 'COMPLETED' ? '#059669' : 'var(--color-secondary)',
+          }}
+        >
+          {r.status === 'COMPLETED' ? 'Tuntas ✓' : 'Ditolak'}
+        </span>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+        {tujuan.map((next) => {
+          const meta = ACTION_META[next];
+          const Ikon =
+            next === 'APPROVED' ? CheckCircle
+              : next === 'REJECTED' ? XCircle
+                : next === 'ON_GOING' ? Truck
+                  : CircleCheck;
+
+          return (
+            <button
+              key={next}
+              onClick={() => mintaKonfirmasi(r, next)}
+              className={next === 'REJECTED' ? 'btn-secondary' : 'btn-primary'}
+              style={{
+                padding: '5px 10px',
+                fontSize: '11.5px',
+                ...TOMBOL_STYLE[meta.tone],
+              }}
+              aria-label={`${meta.label} transaksi ${r.rental_code}`}
+              title={`${meta.label} — ${getRentalStatusLabel(next)}`}
+            >
+              <Ikon size={12} />
+              <span>{meta.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -130,6 +244,40 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
         </button>
       </div>
 
+      {/* Ringkasan Keterlambatan Berjalan */}
+      <div
+        className="card-premium"
+        style={{
+          padding: '14px 16px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: '8px 18px',
+          borderLeft: `4px solid ${dendaBerjalan.lateCount > 0 ? '#EF4444' : '#10B981'}`,
+        }}
+        aria-label="Ringkasan denda keterlambatan berjalan"
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Hourglass size={16} style={{ color: 'var(--color-primary)' }} />
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)' }}>
+            Denda Keterlambatan Berjalan
+          </span>
+        </div>
+        <span style={{ fontSize: '12.5px', color: 'var(--color-secondary)' }}>
+          {dendaBerjalan.lateCount} unit lewat jatuh tempo · tarif {formatRupiah(LATE_PENALTY_PER_DAY)}/hari
+        </span>
+        <strong
+          style={{
+            marginLeft: 'auto',
+            fontSize: '15px',
+            fontFamily: 'monospace',
+            color: dendaBerjalan.penaltyTotal > 0 ? '#B91C1C' : '#059669',
+          }}
+        >
+          {formatRupiah(dendaBerjalan.penaltyTotal)}
+        </strong>
+      </div>
+
       {/* Filter Bar */}
       <div className="card-premium" style={{ padding: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ position: 'relative', flex: '1 1 300px' }}>
@@ -141,6 +289,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ paddingLeft: '36px', height: '40px' }}
+            aria-label="Cari transaksi penyewaan"
           />
         </div>
 
@@ -149,6 +298,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           style={{ width: 'auto', height: '40px', padding: '0 12px' }}
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
+          aria-label="Saring transaksi berdasarkan status"
         >
           <option value="ALL">Semua Status Transaksi</option>
           <option value="PENDING">PENDING (Menunggu Persetujuan)</option>
@@ -176,6 +326,10 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           <tbody>
             {filteredRentals.map((r) => {
               const imgUrl = getEquipmentImage(r.equipment_code);
+              const denda = petaDenda.get(r.id);
+              const tone = getRentalStatusTone(r.status);
+              const gaya = TONE_STYLE[tone] ?? TONE_STYLE.neutral;
+
               return (
                 <tr key={r.id}>
                   <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
@@ -195,8 +349,13 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                     </div>
                   </td>
                   <td style={{ fontSize: '12px' }}>
-                    <div>Mulai: <strong>{r.start_date}</strong></div>
-                    <div>Selesai: <strong>{r.end_date}</strong></div>
+                    <div>Mulai: <strong>{formatTanggal(r.start_date)}</strong></div>
+                    <div>Selesai: <strong>{formatTanggal(r.end_date)}</strong></div>
+                    {denda && denda.isLate && (
+                      <div style={{ marginTop: '4px', fontSize: '11.5px', color: '#B91C1C', fontWeight: 600 }}>
+                        Terlambat {denda.lateDays} hari
+                      </div>
+                    )}
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', fontFamily: 'monospace' }}>
@@ -205,64 +364,145 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                     <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
                       {r.total_days} hari operasional
                     </div>
+                    {denda && denda.isLate && (
+                      <div style={{ fontSize: '11px', color: '#B91C1C', fontWeight: 600 }}>
+                        Denda {formatRupiah(denda.penalty)}
+                      </div>
+                    )}
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <span className={`badge badge-${r.status.toLowerCase()}`}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '3px 9px',
+                        borderRadius: '999px',
+                        border: `1px solid ${gaya.borderColor}`,
+                        backgroundColor: gaya.backgroundColor,
+                        color: gaya.color,
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        letterSpacing: '0.02em',
+                      }}
+                    >
                       {r.status}
                     </span>
+                    <div style={{ marginTop: '4px', fontSize: '10.5px', color: 'var(--color-secondary)' }}>
+                      {getRentalStatusLabel(r.status)}
+                    </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                      {r.status === 'PENDING' && (
-                        <>
-                          <button
-                            onClick={() => onUpdateRentalStatus(r.id, 'APPROVED')}
-                            className="btn-primary"
-                            style={{ padding: '5px 10px', fontSize: '11.5px', backgroundColor: '#10B981' }}
-                            title="Setujui Booking"
-                          >
-                            <CheckCircle size={12} />
-                            <span>Approve</span>
-                          </button>
-                          <button
-                            onClick={() => onUpdateRentalStatus(r.id, 'REJECTED')}
-                            className="btn-secondary"
-                            style={{ padding: '5px 10px', fontSize: '11.5px', color: '#EF4444' }}
-                            title="Tolak Booking"
-                          >
-                            <XCircle size={12} />
-                          </button>
-                        </>
-                      )}
-                      {r.status === 'APPROVED' && (
-                        <button
-                          onClick={() => onUpdateRentalStatus(r.id, 'ON_GOING')}
-                          className="btn-primary"
-                          style={{ padding: '5px 10px', fontSize: '11.5px' }}
-                        >
-                          Mobilisasi
-                        </button>
-                      )}
-                      {r.status === 'ON_GOING' && (
-                        <button
-                          onClick={() => onUpdateRentalStatus(r.id, 'COMPLETED')}
-                          className="btn-secondary"
-                          style={{ padding: '5px 10px', fontSize: '11.5px', color: '#059669', borderColor: '#A7F3D0' }}
-                        >
-                          Selesai
-                        </button>
-                      )}
-                      {r.status === 'COMPLETED' && (
-                        <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>Tuntas ✓</span>
-                      )}
-                    </div>
+                    {renderAksi(r)}
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+
+        {filteredRentals.length === 0 && (
+          <div
+            style={{
+              padding: '40px 24px',
+              textAlign: 'center',
+              color: 'var(--color-secondary)',
+              fontSize: '13px',
+            }}
+          >
+            <p style={{ margin: '0 0 6px 0', fontWeight: 600, color: '#1E293B' }}>
+              Tidak ada transaksi yang cocok
+            </p>
+            <p style={{ margin: 0 }}>
+              Ubah kata kunci pencarian atau pilih status lain pada penyaring di atas.
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Modal Konfirmasi Perubahan Status */}
+      <Modal
+        isOpen={pendingConfirm !== null}
+        onClose={() => setPendingConfirm(null)}
+        title="Konfirmasi Perubahan Status"
+      >
+        {pendingConfirm && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <p style={{ margin: 0, fontSize: '13.5px', lineHeight: 1.6, color: '#1E293B' }}>
+              Ubah status transaksi{' '}
+              <strong className="serial-code">{pendingConfirm.rental.rental_code}</strong> dari{' '}
+              <strong>{getRentalStatusLabel(pendingConfirm.rental.status)}</strong> menjadi{' '}
+              <strong>{getRentalStatusLabel(pendingConfirm.next)}</strong>?
+            </p>
+
+            {pendingConfirm.next === 'ON_GOING' && (
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--color-secondary)', lineHeight: 1.6 }}>
+                Unit akan dikunci berstatus <strong>RENTED</strong> sampai transaksi diselesaikan.
+              </p>
+            )}
+
+            {pendingConfirm.next === 'COMPLETED' && (
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--color-secondary)', lineHeight: 1.6 }}>
+                Unit akan dibebaskan menjadi <strong>AVAILABLE</strong> dan dapat disewa kembali.
+              </p>
+            )}
+
+            {pendingConfirm.next === 'REJECTED' && (
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#991B1B', lineHeight: 1.6 }}>
+                Penolakan bersifat <strong>final</strong> — transaksi tidak dapat diproses kembali.
+              </p>
+            )}
+
+            {pendingConfirm.next === 'COMPLETED' && (() => {
+              const denda = getLateReturnInfo(pendingConfirm.rental);
+              if (!denda.isLate) return null;
+              return (
+                <div
+                  role="alert"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    backgroundColor: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    color: '#991B1B',
+                    fontSize: '12.5px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <TriangleAlert size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <div>
+                    Unit terlambat <strong>{denda.lateDays} hari</strong>. Denda sebesar{' '}
+                    <strong>{formatRupiah(denda.penalty)}</strong> akan dibebankan kepada pelanggan.
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setPendingConfirm(null)}
+                className="btn-secondary"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={jalankanPerubahan}
+                className="btn-primary"
+                style={
+                  pendingConfirm.next === 'REJECTED'
+                    ? { backgroundColor: '#EF4444', borderColor: '#EF4444', color: '#FFFFFF' }
+                    : undefined
+                }
+              >
+                Ya, {ACTION_META[pendingConfirm.next]?.label ?? 'Lanjutkan'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Modal Add Booking */}
       <Modal
@@ -279,6 +519,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
               className="input-premium"
               value={formData.customer_id}
               onChange={(e) => setFormData({ ...formData, customer_id: Number(e.target.value) })}
+              aria-label="Pilih pelanggan atau korporasi"
             >
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -410,6 +651,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                   setFormData({ ...formData, start_date: e.target.value });
                   setFormError(null);
                 }}
+                aria-label="Tanggal mulai sewa"
               />
             </div>
             <div>
@@ -425,6 +667,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                   setFormData({ ...formData, end_date: e.target.value });
                   setFormError(null);
                 }}
+                aria-label="Tanggal selesai sewa"
               />
             </div>
           </div>
@@ -438,6 +681,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
               className="input-premium"
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              aria-label="Catatan proyek dan lokasi"
             />
           </div>
 
