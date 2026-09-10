@@ -1,22 +1,22 @@
 {
-  "cycle": 23,
-  "last_run": "2026-09-10T12:35:00Z",
+  "cycle": 24,
+  "last_run": "2026-09-10T13:10:00Z",
   "current_task_id": "T-0011",
   "current_phase": "PENDING",
   "completed_this_cycle": [
-    "T-0008"
+    "T-0010"
   ],
-  "session_summary": "Cycle 23: T-0008 — Manajemen Pembayaran kini lengkap end-to-end. Seluruh aturan pembayaran hidup di satu modul murni baru src/lib/paymentWorkflow.ts (tanpa DOM, tanpa jaringan, tanpa akses data): matriks transisi status (UNPAID→PENDING_VERIFICATION→PAID|FAILED, FAILED→PENDING_VERIFICATION, PAID akhir), validasi deskriptor bukti transfer (ekstensi .png/.jpg/.jpeg/.webp/.pdf, maksimal 255 karakter, menolak path traversal, jalur absolut, backslash Windows, dan skema javascript:/data:), RBAC (mayTouchPayment — pelanggan hanya boleh menyentuh tagihannya sendiri; mayVerifyPayment — hanya ADMIN/STAFF), serta gerbang pembayaran checkPaymentGate yang mengunci status ON_GOING sampai tagihan PAID kecuali ada override ADMIN eksplisit. db.ts memakai modul itu sebagai satu sumber kebenaran: verifyPayment menolak verifikasi tanpa bukti (BUKTI_TRANSFER_BELUM_ADA) dan verifikasi ulang (STATUS_PEMBAYARAN_TIDAK_VALID); rejectPayment baru menurunkan PENDING_VERIFICATION→FAILED; addPaymentProof membersihkan jejak verifikator lama bila bukti diganti agar peninjauan usang tidak melekat pada berkas baru; updateRentalStatus kini menerima options.overrideUnpaid dan menjalankan gerbang pembayaran. API bertambah tiga endpoint RBAC-ketat: POST /api/payments/:id/proof (unggah bukti), /verify (sahkan), /reject (tolak), dengan pemetaan kode galat terpusat; GET /api/payments kini ber-envelope {success,data,meta:{total,queue}} berisi ringkasan antrean (siap diverifikasi vs menunggu bukti). Antarmuka mengikuti: panel verifikasi staf di StaffDashboard mendapat pencarian, ringkasan antrean, aksi Tolak, pratinjau bukti, dan penanda siap/belum; portal pelanggan memakai label status Indonesia, menyembunyikan unggah pada tagihan final, dan menampilkan peringatan 'Bukti ditolak — silakan lampirkan ulang'. Seed diperbaiki agar sewa ON_GOING selalu lunas (status pembayaran tidak lagi bertentangan dengan gerbang bisnis). Suite baru tests/paymentWorkflow.test.mjs (121 pengujian) + 43 pengujian API baru.",
+  "session_summary": "Cycle 24: T-0010 — GPS Tracking: peta real-time + popup telemetry SELESAI. Inti perubahan adalah modul murni baru src/lib/fleetTelemetry.ts (476 baris, tanpa DOM, tanpa jaringan, tanpa akses data) yang menjadi SATU sumber kebenaran bagi API dan antarmuka. Modul ini mereduksi deret waktu GPS menjadi tepat satu titik TERBARU per unit (data seed berisi 55 titik pada 50 unit, sehingga halaman lama memunculkan marker bertumpuk), lalu mengklasifikasi setiap unit: pergerakan (BERGERAK/DIAM), bahan bakar (KRITIS/RENDAH/NORMAL), dan keusangan sinyal (SEGAR/WASPADA/USANG) berdasarkan umur titik rekam. Seluruh nilai kolom string dinormalkan (spasi ganda, huruf, koma desimal) dan tanggal basis data berformat 'YYYY-MM-DD HH:mm:ss' diparse sebagai UTC — perbaikan ini menyelesaikan 2 kegagalan uji awal akibat perbedaan interpretasi zona. Modul juga mengekspor formatCoordinate, formatSpeed, formatRelativeTime, getMovementLabel, getFuelLabel, getStalenessLabel, normalizeFleetFilter (memotong kata kunci pada SEARCH_MAX_LENGTH dan menolak nilai filter tak dikenal), serta DEFAULT_FLEET_FILTER. Endpoint GET /api/tracking ditulis ulang: kini ber-envelope {success,data:{rows,summary},meta:{total,scope,raw_points}} dan ber-RBAC ketat — ADMIN/STAFF melihat SELURUH_ARMADA, sedangkan CUSTOMER discope ke UNIT_SEWA_SAYA (hanya equipment_id dari rental ON_GOING/APPROVED miliknya). src/pages/admin/GpsTrackingPage.tsx ditulis ulang (523 baris): panel penyaringan (status mesin, pergerakan, BBM, pencarian) dengan label aria di setiap kontrol, kartu ringkasan, peta, dan daftar armada; mendukung props title/subtitle/initialFilter sehingga bisa dipakai ulang di portal pelanggan. src/components/LeafletMap.tsx kini menerima FleetTelemetryRow (bukan GpsTracking mentah) dan popup-nya di-escape agar nama unit tidak bisa menyuntik HTML. Pelanggan mendapat tab kelima 'Lacak Unit Saya' di CustomerPortal (App.tsx meneruskan trackingData). Pengujian: tests/fleetTelemetry.test.mjs (117 uji) + tests/gpsPage.test.mjs (37 uji smoke render dengan stub Leaflet, termasuk empty state, hasil penyaringan kosong, dan data rusak) + ~28 uji API baru untuk telemetri & RBAC.",
   "quality_gate": {
     "type_check": "PASS",
     "build": "PASS",
     "test": "PASS"
   },
-  "test_suites": 18,
-  "commits": 18,
+  "test_suites": 20,
+  "commits": 19,
   "deploy": {
     "status": "READY",
     "note": "deploy:cloud sudah benar; deploy sungguhan butuh login Cloudflare"
   },
-  "next_focus": "T-0011: Portal Customer — katalog, pengajuan, kontrak, pembayaran, transaksi (lanjutan penyempurnaan portal)"
+  "next_focus": "T-0011: Portal Customer — katalog, pengajuan, kontrak, pembayaran, tracking (pelacakan GPS pelanggan sudah beres; tinggal penyempurnaan katalog & alur pengajuan)"
 }

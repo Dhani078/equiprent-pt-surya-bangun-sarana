@@ -888,5 +888,84 @@ console.log('\n== Alur Status Sewa (T-0006) ==');
   t('ubah status tanpa token → 401', r.status === 401);
 }
 
+// ---------------------------------------------------------------------------
+console.log('\n== Telemetri Armada GPS (T-0010) ==');
+{
+  // Endpoint tetap terproteksi meski kini lebih kaya.
+  r = await req('GET', '/api/tracking');
+  t('GET /api/tracking tanpa token → 401', r.status === 401);
+
+  r = await req('GET', '/api/tracking', { token: T_ADMIN });
+  t('admin dapat lihat telemetri → 200', r.status === 200);
+  t('respons ber-envelope success', r.body?.success === true);
+  t('data.rows berupa array', Array.isArray(r.body?.data?.rows));
+  t('data.summary terisi', typeof r.body?.data?.summary === 'object' && r.body.data.summary !== null);
+  t('meta.scope SELURUH_ARMADA untuk admin', r.body?.meta?.scope === 'SELURUH_ARMADA');
+  t('meta.total = panjang rows', r.body?.meta?.total === r.body?.data?.rows?.length);
+  t('ringkasan totalUnits = panjang rows',
+    r.body?.data?.summary?.totalUnits === r.body?.data?.rows?.length);
+
+  const barisAdmin = r.body?.data?.rows ?? [];
+  // 55 titik tersebar pada 50 unit → reduksi wajib menghasilkan <= 55 baris.
+  t('reduksi: rows <= titik mentah', barisAdmin.length <= (r.body?.meta?.raw_points ?? 0));
+  t('satu baris per unit (tanpa duplikat)',
+    new Set(barisAdmin.map(x => x.equipmentId)).size === barisAdmin.length);
+  t('setiap baris punya kelas BBM valid',
+    barisAdmin.every(x => ['KRITIS', 'RENDAH', 'NORMAL'].includes(x.fuel)));
+  t('setiap baris punya kelas gerak valid',
+    barisAdmin.every(x => ['BERGERAK', 'DIAM'].includes(x.movement)));
+  t('koordinat dalam rentang bumi',
+    barisAdmin.every(x => Math.abs(x.latitude) <= 90 && Math.abs(x.longitude) <= 180));
+  t('BBM dalam rentang 0–100',
+    barisAdmin.every(x => x.fuelLevelPercent >= 0 && x.fuelLevelPercent <= 100));
+
+  // Filter status mesin — syarat kelulusan T-0010.
+  r = await req('GET', '/api/tracking?engine=ON', { token: T_ADMIN });
+  t('filter engine=ON → 200', r.status === 200);
+  t('filter engine=ON hanya berisi ON',
+    (r.body?.data?.rows ?? []).every(x => x.engineStatus === 'ON'));
+
+  r = await req('GET', '/api/tracking?engine=OFF', { token: T_ADMIN });
+  t('filter engine=OFF hanya berisi OFF',
+    (r.body?.data?.rows ?? []).every(x => x.engineStatus === 'OFF'));
+
+  // Filter tidak dikenal dinormalkan, bukan menyebabkan 500.
+  r = await req('GET', '/api/tracking?engine=NYALA&movement=JALAN&fuel=KOSONG', { token: T_ADMIN });
+  t('filter tidak dikenal dinormalkan → 200', r.status === 200);
+  t('filter tidak dikenal → tanpa penyaringan',
+    r.body?.data?.rows?.length === barisAdmin.length);
+
+  // Pencarian.
+  r = await req('GET', '/api/tracking?search=EXCA', { token: T_ADMIN });
+  t('pencarian EXCA → 200', r.status === 200);
+  t('hasil pencarian cocok kata kunci',
+    (r.body?.data?.rows ?? []).every(x => x.equipmentCode.toLowerCase().includes('exca')));
+
+  // Pencarian yang sangat panjang tidak boleh merusak server.
+  r = await req('GET', `/api/tracking?search=${'x'.repeat(500)}`, { token: T_ADMIN });
+  t('pencarian 500 karakter → 200', r.status === 200);
+
+  // STAFF melihat seluruh armada (wewenang internal).
+  r = await req('GET', '/api/tracking', { token: T_STAFF });
+  t('staff dapat lihat telemetri → 200', r.status === 200);
+  t('meta.scope SELURUH_ARMADA untuk staff', r.body?.meta?.scope === 'SELURUH_ARMADA');
+
+  // RBAC: pelanggan HANYA melihat unit yang ia sewa.
+  r = await req('GET', '/api/tracking', { token: T_CUST });
+  t('customer dapat lihat telemetri → 200', r.status === 200);
+  t('meta.scope UNIT_SEWA_SAYA untuk customer', r.body?.meta?.scope === 'UNIT_SEWA_SAYA');
+
+  const barisCustomer = r.body?.data?.rows ?? [];
+  const idPelanggan = cust.body?.user?.id;
+  const unitSewaPelanggan = new Set(
+    ((await req('GET', '/api/rentals', { token: T_ADMIN })).body ?? [])
+      .filter(x => x.customer_id === idPelanggan && (x.status === 'ON_GOING' || x.status === 'APPROVED'))
+      .map(x => x.equipment_id)
+  );
+  t('customer hanya melihat unit sewanya sendiri',
+    barisCustomer.every(x => unitSewaPelanggan.has(x.equipmentId)));
+  t('customer tidak melihat seluruh armada', barisCustomer.length < barisAdmin.length);
+}
+
 console.log(`\n=== HASIL: ${pass} PASS, ${fail} FAIL ===`);
 process.exit(fail === 0 ? 0 : 1);

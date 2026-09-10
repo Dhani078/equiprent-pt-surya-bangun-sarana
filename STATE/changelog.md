@@ -731,3 +731,67 @@ atau menolak bukti tersebut.
 
 **Verifikasi:** typecheck PASS · build PASS (597,90 KB) · npm test 18/18 suite PASS
 **Catatan:** Nol `any`, nol penyambungan string SQL, tanpa kredensial pada berkas.
+
+---
+
+## Cycle 24 — 2026-09-10 — T-0010: GPS Tracking: peta real-time + popup telemetry
+
+**Status:** SELESAI (P1, CORE) — seluruh kriteria penerimaan terpenuhi.
+
+**Inti perubahan — satu sumber kebenaran untuk telemetri armada:**
+- `src/lib/fleetTelemetry.ts` (BARU, 476 baris) — modul MURNI: tidak menyentuh
+  DOM, tidak memanggil jaringan, tidak mengambil data sendiri. Dipakai bersama
+  oleh edge API dan antarmuka, sehingga apa yang tampil di layar tidak pernah
+  berbeda dengan keputusan server. Isinya:
+  - **Reduksi deret waktu** — data GPS adalah deret waktu (55 titik pada 50
+    unit), bukan satu baris per unit. Modul memilih tepat SATU titik TERBARU
+    per unit; tanpa ini peta memunculkan banyak marker bertumpuk.
+  - **Klasifikasi** — pergerakan (`BERGERAK`/`DIAM`), bahan bakar
+    (`KRITIS`/`RENDAH`/`NORMAL`), dan keusangan sinyal (`SEGAR`/`WASPADA`/`USANG`)
+    dari umur titik rekam.
+  - **Normalisasi** — nilai kolom string dibersihkan (spasi ganda, huruf, koma
+    desimal) dan tanggal basis data `YYYY-MM-DD HH:mm:ss` diparse sebagai UTC
+    agar tidak bergeser hari di mesin berzona berbeda.
+  - `normalizeFleetFilter()` — memotong kata kunci pada `SEARCH_MAX_LENGTH` dan
+    menolak nilai filter tak dikenal (dinormalkan, bukan menyebabkan 500).
+  - Pembantu tampilan: `formatCoordinate`, `formatSpeed`, `formatRelativeTime`,
+    `getMovementLabel`, `getFuelLabel`, `getStalenessLabel`.
+
+**API:**
+- `src/server/index.ts` — `GET /api/tracking` ditulis ulang: kini ber-envelope
+  `{ success, data: { rows, summary }, meta: { total, scope, raw_points } }` dan
+  ber-RBAC ketat. ADMIN/STAFF → `SELURUH_ARMADA`; CUSTOMER → `UNIT_SEWA_SAYA`
+  (hanya `equipment_id` dari rental `ON_GOING`/`APPROVED` miliknya sendiri).
+  Endpoint tetap terproteksi (401 tanpa token).
+
+**Antarmuka:**
+- `src/pages/admin/GpsTrackingPage.tsx` — ditulis ulang (523 baris): panel
+  penyaringan (status mesin, pergerakan, level BBM, pencarian) lengkap dengan
+  `aria-label` di setiap kontrol, kartu ringkasan agregat, peta, dan daftar
+  armada. Mendukung props `title` / `subtitle` / `initialFilter` sehingga bisa
+  dipakai ulang di portal pelanggan.
+- `src/components/LeafletMap.tsx` — kini menerima `FleetTelemetryRow` (bukan
+  `GpsTracking` mentah); isi popup di-escape agar nama unit tidak dapat
+  menyuntik HTML.
+- `src/pages/customer/CustomerPortal.tsx` — tab kelima **Lacak Unit Saya**,
+  memakai ulang halaman yang sama dengan judul & subjudul pelanggan.
+- `src/App.tsx` — meneruskan `trackingData` ke CustomerPortal.
+
+**Pengujian (2 suite baru, 20 suite total):**
+- `tests/fleetTelemetry.test.mjs` (BARU) — 117 pemeriksaan: reduksi satu titik
+  per unit, klasifikasi gerak/BBM/keusangan, normalisasi filter, dan ketahanan
+  pada data rusak (`null`, `NaN`, koordinat di luar rentang bumi).
+- `tests/gpsPage.test.mjs` (BARU) — 37 pemeriksaan smoke render, termasuk empty
+  state, cabang "hasil penyaringan kosong" (berbeda dari "belum ada data"),
+  data rusak, serta judul/subjudul kustom portal pelanggan. Leaflet diganti stub
+  (`tests/stubs/leaflet.mjs`) karena pustaka asli menyentuh `window` saat dimuat;
+  `useEffect` tidak berjalan pada render statis sehingga peta tidak dibuat.
+- `tests/api.test.mjs` — ~28 pemeriksaan baru: proteksi endpoint, envelope,
+  reduksi, keabsahan kelas, filter `engine=ON/OFF`, filter tak dikenal
+  dinormalkan, pencarian (termasuk 500 karakter), dan RBAC pelanggan yang
+  diverifikasi terhadap rental aktifnya.
+- `tests/run-tests.mjs` — bundle `fleetTelemetry.ts` + halaman GPS (alias
+  Leaflet ke stub) + 2 suite baru.
+
+**Verifikasi:** typecheck PASS · build PASS (614,72 KB) · npm test 20/20 suite PASS
+**Catatan:** Nol `any`, nol penyambungan string SQL, tanpa kredensial pada berkas.
