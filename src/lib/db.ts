@@ -1,6 +1,7 @@
 import { connect } from '@tidbcloud/serverless';
 import { User, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from '../types';
 import { verifyPassword } from './auth';
+import { getTransitionEffect } from './rentalWorkflow';
 import {
   GENERATED_USERS,
   GENERATED_EQUIPMENTS,
@@ -184,13 +185,15 @@ export const db = {
   /**
    * Mengubah status rental sekaligus menjaga konsistensi status unit terkait.
    *
-   * ATURAN BISNIS:
-   * - APPROVED / ON_GOING  → unit dikunci menjadi RENTED
-   * - COMPLETED            → unit dibebaskan menjadi AVAILABLE
-   * - REJECTED             → unit dibebaskan menjadi AVAILABLE
-   *   (sebelumnya unit terkunci selamanya karena kasus ini tidak ditangani)
+   * ATURAN BISNIS (satu sumber kebenaran: `src/lib/rentalWorkflow.ts`):
+   * - ON_GOING   → unit dikunci menjadi RENTED (sedang di tangan pelanggan)
+   * - COMPLETED  → unit dibebaskan menjadi AVAILABLE
+   * - REJECTED   → unit dibebaskan menjadi AVAILABLE
+   * - APPROVED   → unit BELUM dikunci (sewa bisa disetujui jauh hari sebelum
+   *                mobilisasi; mengunci di sini membuat unit tidak bisa
+   *                dipesan untuk periode lain yang sebenarnya sah)
    *
-   * Unit hanya dibebaskan bila tidak sedang disewa oleh rental aktif lain.
+   * Unit hanya dibebaskan bila tidak sedang beroperasi di rental lain.
    */
   updateRentalStatus: async (id: number, status: Rental['status']) => {
     const r = stateStore.rentals.find(x => x.id === id);
@@ -198,18 +201,21 @@ export const db = {
 
     r.status = status;
 
-    if (status === 'APPROVED' || status === 'ON_GOING') {
+    const dampak = getTransitionEffect(status);
+
+    if (dampak.equipmentStatus === 'RENTED') {
       const eq = stateStore.equipments.find(e => e.id === r.equipment_id);
       if (eq) eq.status = 'RENTED';
-    } else if (status === 'COMPLETED' || status === 'REJECTED') {
-      // Pastikan tidak ada rental lain yang masih berjalan untuk unit ini.
-      const masihDigunakan = stateStore.rentals.some(
+    } else if (dampak.equipmentStatus === 'AVAILABLE') {
+      // Unit hanya dibebaskan bila tidak ada rental lain yang sedang
+      // beroperasi (ON_GOING) memakai unit yang sama.
+      const masihBeroperasi = stateStore.rentals.some(
         other =>
           other.id !== r.id &&
           other.equipment_id === r.equipment_id &&
-          (other.status === 'APPROVED' || other.status === 'ON_GOING')
+          other.status === 'ON_GOING'
       );
-      if (!masihDigunakan) {
+      if (!masihBeroperasi) {
         const eq = stateStore.equipments.find(e => e.id === r.equipment_id);
         if (eq) eq.status = 'AVAILABLE';
       }

@@ -143,6 +143,14 @@ const bebas = semuaRental.find(x => x.status === 'PENDING' && !aktifIds.has(x.eq
 if (bebas) {
   r = await req('PUT', `/api/rentals/${bebas.id}/status`, { token: T_ADMIN, body: { status: 'APPROVED' } });
   t('status rental sah (unit tidak bentrok) → 200', r.status === 200);
+  t('respons menyertakan meta denda', typeof r.body?.meta?.lateDays === 'number');
+  t('respons menyertakan allowedNext', Array.isArray(r.body?.meta?.allowedNext));
+  t('APPROVED → allowedNext berisi ON_GOING', r.body?.meta?.allowedNext?.includes('ON_GOING'));
+
+  // Lompatan status harus ditolak: PENDING yang sudah APPROVED tidak bisa
+  // lagi langsung diselesaikan lewat jalur yang tidak sah.
+  r = await req('PUT', `/api/rentals/${bebas.id}/status`, { token: T_ADMIN, body: { status: 'PENDING' } });
+  t('mundur APPROVED → PENDING → 409', r.status === 409);
 } else {
   t('status rental sah (unit tidak bentrok) → 200', true); // tak ada kasus uji
 }
@@ -554,6 +562,61 @@ t('stats oleh STAFF → 200', r.status === 200);
 // Tetap terproteksi: tanpa token harus 401.
 r = await req('GET', '/api/dashboard/stats');
 t('stats tanpa token → 401', r.status === 401);
+
+// ---------------------------------------------------------------------------
+// DITARUH DI AKHIR: blok ini mengubah status rental, sehingga semua
+// pemeriksaan di atas selesai lebih dulu agar hasilnya deterministik.
+// ---------------------------------------------------------------------------
+console.log('\n== Alur Status Sewa (T-0006) ==');
+{
+  const daftarSewa = (await req('GET', '/api/rentals', { token: T_ADMIN })).body || [];
+
+  // Status akhir tidak boleh diubah lagi.
+  const tuntas = daftarSewa.find(x => x.status === 'COMPLETED');
+  if (tuntas) {
+    r = await req('PUT', `/api/rentals/${tuntas.id}/status`, { token: T_ADMIN, body: { status: 'ON_GOING' } });
+    t('COMPLETED → ON_GOING → 409', r.status === 409);
+    t('kode INVALID_STATUS_TRANSITION', r.body?.error?.code === 'INVALID_STATUS_TRANSITION');
+  }
+
+  const ditolak = daftarSewa.find(x => x.status === 'REJECTED');
+  if (ditolak) {
+    r = await req('PUT', `/api/rentals/${ditolak.id}/status`, { token: T_ADMIN, body: { status: 'PENDING' } });
+    t('REJECTED → PENDING → 409', r.status === 409);
+  }
+
+  // PENDING tidak boleh langsung beroperasi tanpa persetujuan.
+  const menggantung = daftarSewa.find(x => x.status === 'PENDING');
+  if (menggantung) {
+    r = await req('PUT', `/api/rentals/${menggantung.id}/status`, { token: T_ADMIN, body: { status: 'ON_GOING' } });
+    t('PENDING → ON_GOING (loncat) → 409', r.status === 409);
+
+    r = await req('PUT', `/api/rentals/${menggantung.id}/status`, { token: T_ADMIN, body: { status: 'COMPLETED' } });
+    t('PENDING → COMPLETED (loncat) → 409', r.status === 409);
+
+    // Ubah ke status yang sama → ditolak (bukan 200 kosong).
+    r = await req('PUT', `/api/rentals/${menggantung.id}/status`, { token: T_ADMIN, body: { status: 'PENDING' } });
+    t('PENDING → PENDING (sama) → 409', r.status === 409);
+  }
+
+  // Menyelesaikan rental ON_GOING mengembalikan denda bila terlambat.
+  const berjalan = daftarSewa.find(x => x.status === 'ON_GOING');
+  if (berjalan) {
+    r = await req('PUT', `/api/rentals/${berjalan.id}/status`, { token: T_ADMIN, body: { status: 'COMPLETED' } });
+    t('ON_GOING → COMPLETED → 200', r.status === 200);
+    t('meta.lateDays angka >= 0', typeof r.body?.meta?.lateDays === 'number' && r.body.meta.lateDays >= 0);
+    t('meta.penalty kelipatan tarif', (r.body?.meta?.penalty ?? -1) % 500000 === 0);
+    t('COMPLETED tidak punya allowedNext', r.body?.meta?.allowedNext?.length === 0);
+  }
+
+  // Rental yang tidak ada → 404 (bukan 500).
+  r = await req('PUT', '/api/rentals/999999/status', { token: T_ADMIN, body: { status: 'APPROVED' } });
+  t('ubah status rental tidak ada → 404', r.status === 404);
+
+  // Tanpa token → 401 (endpoint tetap terproteksi).
+  r = await req('PUT', '/api/rentals/1/status', { body: { status: 'APPROVED' } });
+  t('ubah status tanpa token → 401', r.status === 401);
+}
 
 console.log(`\n=== HASIL: ${pass} PASS, ${fail} FAIL ===`);
 process.exit(fail === 0 ? 0 : 1);

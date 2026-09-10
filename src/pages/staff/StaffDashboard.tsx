@@ -408,6 +408,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                               onClick={() => onUpdateRentalStatus(r.id, 'APPROVED')}
                               className="btn-primary"
                               style={{ padding: '4px 8px', fontSize: '11.5px', backgroundColor: '#10B981' }}
+                              aria-label={`Setujui pengajuan ${r.rental_code}`}
                             >
                               Setujui
                             </button>
@@ -416,6 +417,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                               onClick={() => onUpdateRentalStatus(r.id, 'REJECTED')}
                               className="btn-secondary"
                               style={{ padding: '4px 8px', fontSize: '11.5px', color: '#EF4444' }}
+                              aria-label={`Tolak pengajuan ${r.rental_code}`}
                             >
                               Tolak
                             </button>
