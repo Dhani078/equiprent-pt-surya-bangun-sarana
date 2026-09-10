@@ -42,6 +42,7 @@ bundle('src/lib/dashboard.ts', '.tmp_dashboard.mjs');
 bundle('src/lib/rentalWorkflow.ts', '.tmp_rentalWorkflow.mjs');
 bundle('src/lib/contracts.ts', '.tmp_contracts.mjs');
 bundle('src/lib/paymentWorkflow.ts', '.tmp_paymentWorkflow.mjs');
+bundle('src/lib/fleetTelemetry.ts', '.tmp_fleetTelemetry.mjs');
 
 // Panel laporan butuh JSX → sertakan loader .tsx dan jadikan React eksternal
 // agar modul react/react-dom tidak ikut ter-bundle (cukup satu instans).
@@ -68,6 +69,14 @@ execSync(
   { cwd: root, stdio: 'ignore' }
 );
 
+// Halaman pelacakan GPS (JSX). Leaflet menyentuh `window` saat modul dimuat,
+// sehingga diganti dengan stub ringan; useEffect tidak berjalan pada render
+// statis, jadi peta tidak benar-benar dibuat saat pengujian.
+execSync(
+  `npx esbuild "${join(root, 'src/pages/admin/GpsTrackingPage.tsx')}" --bundle --format=esm --outfile="${join(root, '.tmp_gps.mjs')}" --platform=neutral --external:react --external:react-dom --external:@tidbcloud/serverless --alias:leaflet=./tests/stubs/leaflet.mjs --loader:.tsx=tsx --jsx=automatic`,
+  { cwd: root, stdio: 'ignore' }
+);
+
 const suites = [
   'businessRules.test.mjs',
   'validators.test.mjs',
@@ -86,6 +95,8 @@ const suites = [
   'contracts.test.mjs',
   'contractPanel.test.mjs',
   'paymentWorkflow.test.mjs',
+  'fleetTelemetry.test.mjs',
+  'gpsPage.test.mjs',
   'codeQuality.test.mjs',
 ];
 
@@ -109,7 +120,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs', '.tmp_fleetTelemetry.mjs', '.tmp_gps.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }

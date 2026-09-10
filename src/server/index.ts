@@ -49,6 +49,7 @@ import {
 } from '../lib/reports';
 import type { ReportDataSource } from '../lib/reports';
 import { buildDashboardStats } from '../lib/dashboard';
+import { buildFleetTelemetry, normalizeFleetFilter } from '../lib/fleetTelemetry';
 import {
   canTransition,
   getAllowedNextStatuses,
@@ -1286,9 +1287,53 @@ app.post('/api/maintenance', async (c) => {
 });
 
 // GPS Telemetry API
+/**
+ * Telemetri armada: satu titik TERBARU per unit + ringkasan + penyaringan.
+ *
+ * RBAC: ADMIN & STAFF melihat seluruh armada. CUSTOMER hanya melihat unit
+ * yang sedang ia sewa (ON_GOING / APPROVED) — diputuskan di server, bukan
+ * di klien, sehingga pelanggan tidak dapat melacak armada pelanggan lain.
+ *
+ * Query (semua opsional & dinormalkan):
+ *   engine   = ALL | ON | OFF
+ *   movement = ALL | BERGERAK | DIAM
+ *   fuel     = ALL | KRITIS | RENDAH | NORMAL
+ *   search   = kata kunci (kode unit / nama unit / ID unit)
+ */
 app.get('/api/tracking', async (c) => {
-  const items = await db.getGpsTracking();
-  return c.json(items);
+  const role = c.get('role');
+  const userId = c.get('userId');
+
+  // Unit yang boleh dilihat. `null` = seluruh armada (wewenang internal).
+  let equipmentIds: readonly number[] | null = null;
+
+  if (role === 'CUSTOMER') {
+    const rentals = await db.getRentals();
+    equipmentIds = rentals
+      .filter((r) => r.customer_id === userId && (r.status === 'ON_GOING' || r.status === 'APPROVED'))
+      .map((r) => r.equipment_id);
+  }
+
+  const filter = normalizeFleetFilter({
+    engine: c.req.query('engine'),
+    movement: c.req.query('movement'),
+    fuel: c.req.query('fuel'),
+    search: c.req.query('search'),
+  });
+
+  const points = await db.getGpsTracking();
+  const view = buildFleetTelemetry(points, { role, equipmentIds }, filter);
+
+  return c.json({
+    success: true,
+    data: view,
+    meta: {
+      total: view.rows.length,
+      raw_points: view.rawPointCount,
+      scope: role === 'CUSTOMER' ? 'UNIT_SEWA_SAYA' : 'SELURUH_ARMADA',
+      role,
+    },
+  });
 });
 
 // Reports API

@@ -304,6 +304,7 @@ export const App: React.FC = () => {
                 rentals={rentals}
                 contracts={contracts}
                 payments={payments}
+                trackingData={trackingData}
                 onAddRental={handleAddRental}
                 onSignContract={handleSignContract}
                 onUploadPaymentProof={handleUploadPaymentProof}

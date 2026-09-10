@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
-import { Equipment, Rental, Contract, Payment, User } from '../../types';
-import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Equipment, Rental, Contract, Payment, User, GpsTracking } from '../../types';
+import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle, MapPin, Crosshair } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { ContractPanel } from '../../components/ContractPanel';
+import { LeafletMap } from '../../components/LeafletMap';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
-import { formatRupiah } from '../../lib/businessRules';
+import { formatRupiah, formatWaktu } from '../../lib/businessRules';
 import { buildEquipmentAvailability, describeBlockedReason } from '../../lib/availability';
 import { getPaymentStatusLabel, isPaymentFinal, validatePaymentProofPath } from '../../lib/paymentWorkflow';
+import {
+  buildFleetTelemetry,
+  formatCoordinate,
+  formatSpeed,
+  getFuelLabel,
+  getMovementLabel,
+} from '../../lib/fleetTelemetry';
 
 interface CustomerPortalProps {
   currentUser: User;
@@ -14,6 +22,8 @@ interface CustomerPortalProps {
   rentals: Rental[];
   contracts: Contract[];
   payments: Payment[];
+  /** Titik telemetri mentah seluruh armada; disaring ke miliknya sendiri. */
+  trackingData: GpsTracking[];
   onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<void>;
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
   onUploadPaymentProof: (paymentId: number, proofPath: string) => Promise<void>;
@@ -25,11 +35,12 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   rentals,
   contracts,
   payments,
+  trackingData,
   onAddRental,
   onSignContract,
   onUploadPaymentProof
 }) => {
-  const [activeTab, setActiveTab] = useState<'catalog' | 'my_rentals' | 'contracts' | 'payments'>('catalog');
+  const [activeTab, setActiveTab] = useState<'catalog' | 'my_rentals' | 'contracts' | 'payments' | 'tracking'>('catalog');
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [isRentModalOpen, setIsRentModalOpen] = useState(false);
 
@@ -50,6 +61,32 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   const myRentals = rentals.filter(r => r.customer_id === currentUser.id || r.customer_name?.includes(currentUser.full_name));
   const myContracts = contracts.filter(c => c.customer_id === currentUser.id);
   const myPayments = payments.filter(p => p.customer_id === currentUser.id);
+
+  /**
+   * Pelacakan GPS HANYA untuk unit yang sedang pelanggan ini sewa.
+   *
+   * Pembatasan dihitung oleh modul `fleetTelemetry` — mesin yang sama
+   * dipakai edge API `GET /api/tracking`. Tanpa penyaringan ini pelanggan
+   * dapat melihat posisi seluruh armada, termasuk unit pelanggan lain.
+   */
+  const unitSewaSaya = useMemo(
+    () =>
+      myRentals
+        .filter(r => r.status === 'ON_GOING' || r.status === 'APPROVED')
+        .map(r => r.equipment_id),
+    [myRentals]
+  );
+
+  const lacakView = useMemo(
+    () =>
+      buildFleetTelemetry(
+        trackingData,
+        { role: 'CUSTOMER', equipmentIds: unitSewaSaya }
+      ),
+    [trackingData, unitSewaSaya]
+  );
+
+  const [selectedTrackedUnit, setSelectedTrackedUnit] = useState<number | null>(null);
 
   const calculateDays = (start: string, end: string) => {
     const diff = new Date(end).getTime() - new Date(start).getTime();
@@ -203,8 +240,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
         </div>
       </div>
 
-      {/* 4 Interactive Navigation Tabs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+      {/* 5 Interactive Navigation Tabs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <button
           type="button"
           onClick={() => setActiveTab('catalog')}
@@ -353,6 +390,45 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             </div>
             <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
               {myPayments.length} Pembayaran
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('tracking')}
+          style={{
+            padding: '14px',
+            borderRadius: '8px',
+            border: activeTab === 'tracking' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+            backgroundColor: activeTab === 'tracking' ? '#EFF6FF' : '#FFFFFF',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+          aria-label="Lacak posisi unit sewa saya"
+        >
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
+            backgroundColor: activeTab === 'tracking' ? 'var(--color-primary)' : '#F1F5F9',
+            color: activeTab === 'tracking' ? '#FFFFFF' : 'var(--color-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <MapPin size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'tracking' ? 'var(--color-primary)' : '#1E293B' }}>
+              Lacak Unit Saya
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
+              {lacakView.rows.length} Unit Beroperasi
             </div>
           </div>
         </button>
@@ -600,6 +676,85 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Tab: Lacak Unit Saya (GPS Tracking) */}
+      {activeTab === 'tracking' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="card-premium" style={{ padding: '20px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary)', margin: '0 0 4px 0' }}>
+              Pelacakan Posisi Unit Sewa Anda
+            </h3>
+            <p style={{ fontSize: '12.5px', color: 'var(--color-secondary)', margin: 0 }}>
+              Hanya unit yang sedang beroperasi atas nama {currentUser.company_name || currentUser.full_name} yang ditampilkan.
+            </p>
+          </div>
+
+          {/* Empty state: pelanggan belum punya unit beroperasi */}
+          {lacakView.rows.length === 0 ? (
+            <div className="card-premium" style={{ padding: '40px 24px', textAlign: 'center' }}>
+              <Crosshair size={40} color="var(--color-border)" style={{ marginBottom: '12px' }} />
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '6px' }}>
+                Belum ada unit yang dapat dilacak
+              </div>
+              <div style={{ fontSize: '12.5px', color: 'var(--color-secondary-light)', maxWidth: '420px', margin: '0 auto' }}>
+                Posisi unit dapat dipantau setelah pengajuan sewa Anda disetujui dan unit berstatus beroperasi
+                (ON_GOING). Ajukan sewa terlebih dahulu melalui menu Katalog Alat.
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+              <div className="card-premium" style={{ padding: '12px' }}>
+                <LeafletMap
+                  trackingData={lacakView.rows}
+                  selectedUnitId={selectedTrackedUnit}
+                  onSelectUnit={setSelectedTrackedUnit}
+                />
+              </div>
+
+              <div className="card-premium" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-secondary)', textTransform: 'uppercase' }}>
+                  Unit Beroperasi ({lacakView.rows.length})
+                </div>
+
+                {lacakView.rows.map((row) => (
+                  <div
+                    key={row.id}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: selectedTrackedUnit === row.equipmentId ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                      backgroundColor: selectedTrackedUnit === row.equipmentId ? '#EFF6FF' : '#FFFFFF',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>{row.equipmentName}</div>
+                        <div className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>
+                          {row.equipmentCode}
+                        </div>
+                      </div>
+                      <span className={`badge badge-${row.engineStatus === 'ON' ? 'active' : 'suspended'}`} style={{ fontSize: '10px' }}>
+                        MESIN {row.engineStatus}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11.5px', color: 'var(--color-secondary)' }}>
+                      <div>Kecepatan: <strong>{formatSpeed(row.speed)}</strong></div>
+                      <div>BBM: <strong>{row.fuelLevelPercent}% ({getFuelLabel(row.fuel)})</strong></div>
+                      <div>Status: <strong>{getMovementLabel(row.movement)}</strong></div>
+                      <div>Direkam: <strong>{formatWaktu(row.recordedAt)}</strong></div>
+                    </div>
+
+                    <div className="gps-coordinates" style={{ fontSize: '11px', color: 'var(--color-secondary-light)', marginTop: '8px' }}>
+                      {formatCoordinate(row.latitude)}, {formatCoordinate(row.longitude)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

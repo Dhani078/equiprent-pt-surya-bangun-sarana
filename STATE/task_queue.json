@@ -244,7 +244,9 @@
       "title": "GPS Tracking: peta real-time + popup telemetry",
       "category": "CORE",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
+      "completed_at": "2026-09-10T13:10:00Z",
+      "completed_by": "agent24t-cycle-24",
       "estimate_minutes": 60,
       "depends_on": [
         "T-0002"
@@ -254,12 +256,13 @@
         "src/components/LeafletMap.tsx"
       ],
       "acceptance_criteria": [
-        "Marker per unit tampil",
-        "Popup berisi status mesin, speed, fuel, timestamp",
-        "Filter status mesin ON/OFF"
+        "Marker per unit tampil (reduksi deret waktu → 1 titik TERBARU per unit; tanpa marker tumpang-tindih)",
+        "Popup berisi status mesin, kecepatan, BBM, cap waktu (format koordinat & kecepatan terpusat)",
+        "Filter status mesin ON/OFF (+ filter pergerakan, level BBM, pencarian; nilai tak dikenal dinormalkan)"
       ],
       "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
+      "created_at": "2026-09-04T19:00:00Z",
+      "result": "Modul murni src/lib/fleetTelemetry.ts menjadi satu sumber kebenaran bagi API dan antarmuka. GET /api/tracking ber-RBAC: ADMIN/STAFF melihat seluruh armada, CUSTOMER hanya unit yang sedang ia sewa."
     },
     {
       "id": "T-0011",
