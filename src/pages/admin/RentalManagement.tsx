@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Rental, Equipment, User } from '../../types';
+import { Rental, Equipment, User, Contract } from '../../types';
+import { ContractPanel } from '../../components/ContractPanel';
 import { Plus, Search, CheckCircle, XCircle, Truck, CircleCheck, TriangleAlert, Hourglass } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
@@ -22,9 +23,24 @@ interface RentalManagementProps {
   rentals: Rental[];
   equipments: Equipment[];
   users: User[];
+  /** Kontrak yang sudah diterbitkan — panel kontrak butuh ini untuk menandai sewa yang sudah punya kontrak. */
+  contracts: Contract[];
   onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<void>;
   onUpdateRentalStatus: (id: number, status: Rental['status']) => Promise<void>;
+  /** Menerbitkan kontrak untuk transaksi sewa. */
+  onCreateContract: (rentalId: number) => Promise<void>;
+  /** Membubuhkan tanda tangan elektronik (Admin/Staf bertindak atas nama perusahaan). */
+  onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
 }
+
+/** Tab di dalam halaman: daftar transaksi atau panel kontrak digital. */
+type SubTab = 'transaksi' | 'kontrak';
+
+/** Daftar sub-tab beserta label siap tampil. */
+const SUB_TABS: readonly { id: SubTab; label: string }[] = [
+  { id: 'transaksi', label: 'Daftar Transaksi' },
+  { id: 'kontrak', label: 'Kontrak Digital' },
+];
 
 /** Warna badge mengikuti design system §7 (hijau=aktif, kuning=pending, dst). */
 const TONE_STYLE: Record<string, { backgroundColor: string; color: string; borderColor: string }> = {
@@ -54,9 +70,13 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
   rentals,
   equipments,
   users,
+  contracts,
   onAddRental,
-  onUpdateRentalStatus
+  onUpdateRentalStatus,
+  onCreateContract,
+  onSignContract
 }) => {
+  const [subTab, setSubTab] = useState<SubTab>('transaksi');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -238,11 +258,64 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
             Daftar order sewa alat berat, durasi operasional proyek, dan kontrol status kontrak sewa.
           </p>
         </div>
-        <button onClick={() => setIsAddModalOpen(true)} className="btn-primary" style={{ padding: '9px 16px', fontSize: '13.5px' }}>
-          <Plus size={16} />
-          <span>Buat Booking Sewa</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Pemilih sub-tab: daftar transaksi ↔ panel kontrak digital. */}
+          <div
+            role="tablist"
+            aria-label="Bagian halaman transaksi penyewaan"
+            style={{ display: 'inline-flex', gap: '4px', padding: '4px', borderRadius: '8px', backgroundColor: '#F1F5F9' }}
+          >
+            {SUB_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={subTab === tab.id}
+                onClick={() => setSubTab(tab.id)}
+                style={{
+                  padding: '7px 14px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  borderRadius: '6px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: subTab === tab.id ? '#FFFFFF' : 'transparent',
+                  color: subTab === tab.id ? 'var(--color-primary)' : 'var(--color-secondary)',
+                  boxShadow: subTab === tab.id ? '0 1px 3px rgba(0, 51, 102, 0.12)' : 'none',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {subTab === 'transaksi' && (
+            <button onClick={() => setIsAddModalOpen(true)} className="btn-primary" style={{ padding: '9px 16px', fontSize: '13.5px' }}>
+              <Plus size={16} />
+              <span>Buat Booking Sewa</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Sub-tab: Kontrak digital (penerbitan, pratinjau, e-signature) */}
+      {subTab === 'kontrak' && (
+        <ContractPanel
+          contracts={contracts}
+          rentals={rentals}
+          equipments={equipments}
+          users={users}
+          onCreateContract={onCreateContract}
+          onSignContract={onSignContract}
+          title="Kontrak Sewa Digital & Tanda Tangan Elektronik"
+          canIssue={true}
+          canSign={true}
+        />
+      )}
+
+      {subTab === 'transaksi' && (
+        <>
 
       {/* Ringkasan Keterlambatan Berjalan */}
       <div
@@ -716,6 +789,8 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           </div>
         </form>
       </Modal>
+      </>
+      )}
     </div>
   );
 };

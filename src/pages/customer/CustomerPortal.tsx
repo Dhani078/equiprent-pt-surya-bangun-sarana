@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Equipment, Rental, Contract, Payment, User } from '../../types';
 import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { ContractPanel } from '../../components/ContractPanel';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { formatRupiah } from '../../lib/businessRules';
 import { buildEquipmentAvailability, describeBlockedReason } from '../../lib/availability';
@@ -13,7 +14,7 @@ interface CustomerPortalProps {
   contracts: Contract[];
   payments: Payment[];
   onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<any>;
-  onSignContract: (contractId: number) => Promise<any>;
+  onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
   onUploadPaymentProof: (paymentId: number, proofPath: string) => Promise<any>;
 }
 
@@ -30,10 +31,6 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   const [activeTab, setActiveTab] = useState<'catalog' | 'my_rentals' | 'contracts' | 'payments'>('catalog');
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [isRentModalOpen, setIsRentModalOpen] = useState(false);
-
-  // E-Sign Modal
-  const [signingContract, setSigningContract] = useState<Contract | null>(null);
-  const [signatureName, setSignatureName] = useState(currentUser.full_name);
 
   // Payment Upload Modal
   const [uploadingPayment, setUploadingPayment] = useState<Payment | null>(null);
@@ -471,76 +468,21 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
       {/* Tab: Contracts */}
       {activeTab === 'contracts' && (
-        <div className="card-premium" style={{ padding: '20px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 16px 0' }}>
-            Kontrak Sewa Digital & Tanda Tangan Elektronik
-          </h3>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Nomor Kontrak</th>
-                  <th>ID Rental</th>
-                  <th>Masa Berlaku</th>
-                  <th>Status Tanda Tangan</th>
-                  <th>Aksi Tanda Tangan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myContracts.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-secondary)' }}>
-                      Belum ada kontrak yang diterbitkan untuk akun ini.
-                    </td>
-                  </tr>
-                ) : (
-                  myContracts.map((c) => (
-                    <tr key={c.id}>
-                      <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                        {c.contract_code}
-                      </td>
-                      <td className="serial-code" style={{ fontSize: '12px' }}>
-                        {c.rental_code || `RNT-SBS-${c.rental_id}`}
-                      </td>
-                      <td style={{ fontSize: '12px' }}>
-                        {c.contract_date} s/d {c.valid_until}
-                      </td>
-                      <td>
-                        {c.is_signed_customer ? (
-                          <span className="badge badge-available" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <Check size={12} />
-                            Telah Ditandatangani
-                          </span>
-                        ) : (
-                          <span className="badge badge-pending" style={{ fontSize: '11px' }}>
-                            Menunggu Tanda Tangan
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        {!c.is_signed_customer ? (
-                          <button
-                            type="button"
-                            onClick={() => setSigningContract(c)}
-                            className="btn-primary"
-                            style={{ padding: '6px 12px', fontSize: '12px' }}
-                          >
-                            <PenTool size={13} />
-                            <span>Tanda Tangan E-Sign</span>
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
-                            Sah & Legalisasi ({c.signed_at?.slice(0, 10)})
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ContractPanel
+          contracts={myContracts}
+          rentals={rentals}
+          equipments={equipments}
+          users={[currentUser]}
+          onCreateContract={async () => {
+            // Pelanggan tidak dapat menerbitkan kontrak sendiri —
+            // kontrak diterbitkan Admin/Staf setelah sewa disetujui.
+            throw new Error('Penerbitan kontrak dilakukan oleh Admin atau Staf Operasional.');
+          }}
+          onSignContract={onSignContract}
+          title="Kontrak Sewa Digital & Tanda Tangan Elektronik"
+          canIssue={false}
+          canSign={true}
+        />
       )}
 
       {/* Tab: Payments */}
@@ -717,79 +659,6 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               </button>
             </div>
           </form>
-        </Modal>
-      )}
-
-      {/* Modal: E-Sign Contract */}
-      {signingContract && (
-        <Modal
-          isOpen={true}
-          onClose={() => setSigningContract(null)}
-          title={`Penandatanganan Kontrak: ${signingContract.contract_code}`}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12.5px', lineHeight: 1.6 }}>
-              <p style={{ margin: '0 0 6px 0' }}>
-                Dengan membubuhkan tanda tangan elektronik di bawah ini, <strong>{currentUser.full_name}</strong> atas nama <strong>{currentUser.company_name || 'Pelanggan'}</strong> menyetujui seluruh ketentuan sewa alat berat PT. Surya Bangun Sarana Banjarmasin, termasuk tanggung jawab operasional dan jadwal mobilisasi.
-              </p>
-              <p style={{ margin: 0, color: 'var(--color-secondary)', fontSize: '11px' }}>
-                Legalitas dokumen dijamin sah berdasarkan UU ITE Pasal 11 tentang Tanda Tangan Elektronik.
-              </p>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
-                Nama Penandatangan Resmi (Sesuai KTP / Perusahaan)
-              </label>
-              <input
-                type="text"
-                className="input-premium"
-                value={signatureName}
-                onChange={(e) => setSignatureName(e.target.value)}
-              />
-            </div>
-
-            {/* E-Signature Canvas Mockup */}
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
-                Goresan Tanda Tangan Digital
-              </label>
-              <div style={{
-                height: '110px',
-                border: '2px dashed var(--color-primary)',
-                borderRadius: '8px',
-                backgroundColor: '#FAFAFA',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative'
-              }}>
-                <div style={{ fontFamily: 'Brush Script MT, cursive, serif', fontSize: '32px', color: 'var(--color-primary)', transform: 'rotate(-3deg)' }}>
-                  {signatureName}
-                </div>
-                <span style={{ position: 'absolute', bottom: '8px', right: '12px', fontSize: '10px', color: 'var(--color-secondary)', fontFamily: 'monospace' }}>
-                  TIMESTAMP: {new Date().toISOString()}
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button type="button" onClick={() => setSigningContract(null)} className="btn-secondary">
-                Tinjau Kembali
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  await onSignContract(signingContract.id);
-                  setSigningContract(null);
-                }}
-                className="btn-primary"
-              >
-                <Check size={16} />
-                <span>Bubuhkan Tanda Tangan Digital</span>
-              </button>
-            </div>
-          </div>
         </Modal>
       )}
 

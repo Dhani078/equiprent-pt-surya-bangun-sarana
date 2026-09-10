@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Rental, Contract, Payment, Maintenance, User } from '../../types';
-import { ClipboardCheck, CreditCard, FileCheck, Check, Clock, AlertCircle, CheckCircle, XCircle, Eye, Bell } from 'lucide-react';
+import { Rental, Contract, Payment, Maintenance, User, Equipment } from '../../types';
+import { ClipboardCheck, CreditCard, FileCheck, Check, Eye, Bell } from 'lucide-react';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { Modal } from '../../components/Modal';
+import { ContractPanel } from '../../components/ContractPanel';
 import { formatRupiah, LATE_PENALTY_PER_DAY } from '../../lib/businessRules';
 
 interface StaffDashboardProps {
@@ -10,9 +11,16 @@ interface StaffDashboardProps {
   contracts: Contract[];
   payments: Payment[];
   maintenance: Maintenance[];
+  /** Unit alat berat — diperlukan panel kontrak untuk melengkapi rincian objek sewa. */
+  equipments: Equipment[];
+  users: User[];
   currentUser: User;
-  onVerifyPayment: (paymentId: number, staffId: number, staffName: string) => Promise<any>;
-  onUpdateRentalStatus: (id: number, status: Rental['status']) => Promise<any>;
+  onVerifyPayment: (paymentId: number, staffId: number, staffName: string) => Promise<void>;
+  onUpdateRentalStatus: (id: number, status: Rental['status']) => Promise<void>;
+  /** Menerbitkan kontrak baru — wewenang Staf Operasional. */
+  onCreateContract: (rentalId: number) => Promise<void>;
+  /** Membubuhkan tanda tangan atas nama perusahaan. */
+  onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
 }
 
 export const StaffDashboard: React.FC<StaffDashboardProps> = ({
@@ -20,9 +28,13 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   contracts,
   payments,
   maintenance,
+  equipments,
+  users,
   currentUser,
   onVerifyPayment,
-  onUpdateRentalStatus
+  onUpdateRentalStatus,
+  onCreateContract,
+  onSignContract
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'payments' | 'contracts' | 'rentals'>('payments');
   const [viewingPaymentProof, setViewingPaymentProof] = useState<Payment | null>(null);
@@ -439,54 +451,17 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
       {/* Sub Tab: Contracts */}
       {activeSubTab === 'contracts' && (
-        <div className="card-premium" style={{ padding: '20px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 14px 0' }}>
-            Daftar Kontrak Sewa yang Telah Diterbitkan
-          </h3>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Nomor Kontrak</th>
-                  <th>ID Rental</th>
-                  <th>Pelanggan</th>
-                  <th>Masa Berlaku</th>
-                  <th>Status Tanda Tangan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contracts.map((c) => (
-                  <tr key={c.id}>
-                    <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                      {c.contract_code}
-                    </td>
-                    <td className="serial-code" style={{ fontSize: '12px' }}>
-                      {c.rental_code || `RNT-SBS-${c.rental_id}`}
-                    </td>
-                    <td>
-                      <strong>{c.customer_name || 'Pelanggan SBS'}</strong>
-                    </td>
-                    <td style={{ fontSize: '12px' }}>
-                      {c.contract_date} s/d {c.valid_until}
-                    </td>
-                    <td>
-                      {c.is_signed_customer ? (
-                        <span className="badge badge-available" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Check size={12} />
-                          Ditandatangani ({c.signed_at?.slice(0, 10)})
-                        </span>
-                      ) : (
-                        <span className="badge badge-pending" style={{ fontSize: '11px' }}>
-                          Menunggu E-Sign Klien
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ContractPanel
+          contracts={contracts}
+          rentals={rentals}
+          equipments={equipments}
+          users={users}
+          onCreateContract={onCreateContract}
+          onSignContract={onSignContract}
+          title="Kontrak Sewa Digital & Tanda Tangan Elektronik"
+          canIssue={true}
+          canSign={false}
+        />
       )}
 
       {/* Modal View Payment Proof */}

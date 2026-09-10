@@ -352,20 +352,84 @@ if (siapVerif) {
 }
 
 // ---------------------------------------------------------------------------
+console.log('\n== Daftar Kontrak (envelope terstandar) ==');
+r = await req('GET', '/api/contracts', { token: T_ADMIN });
+t('GET /api/contracts → 200', r.status === 200);
+t('daftar kontrak dibungkus { success, data }', r.body?.success === true && Array.isArray(r.body?.data));
+t('meta.total sama dengan jumlah kontrak', r.body?.meta?.total === r.body?.data?.length);
+t('tiap kontrak punya pratinjau', r.body?.data?.every(x => Boolean(x.preview?.code)) === true);
+t('kode kontrak berformat SBS/CONTRACT/YYYY/MM/SEQ',
+  /^SBS\/CONTRACT\/\d{4}\/\d{2}\/\d{4}$/.test(r.body?.data?.[0]?.contract_code ?? ''));
+t('GET /api/contracts tanpa token → 401', (await req('GET', '/api/contracts')).status === 401);
+
+r = await req('GET', '/api/contracts/1/preview', { token: T_ADMIN });
+t('pratinjau kontrak → 200', r.status === 200);
+t('pratinjau menyertakan berkas HTML cetak', typeof r.body?.data?.html === 'string' && r.body.data.html.includes('<!DOCTYPE html>'));
+t('pratinjau kontrak tidak ada → 404', (await req('GET', '/api/contracts/999999/preview', { token: T_ADMIN })).status === 404);
+t('pratinjau ID tidak valid → 400', (await req('GET', '/api/contracts/abc/preview', { token: T_ADMIN })).status === 400);
+
+// ---------------------------------------------------------------------------
 console.log('\n== Aturan Penandatanganan Kontrak ==');
-const semuaKontrak = (await req('GET', '/api/contracts', { token: T_ADMIN })).body || [];
-const belumTtd = semuaKontrak.find(x => x.is_signed_customer !== 1);
-if (belumTtd) {
-  r = await req('POST', `/api/contracts/${belumTtd.id}/sign`, { token: T_CUST, body: {} });
-  t('tanda tangani kontrak pertama kali → 200', r.status === 200);
+const ID_CUSTOMER = cust.body?.user?.id;
+const CONTOH_TTD = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+const daftarKontrak = (await req('GET', '/api/contracts', { token: T_ADMIN })).body?.data ?? [];
+const milikSendiri = daftarKontrak.find(x => x.customer_id === ID_CUSTOMER && x.is_signed_customer !== 1);
+const milikOrang = daftarKontrak.find(x => x.customer_id !== ID_CUSTOMER && x.is_signed_customer !== 1);
+
+// Validasi: tanda tangan tidak boleh kosong & nama minimal 3 karakter.
+r = await req('POST', `/api/contracts/${milikSendiri?.id ?? 1}/sign`, { token: T_CUST, body: {} });
+t('tanda tangan tanpa nama & goresan → 400', r.status === 400);
+t('galat menyebut field signerName', Boolean(r.body?.error?.errors?.signerName));
+t('galat menyebut field signature', Boolean(r.body?.error?.errors?.signature));
+
+// Penolakan kepemilikan: pelanggan tidak boleh menandatangani kontrak orang lain.
+if (milikOrang) {
+  r = await req('POST', `/api/contracts/${milikOrang.id}/sign`, {
+    token: T_CUST, body: { signerName: 'Budi Santoso', signature: CONTOH_TTD },
+  });
+  t('pelanggan DILARANG ttd kontrak pelanggan lain → 403', r.status === 403);
+  t('kode galat FORBIDDEN', r.body?.error?.code === 'FORBIDDEN');
+}
+
+if (milikSendiri) {
+  r = await req('POST', `/api/contracts/${milikSendiri.id}/sign`, {
+    token: T_CUST, body: { signerName: 'Budi Santoso', signature: CONTOH_TTD },
+  });
+  t('tanda tangani kontrak sendiri → 200', r.status === 200);
   t('status is_signed_customer = 1', r.body?.item?.is_signed_customer === 1);
   t('waktu ttd tercatat', Boolean(r.body?.item?.signed_at));
+  t('nama penandatangan tersimpan', r.body?.item?.signer_name === 'Budi Santoso');
+  t('goresan tanda tangan tersimpan', r.body?.item?.signature_data_url === CONTOH_TTD);
+  t('meta.hasSignature true', r.body?.meta?.hasSignature === true);
 
   // Tanda tangan kedua kali harus ditolak agar audit trail tidak tertimpa.
-  r = await req('POST', `/api/contracts/${belumTtd.id}/sign`, { token: T_CUST, body: {} });
+  r = await req('POST', `/api/contracts/${milikSendiri.id}/sign`, {
+    token: T_CUST, body: { signerName: 'Budi Santoso', signature: CONTOH_TTD },
+  });
   t('tanda tangan ulang → 409', r.status === 409);
   t('kode KONTRAK_SUDAH_DITANDATANGANI', r.body?.error?.code === 'KONTRAK_SUDAH_DITANDATANGANI');
+
+  // Goresan berbahaya (bukan data URL gambar) wajib ditolak.
+  const sudahTtd = daftarKontrak.find(x => x.customer_id !== ID_CUSTOMER && x.is_signed_customer !== 1);
+  if (sudahTtd) {
+    r = await req('POST', `/api/contracts/${sudahTtd.id}/sign`, {
+      token: T_STAFF, body: { signerName: 'Staf Uji', signature: 'javascript:alert(1)' },
+    });
+    t('goresan bukan data URL gambar → 400', r.status === 400);
+  }
 }
+
+// Penerbitan kontrak: hanya Admin/Staf, bukan Pelanggan.
+r = await req('POST', '/api/contracts', { token: T_CUST, body: { rentalId: 1 } });
+t('pelanggan DILARANG menerbitkan kontrak → 403', r.status === 403);
+t('kode galat penerbitan FORBIDDEN', r.body?.error?.code === 'FORBIDDEN');
+
+r = await req('POST', '/api/contracts', { token: T_STAFF, body: { rentalId: 'bukan-angka' } });
+t('terbitkan kontrak dengan ID tidak valid → 400', r.status === 400);
+
+r = await req('POST', '/api/contracts', { token: T_STAFF, body: { rentalId: 999999 } });
+t('terbitkan kontrak untuk sewa tidak ada → 404', r.status === 404);
 
 // ---------------------------------------------------------------------------
 console.log('\n== Data Tidak Ditemukan ==');
@@ -375,7 +439,12 @@ t('update unit tidak ada → 404', r.status === 404);
 r = await req('DELETE', '/api/equipments/999999', { token: T_ADMIN });
 t('hapus unit tidak ada → 404', r.status === 404);
 
-r = await req('POST', '/api/contracts/999999/sign', { token: T_STAFF });
+// Body tetap dikirim: tanpa nama & goresan permintaan ditolak lebih awal
+// (400) oleh validasi, sehingga 404 hanya muncul bila kontrak benar-benar
+// tidak ada — itulah yang diuji di sini.
+r = await req('POST', '/api/contracts/999999/sign', {
+  token: T_STAFF, body: { signerName: 'Staf Uji', signature: CONTOH_TTD },
+});
 t('tanda tangan kontrak tidak ada → 404', r.status === 404);
 
 r = await req('POST', '/api/payments/999999/verify', { token: T_STAFF, body: {} });

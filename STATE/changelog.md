@@ -599,3 +599,70 @@ Armada" pada dashboard yang sama.
 `tests/api.test.mjs` karena bersifat mutasi (mengubah status rental).
 Bila nanti ditambah uji yang bergantung pada status seed, letakkan
 SEBELUM blok tersebut agar hasilnya tetap deterministik.
+
+---
+
+## [CYCLE 22] 2026-09-10T11:30:00Z — T-0007 — P1 — DONE
+**Judul:** Manajemen Kontrak Digital + e-signature canvas (kode SBS/CONTRACT/YYYY/MM/SEQ)
+**Perubahan:**
+- `src/lib/contracts.ts` (BARU) — SATU sumber kebenaran kontrak: penomoran
+  `SBS/CONTRACT/<YYYY>/<MM>/<SEQ-4digit>`, syarat & ketentuan baku, status
+  penandatanganan, model pratinjau, dan render HTML cetak A4. Modul MURNI
+  (tanpa DOM/DB/jaringan) sehingga aman dipakai browser, edge worker, & Node.
+- `src/components/SignatureCanvas.tsx` (BARU) — kanvas tanda tangan: Pointer
+  Events (stylus/layar sentuh bekerja), skala Device Pixel Ratio (goresan
+  tidak pecah di layar retina), riwayat sapuan untuk tombol "Urungkan",
+  `touch-action: none` agar halaman tidak ikut tergulung saat menggambar.
+- `src/components/ContractPanel.tsx` (BARU) — satu panel untuk seluruh siklus
+  kontrak: terbitkan, tinjau, tanda tangani, cetak. Props `canIssue`/`canSign`
+  membuat panel bisa dipakai Admin, Staf, dan Pelanggan tanpa cabang kode.
+- `src/components/ContractViewer.tsx` (BARU) — pratinjau identik dengan hasil
+  cetak A4; pencetakan didelegasikan ke `printHtmlDocument()`.
+- `src/lib/db.ts` — `createContract()` menolak kontrak ganda per transaksi
+  (`KONTRAK_SUDAH_ADA`); `signContract(id, signerName, signature)` menyimpan
+  nama penandatangan + goresan PNG dan menolak tanda tangan ulang
+  (`KONTRAK_SUDAH_DITANDATANGANI`) agar bukti waktu audit tidak tertimpa.
+- `src/lib/validators.ts` — `validateContractSignature()` terpusat: nama wajib,
+  goresan wajib (bukan sekadar string kosong), format data URL gambar divalidasi,
+  dan ukuran dibatasi 200.000 karakter.
+- `src/lib/documentPrinter.ts` — `printHtmlDocument()` untuk dokumen yang sudah
+  jadi HTML-nya (kontrak), tetap mengembalikan `PrintResult` tanpa melempar.
+- `src/server/index.ts` — `GET /api/contracts` (envelope `{success,data,meta}`
+  + pratinjau per kontrak), `GET /api/contracts/:id/preview` (HTML disusun
+  server agar hasil cetak identik dengan pratinjau), `POST /api/contracts`
+  (Admin/Staf saja; Pelanggan 403), `POST /api/contracts/:id/sign`.
+- `src/types/index.ts` — field `signer_name` & `signature_data_url` pada `Contract`.
+**Keamanan yang dijaga:**
+- Pelanggan HANYA boleh menandatangani kontrak MILIKNYA (`maySignContract`),
+  dicek SETELAH validasi agar penyerang tidak bisa membedakan "kontrak orang
+  lain" dari "kontrak tidak ada" lewat kode status (403 vs 404).
+- Goresan tanda tangan hanya diterima bila `data:image/(png|jpeg|webp);base64`
+  — `javascript:` dan URL eksternal ditolak, mencegah XSS lewat tanda tangan.
+- Semua teks kontrak di-escape sebelum masuk HTML cetak.
+**Penyambungan UI (yang belum rampung di sesi sebelumnya):**
+- `src/pages/admin/RentalManagement.tsx` — sub-tab baru "Kontrak Digital"
+  (role=tablist, aria-selected) sehingga Admin dapat menerbitkan & menandatangani
+  kontrak tanpa berpindah halaman.
+- `src/pages/staff/StaffDashboard.tsx` — tabel kontrak pasif diganti
+  `ContractPanel` (Staf dapat menerbitkan & meninjau; `canSign=false` karena
+  yang berhak menandatangani adalah pihak penyewa). Empat `Promise<any>`
+  pada props diganti `Promise<void>` (nol `any`).
+- `src/App.tsx` — `handleCreateContract` baru; StaffDashboard & RentalManagement
+  kini menerima `contracts`, `equipments`, `users`, `onCreateContract`,
+  `onSignContract`.
+**Pengujian:**
+- `tests/contracts.test.mjs` (BARU) — modul kontrak: format penomoran, pengkleman
+  nomor urut (0/negatif/NaN/ >9999), tanggal rusak jatuh ke 1970-01, nomor urut
+  per periode (`maksimum+1`, bukan `jumlah+1`), normalisasi status 0/1 & boolean,
+  pratinjau pada data kosong, escape HTML, penolakan data URL berbahaya.
+- `tests/contractPanel.test.mjs` (BARU) — 23 pemeriksaan render: data nyata,
+  hak akses pelanggan, kontrak sudah/belum ditandatangani, empty state,
+  aksesibilitas (aria-label), ketahanan pada rujukan rusak, dan goresan
+  berbahaya tidak sampai ke atribut `src`.
+- `tests/api.test.mjs` — uji kontrak ditulis ulang: envelope terstandar,
+  400/403/404, penolakan tanda tangan atas kontrak pelanggan lain.
+- `tests/run-tests.mjs` — bundle `ContractPanel.tsx` + suite baru (17 suite).
+**Verifikasi:** typecheck PASS · build PASS (590 KB) · npm test 17/17 suite PASS
+**Catatan:** Pratinjau cetak A4 kontrak (T-0029) kini sudah terpenuhi oleh
+`ContractViewer` + `renderContractHtml()`; T-0029 dapat ditandai DONE pada
+pemeriksaan berikutnya.

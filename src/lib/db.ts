@@ -2,6 +2,7 @@ import { connect } from '@tidbcloud/serverless';
 import { User, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from '../types';
 import { verifyPassword } from './auth';
 import { getTransitionEffect } from './rentalWorkflow';
+import { CONTRACT_TERMS_TEXT, generateContractCode } from './contracts';
 import {
   GENERATED_USERS,
   GENERATED_EQUIPMENTS,
@@ -226,7 +227,59 @@ export const db = {
 
   // Contracts
   getContracts: async () => stateStore.contracts,
-  signContract: async (contractId: number) => {
+
+  /**
+   * Menerbitkan kontrak baru untuk sebuah transaksi sewa.
+   *
+   * Kode kontrak disusun oleh `generateContractCode()` (satu-satunya
+   * tempat aturan penomoran `SBS/CONTRACT/<YYYY>/<MM>/<SEQ>` hidup) agar
+   * nomor yang tercetak di dokumen selalu identik dengan yang tersimpan.
+   */
+  createContract: async (rentalId: number) => {
+    const rental = stateStore.rentals.find(r => r.id === rentalId);
+    if (!rental) return undefined;
+
+    // Satu kontrak per transaksi: menerbitkan ulang akan mengacaukan
+    // rujukan pembayaran yang sudah terlanjur menunjuk kontrak lama.
+    const existing = stateStore.contracts.find(c => c.rental_id === rentalId);
+    if (existing) {
+      throw new Error('KONTRAK_SUDAH_ADA');
+    }
+
+    const now = new Date();
+    const contractDate = now.toISOString().slice(0, 10);
+    const validUntil = rental.end_date;
+
+    const id = nextId(stateStore.contracts);
+    const contract: Contract = {
+      id,
+      contract_code: generateContractCode(stateStore.contracts, contractDate),
+      rental_id: rental.id,
+      rental_code: rental.rental_code,
+      customer_id: rental.customer_id,
+      customer_name: rental.customer_name,
+      contract_date: contractDate,
+      valid_until: validUntil,
+      // Syarat & ketentuan baku diambil dari modul kontrak, bukan
+      // ditulis ulang di sini, agar dokumen & pratinjau tidak menyimpang.
+      terms_conditions: CONTRACT_TERMS_TEXT,
+      is_signed_customer: 0,
+      signed_at: null,
+      signer_name: null,
+      signature_data_url: null,
+    };
+
+    stateStore.contracts.push(contract);
+    return contract;
+  },
+
+  /**
+   * Membubuhkan tanda tangan elektronik pada kontrak.
+   *
+   * `signerName` & `signature` sudah divalidasi oleh `validateContractSignature()`
+   * di lapisan API sebelum sampai ke sini.
+   */
+  signContract: async (contractId: number, signerName: string, signature: string) => {
     const c = stateStore.contracts.find(x => x.id === contractId);
     if (!c) return undefined;
 
@@ -238,6 +291,8 @@ export const db = {
 
     c.is_signed_customer = 1;
     c.signed_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    c.signer_name = signerName;
+    c.signature_data_url = signature;
     return c;
   },
 

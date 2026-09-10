@@ -123,8 +123,13 @@ export const App: React.FC = () => {
     refreshData();
   };
 
-  const handleSignContract = async (contractId: number) => {
-    await db.signContract(contractId);
+  const handleCreateContract = async (rentalId: number) => {
+    await db.createContract(rentalId);
+    refreshData();
+  };
+
+  const handleSignContract = async (contractId: number, signerName: string, signature: string) => {
+    await db.signContract(contractId, signerName, signature);
     refreshData();
   };
 
@@ -178,8 +183,11 @@ export const App: React.FC = () => {
                   rentals={rentals}
                   equipments={equipments}
                   users={users}
+                  contracts={contracts}
                   onAddRental={handleAddRental}
                   onUpdateRentalStatus={handleUpdateRentalStatus}
+                  onCreateContract={handleCreateContract}
+                  onSignContract={handleSignContract}
                 />
               )}
               {activeTab === 'maintenance' && (
@@ -238,9 +246,13 @@ export const App: React.FC = () => {
                   contracts={contracts}
                   payments={payments}
                   maintenance={maintenance}
+                  equipments={equipments}
+                  users={users}
                   currentUser={currentUser}
                   onVerifyPayment={handleVerifyPayment}
                   onUpdateRentalStatus={handleUpdateRentalStatus}
+                  onCreateContract={handleCreateContract}
+                  onSignContract={handleSignContract}
                 />
               )}
               {activeTab === 'maintenance' && (
