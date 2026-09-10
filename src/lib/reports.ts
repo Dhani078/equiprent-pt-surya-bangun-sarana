@@ -41,6 +41,13 @@ import { formatRupiah, formatTanggal, formatWaktu } from './businessRules';
 export const OPERATIONAL_TAX_RATE = 0.1;
 
 /**
+ * Batas panjang kata kunci pencarian (lihat `normalizeKeyword`).
+ * Dipakai untuk mencegah pencarian yang sangat panjang menguras CPU
+ * tanpa menghasilkan manfaat bagi pengguna.
+ */
+export const MAX_KEYWORD_LENGTH = 100;
+
+/**
  * Status rental yang diakui sebagai pendapatan.
  * Referensi PHP hanya memakai `APPROVED`; daftar ini diperluas dengan
  * `ON_GOING` dan `COMPLETED` karena keduanya juga merupakan pesanan yang
@@ -224,6 +231,43 @@ function round2(value: number): number {
 }
 
 // ---------------------------------------------------------------------------
+// Helper Agregasi Baris
+// ---------------------------------------------------------------------------
+
+/**
+ * Ringkasan laporan DIHITUNG DARI BARIS, bukan dari sumber mentah.
+ *
+ * Alasannya: setelah baris disaring kata kunci (lihat `filterReportRows`),
+ * ringkasan harus menggambarkan baris yang masih terlihat. Bila ringkasan
+ * dihitung dari sumber aslinya, pengguna yang mencari satu pelanggan akan
+ * melihat nilai total seluruh transaksi — kesalahan fatal pada laporan
+ * keuangan yang akan langsung dipertanyakan penguji.
+ */
+
+/** Menjumlahkan nilai numerik pada satu indeks kolom. Sel bermasalah diabaikan. */
+function sumColumn(rows: readonly ReportCellValue[][], index: number): number {
+  let total = 0;
+  for (const row of rows) {
+    const value = Number(row[index]);
+    if (Number.isFinite(value)) total += value;
+  }
+  return total;
+}
+
+/** Menghitung baris yang nilainya pada kolom `index` persis sama dengan `needle`. */
+function countWhere(
+  rows: readonly ReportCellValue[][],
+  index: number,
+  needle: string
+): number {
+  let n = 0;
+  for (const row of rows) {
+    if (String(row[index] ?? '') === needle) n += 1;
+  }
+  return n;
+}
+
+// ---------------------------------------------------------------------------
 // Sumber Data Laporan
 // ---------------------------------------------------------------------------
 
@@ -313,6 +357,218 @@ function paymentMethodLabel(method: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Perangkum Ringkasan (satu definisi per laporan)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ringkasan dihitung HANYA dari baris yang tersedia.
+ *
+ * Konsekuensi penting: bila baris disaring kata kunci, `applyKeywordFilter`
+ * memanggil perangkum yang sama dengan baris hasil penyaringan, sehingga
+ * angka pada kartu ringkasan mengikuti apa yang terlihat di tabel.
+ *
+ * `baseline` adalah jumlah baris SEBELUM penyaringan. Ia dipakai hanya oleh
+ * metrik rasio (misal "Cakupan Umpan Balik") yang membandingkan sebagian
+ * terhadap keseluruhan periode, bukan terhadap dirinya sendiri.
+ */
+type Summarizer = (rows: readonly ReportCellValue[][], baseline: number) => ReportSummary[];
+
+function summarizeRentalBulanan(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalNilai = sumColumn(rows, 6);
+  const totalHari = sumColumn(rows, 5);
+  return [
+    { label: 'Total Transaksi', value: `${rows.length} sewa` },
+    { label: 'Total Nilai Sewa', value: formatRupiah(totalNilai), tone: 'positive' },
+    {
+      label: 'Rata-rata Nilai Sewa',
+      value: formatRupiah(rows.length === 0 ? 0 : totalNilai / rows.length),
+    },
+    { label: 'Akumulasi Hari Sewa', value: `${totalHari} hari` },
+  ];
+}
+
+function summarizePembayaranPiutang(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalTagihan = sumColumn(rows, 3);
+  const totalLunas = sumColumn(
+    rows.filter((row) => row[4] === PAYMENT_STATUS_LABEL.PAID),
+    3
+  );
+  const totalPiutang = sumColumn(
+    rows.filter((row) => RECEIVABLE_STATUSES.some((s) => PAYMENT_STATUS_LABEL[s] === row[4])),
+    3
+  );
+  return [
+    { label: 'Total Tagihan', value: formatRupiah(totalTagihan) },
+    { label: 'Sudah Diterima', value: formatRupiah(totalLunas), tone: 'positive' },
+    { label: 'Piutang Berjalan', value: formatRupiah(totalPiutang), tone: 'negative' },
+    {
+      label: 'Rasio Penerimaan',
+      value: totalTagihan === 0 ? '0%' : `${Math.round((totalLunas / totalTagihan) * 100)}%`,
+    },
+  ];
+}
+
+function summarizePendapatanBersih(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalGross = sumColumn(rows, 1);
+  const totalMaint = sumColumn(rows, 2);
+  const totalTax = sumColumn(rows, 3);
+  const totalNet = sumColumn(rows, 4);
+  return [
+    { label: 'Pendapatan Kotor', value: formatRupiah(totalGross), tone: 'positive' },
+    { label: 'Biaya Servis', value: formatRupiah(totalMaint), tone: 'negative' },
+    { label: 'Pajak & Operasional', value: formatRupiah(totalTax), tone: 'negative' },
+    {
+      label: 'Laba Bersih',
+      value: formatRupiah(totalNet),
+      tone: totalNet >= 0 ? 'positive' : 'negative',
+    },
+  ];
+}
+
+function summarizeMaintenanceServis(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalBiaya = sumColumn(rows, 5);
+  const preventif = countWhere(rows, 2, MAINTENANCE_TYPE_LABEL.PREVENTIVE);
+  const korektif =
+    countWhere(rows, 2, MAINTENANCE_TYPE_LABEL.CORRECTIVE) +
+    countWhere(rows, 2, MAINTENANCE_TYPE_LABEL.OVERHAUL);
+  return [
+    { label: 'Total Pekerjaan', value: `${rows.length} servis` },
+    { label: 'Total Biaya', value: formatRupiah(totalBiaya), tone: 'negative' },
+    { label: 'Servis Preventif', value: `${preventif} pekerjaan` },
+    { label: 'Servis Korektif/Overhaul', value: `${korektif} pekerjaan` },
+  ];
+}
+
+function summarizeUtilisasiHm(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalHm = sumColumn(rows, 3);
+  const rataHm = rows.length === 0 ? 0 : totalHm / rows.length;
+  return [
+    { label: 'Total Unit', value: `${rows.length} unit` },
+    { label: 'Akumulasi HM', value: `${round2(totalHm)} jam` },
+    { label: 'Rata-rata HM per Unit', value: `${round2(rataHm)} jam` },
+    {
+      // Baris sudah terurut menurun berdasarkan HM, jadi baris pertama
+      // adalah unit dengan jam operasi tertinggi di antara yang tampil.
+      label: 'HM Tertinggi',
+      value:
+        rows.length === 0 ? '-' : `${String(rows[0][0])} · ${round2(Number(rows[0][3]))} jam`,
+    },
+  ];
+}
+
+function summarizeKerusakanUnit(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalBiaya = sumColumn(rows, 4);
+  return [
+    { label: 'Total Kejadian', value: `${rows.length} kasus`, tone: 'negative' },
+    { label: 'Total Biaya Perbaikan', value: formatRupiah(totalBiaya), tone: 'negative' },
+    {
+      label: 'Rata-rata Biaya',
+      value: formatRupiah(rows.length === 0 ? 0 : totalBiaya / rows.length),
+    },
+  ];
+}
+
+function summarizeTelemetriGps(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const mesinMenyala = countWhere(rows, 4, 'Menyala');
+  const totalBbm = sumColumn(rows, 5);
+  const rataBbm = rows.length === 0 ? 0 : totalBbm / rows.length;
+  return [
+    { label: 'Total Titik Rekam', value: `${rows.length} titik` },
+    { label: 'Mesin Menyala', value: `${mesinMenyala} titik`, tone: 'positive' },
+    { label: 'Rata-rata BBM', value: `${round2(rataBbm)}%` },
+    {
+      label: 'Utilisasi Mesin',
+      value: rows.length === 0 ? '0%' : `${Math.round((mesinMenyala / rows.length) * 100)}%`,
+    },
+  ];
+}
+
+function summarizeKinerjaStaf(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalVerifikasi = sumColumn(rows, 5);
+  const totalServis = sumColumn(rows, 6);
+  return [
+    { label: 'Total Akun Staf', value: `${rows.length} akun` },
+    { label: 'Total Verifikasi', value: `${totalVerifikasi} pembayaran`, tone: 'positive' },
+    { label: 'Total Servis', value: `${totalServis} pekerjaan`, tone: 'positive' },
+    {
+      label: 'Rata-rata Beban Kerja',
+      value:
+        rows.length === 0
+          ? '0'
+          : `${round2((totalVerifikasi + totalServis) / rows.length)} tugas`,
+    },
+  ];
+}
+
+function summarizeSukuCadang(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalBiaya = sumColumn(rows, 3);
+  return [
+    { label: 'Total Penggantian', value: `${rows.length} item` },
+    { label: 'Total Biaya', value: formatRupiah(totalBiaya), tone: 'negative' },
+    {
+      label: 'Rata-rata Biaya',
+      value: formatRupiah(rows.length === 0 ? 0 : totalBiaya / rows.length),
+    },
+  ];
+}
+
+function summarizeKepuasanPelanggan(
+  rows: readonly ReportCellValue[][],
+  baseline: number
+): ReportSummary[] {
+  return [
+    { label: 'Total Umpan Balik', value: `${rows.length} catatan`, tone: 'positive' },
+    {
+      label: 'Pelanggan Memberi Catatan',
+      value: `${new Set(rows.map((row) => String(row[1]))).size} pelanggan`,
+    },
+    {
+      // Cakupan dibandingkan terhadap SELURUH transaksi pada periode
+      // (baseline), bukan terhadap baris yang lolos penyaringan — kalau
+      // tidak, angkanya akan selalu 100% dan tidak bermakna.
+      label: 'Cakupan Umpan Balik',
+      value: baseline === 0 ? '0%' : `${Math.round((rows.length / baseline) * 100)}%`,
+    },
+  ];
+}
+
+function summarizeAuditTrail(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const perJenis = new Map<string, number>();
+  for (const row of rows) {
+    const key = String(row[2] ?? '');
+    perJenis.set(key, (perJenis.get(key) ?? 0) + 1);
+  }
+  const jenisTerbanyak = [...perJenis.entries()].sort((a, b) => b[1] - a[1])[0];
+  return [
+    { label: 'Total Dokumen', value: `${rows.length} dokumen` },
+    { label: 'Jenis Dokumen', value: `${perJenis.size} jenis` },
+    {
+      label: 'Terbanyak',
+      value: jenisTerbanyak ? `${jenisTerbanyak[0]} (${jenisTerbanyak[1]})` : '-',
+    },
+    {
+      label: 'Penerbit Aktif',
+      value: `${new Set(rows.map((row) => String(row[1]))).size} pengguna`,
+    },
+  ];
+}
+
+/** Perangkum ringkasan per jenis laporan. Kunci harus lengkap & unik. */
+const SUMMARIZERS: Readonly<Record<ReportId, Summarizer>> = {
+  RENTAL_BULANAN: summarizeRentalBulanan,
+  PEMBAYARAN_PIUTANG: summarizePembayaranPiutang,
+  PENDAPATAN_BERSIH: summarizePendapatanBersih,
+  MAINTENANCE_SERVIS: summarizeMaintenanceServis,
+  UTILISASI_HM: summarizeUtilisasiHm,
+  KERUSAKAN_UNIT: summarizeKerusakanUnit,
+  TELEMETRI_GPS: summarizeTelemetriGps,
+  KINERJA_STAF: summarizeKinerjaStaf,
+  SUKU_CADANG: summarizeSukuCadang,
+  KEPUASAN_PELANGGAN: summarizeKepuasanPelanggan,
+  AUDIT_TRAIL: summarizeAuditTrail,
+};
+
+// ---------------------------------------------------------------------------
 // Pembangun 11 Laporan
 // ---------------------------------------------------------------------------
 
@@ -334,9 +590,6 @@ function buildRentalBulanan(source: ReportDataSource, range: DateRangeFilter): R
     RENTAL_STATUS_LABEL[r.status],
   ]);
 
-  const totalNilai = ordered.reduce((s, r) => s + Number(r.subtotal), 0);
-  const totalHari = ordered.reduce((s, r) => s + Number(r.total_days), 0);
-
   return {
     id: 'RENTAL_BULANAN',
     title: 'Laporan Rental Bulanan',
@@ -353,15 +606,7 @@ function buildRentalBulanan(source: ReportDataSource, range: DateRangeFilter): R
       { key: 'status', label: 'Status' },
     ],
     rows,
-    summaries: [
-      { label: 'Total Transaksi', value: `${ordered.length} sewa` },
-      { label: 'Total Nilai Sewa', value: formatRupiah(totalNilai), tone: 'positive' },
-      {
-        label: 'Rata-rata Nilai Sewa',
-        value: formatRupiah(ordered.length === 0 ? 0 : totalNilai / ordered.length),
-      },
-      { label: 'Akumulasi Hari Sewa', value: `${totalHari} hari` },
-    ],
+    summaries: summarizeRentalBulanan(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -381,13 +626,6 @@ function buildPembayaranPiutang(source: ReportDataSource, range: DateRangeFilter
     toDay(p.payment_date),
   ]);
 
-  const lunas = ordered.filter((p) => p.status === 'PAID');
-  const piutang = ordered.filter((p) => RECEIVABLE_STATUSES.includes(p.status));
-
-  const totalTagihan = ordered.reduce((s, p) => s + Number(p.amount), 0);
-  const totalLunas = lunas.reduce((s, p) => s + Number(p.amount), 0);
-  const totalPiutang = piutang.reduce((s, p) => s + Number(p.amount), 0);
-
   return {
     id: 'PEMBAYARAN_PIUTANG',
     title: 'Laporan Pembayaran & Piutang',
@@ -402,15 +640,7 @@ function buildPembayaranPiutang(source: ReportDataSource, range: DateRangeFilter
       { key: 'payment_date', label: 'Tanggal', format: 'date' },
     ],
     rows,
-    summaries: [
-      { label: 'Total Tagihan', value: formatRupiah(totalTagihan) },
-      { label: 'Sudah Diterima', value: formatRupiah(totalLunas), tone: 'positive' },
-      { label: 'Piutang Berjalan', value: formatRupiah(totalPiutang), tone: 'negative' },
-      {
-        label: 'Rasio Penerimaan',
-        value: totalTagihan === 0 ? '0%' : `${Math.round((totalLunas / totalTagihan) * 100)}%`,
-      },
-    ],
+    summaries: summarizePembayaranPiutang(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -451,11 +681,6 @@ function buildPendapatanBersih(source: ReportDataSource, range: DateRangeFilter)
     return [monthLabel(key), gross, maint, Math.round(tax), Math.round(gross - maint - tax)];
   });
 
-  const totalGross = periods.reduce((s, k) => s + (pendapatan.get(k) ?? 0), 0);
-  const totalMaint = periods.reduce((s, k) => s + (biayaServis.get(k) ?? 0), 0);
-  const totalTax = Math.round(totalGross * OPERATIONAL_TAX_RATE);
-  const totalNet = Math.round(totalGross - totalMaint - totalTax);
-
   return {
     id: 'PENDAPATAN_BERSIH',
     title: 'Laporan Pendapatan Bersih',
@@ -474,12 +699,7 @@ function buildPendapatanBersih(source: ReportDataSource, range: DateRangeFilter)
       { key: 'net', label: 'Laba Bersih', align: 'right', format: 'currency' },
     ],
     rows,
-    summaries: [
-      { label: 'Pendapatan Kotor', value: formatRupiah(totalGross), tone: 'positive' },
-      { label: 'Biaya Servis', value: formatRupiah(totalMaint), tone: 'negative' },
-      { label: 'Pajak & Operasional', value: formatRupiah(totalTax), tone: 'negative' },
-      { label: 'Laba Bersih', value: formatRupiah(totalNet), tone: totalNet >= 0 ? 'positive' : 'negative' },
-    ],
+    summaries: summarizePendapatanBersih(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -500,12 +720,6 @@ function buildMaintenanceServis(source: ReportDataSource, range: DateRangeFilter
     MAINTENANCE_STATUS_LABEL[m.status],
   ]);
 
-  const totalBiaya = ordered.reduce((s, m) => s + Number(m.cost), 0);
-  const preventif = ordered.filter((m) => m.maintenance_type === 'PREVENTIVE').length;
-  const korektif = ordered.filter(
-    (m) => m.maintenance_type === 'CORRECTIVE' || m.maintenance_type === 'OVERHAUL'
-  ).length;
-
   return {
     id: 'MAINTENANCE_SERVIS',
     title: 'Laporan Maintenance & Servis',
@@ -521,12 +735,7 @@ function buildMaintenanceServis(source: ReportDataSource, range: DateRangeFilter
       { key: 'status', label: 'Status' },
     ],
     rows,
-    summaries: [
-      { label: 'Total Pekerjaan', value: `${ordered.length} servis` },
-      { label: 'Total Biaya', value: formatRupiah(totalBiaya), tone: 'negative' },
-      { label: 'Servis Preventif', value: `${preventif} pekerjaan` },
-      { label: 'Servis Korektif/Overhaul', value: `${korektif} pekerjaan` },
-    ],
+    summaries: summarizeMaintenanceServis(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -555,10 +764,6 @@ function buildUtilisasiHm(source: ReportDataSource, _range: DateRangeFilter): Re
     EQUIPMENT_STATUS_LABEL[e.status],
   ]);
 
-  const totalHm = ordered.reduce((s, e) => s + Number(e.hour_meter), 0);
-  const rataHm = ordered.length === 0 ? 0 : totalHm / ordered.length;
-  const terbanyak = ordered[0];
-
   return {
     id: 'UTILISASI_HM',
     title: 'Laporan Utilisasi & Hour Meter',
@@ -573,15 +778,7 @@ function buildUtilisasiHm(source: ReportDataSource, _range: DateRangeFilter): Re
       { key: 'status', label: 'Status Unit' },
     ],
     rows,
-    summaries: [
-      { label: 'Total Unit', value: `${ordered.length} unit` },
-      { label: 'Akumulasi HM', value: `${round2(totalHm)} jam` },
-      { label: 'Rata-rata HM per Unit', value: `${round2(rataHm)} jam` },
-      {
-        label: 'HM Tertinggi',
-        value: terbanyak ? `${terbanyak.equipment_code} · ${round2(terbanyak.hour_meter)} jam` : '-',
-      },
-    ],
+    summaries: summarizeUtilisasiHm(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -602,8 +799,6 @@ function buildKerusakanUnit(source: ReportDataSource, range: DateRangeFilter): R
     Number(m.cost),
   ]);
 
-  const totalBiaya = ordered.reduce((s, m) => s + Number(m.cost), 0);
-
   return {
     id: 'KERUSAKAN_UNIT',
     title: 'Laporan Kerusakan Unit',
@@ -617,14 +812,7 @@ function buildKerusakanUnit(source: ReportDataSource, range: DateRangeFilter): R
       { key: 'cost', label: 'Biaya Perbaikan', align: 'right', format: 'currency' },
     ],
     rows,
-    summaries: [
-      { label: 'Total Kejadian', value: `${ordered.length} kasus`, tone: 'negative' },
-      { label: 'Total Biaya Perbaikan', value: formatRupiah(totalBiaya), tone: 'negative' },
-      {
-        label: 'Rata-rata Biaya',
-        value: formatRupiah(ordered.length === 0 ? 0 : totalBiaya / ordered.length),
-      },
-    ],
+    summaries: summarizeKerusakanUnit(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -645,10 +833,6 @@ function buildTelemetriGps(source: ReportDataSource, range: DateRangeFilter): Re
     g.recorded_at,
   ]);
 
-  const mesinMenyala = ordered.filter((g) => g.engine_status === 'ON').length;
-  const totalBbm = ordered.reduce((s, g) => s + Number(g.fuel_level_percent), 0);
-  const rataBbm = ordered.length === 0 ? 0 : totalBbm / ordered.length;
-
   return {
     id: 'TELEMETRI_GPS',
     title: 'Laporan Histori Telemetri GPS',
@@ -664,15 +848,7 @@ function buildTelemetriGps(source: ReportDataSource, range: DateRangeFilter): Re
       { key: 'recorded_at', label: 'Waktu Rekam', format: 'datetime' },
     ],
     rows,
-    summaries: [
-      { label: 'Total Titik Rekam', value: `${ordered.length} titik` },
-      { label: 'Mesin Menyala', value: `${mesinMenyala} titik`, tone: 'positive' },
-      { label: 'Rata-rata BBM', value: `${round2(rataBbm)}%` },
-      {
-        label: 'Utilisasi Mesin',
-        value: ordered.length === 0 ? '0%' : `${Math.round((mesinMenyala / ordered.length) * 100)}%`,
-      },
-    ],
+    summaries: summarizeTelemetriGps(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -715,9 +891,6 @@ function buildKinerjaStaf(source: ReportDataSource, range: DateRangeFilter): Rep
     u.status === 'ACTIVE' ? 'Aktif' : 'Nonaktif',
   ]);
 
-  const totalVerifikasi = rows.reduce((s, r) => s + Number(r[5]), 0);
-  const totalServis = rows.reduce((s, r) => s + Number(r[6]), 0);
-
   return {
     id: 'KINERJA_STAF',
     title: 'Laporan Kinerja Staf & Operator',
@@ -734,15 +907,7 @@ function buildKinerjaStaf(source: ReportDataSource, range: DateRangeFilter): Rep
       { key: 'status', label: 'Status Akun' },
     ],
     rows,
-    summaries: [
-      { label: 'Total Akun Staf', value: `${staf.length} akun` },
-      { label: 'Total Verifikasi', value: `${totalVerifikasi} pembayaran`, tone: 'positive' },
-      { label: 'Total Servis', value: `${totalServis} pekerjaan`, tone: 'positive' },
-      {
-        label: 'Rata-rata Beban Kerja',
-        value: staf.length === 0 ? '0' : `${round2((totalVerifikasi + totalServis) / staf.length)} tugas`,
-      },
-    ],
+    summaries: summarizeKinerjaStaf(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -764,8 +929,6 @@ function buildSukuCadang(source: ReportDataSource, range: DateRangeFilter): Repo
     toDay(m.scheduled_date),
   ]);
 
-  const totalBiaya = ordered.reduce((s, m) => s + Number(m.cost), 0);
-
   return {
     id: 'SUKU_CADANG',
     title: 'Laporan Pemakaian Suku Cadang',
@@ -779,14 +942,7 @@ function buildSukuCadang(source: ReportDataSource, range: DateRangeFilter): Repo
       { key: 'date', label: 'Tanggal Ganti', format: 'date' },
     ],
     rows,
-    summaries: [
-      { label: 'Total Penggantian', value: `${ordered.length} item` },
-      { label: 'Total Biaya', value: formatRupiah(totalBiaya), tone: 'negative' },
-      {
-        label: 'Rata-rata Biaya',
-        value: formatRupiah(ordered.length === 0 ? 0 : totalBiaya / ordered.length),
-      },
-    ],
+    summaries: summarizeSukuCadang(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -825,22 +981,12 @@ function buildKepuasanPelanggan(source: ReportDataSource, range: DateRangeFilter
       { key: 'notes', label: 'Catatan Evaluasi' },
       { key: 'date', label: 'Tanggal', format: 'date' },
     ],
+    // `source.rentals.length` disimpan sebagai baseline agar persentase
+    // cakupan tetap bermakna setelah baris disaring kata kunci.
     rows,
-    summaries: [
-      { label: 'Total Umpan Balik', value: `${ordered.length} catatan`, tone: 'positive' },
-      {
-        label: 'Pelanggan Memberi Catatan',
-        value: `${new Set(ordered.map((r) => r.customer_id)).size} pelanggan`,
-      },
-      {
-        label: 'Cakupan Umpan Balik',
-        value:
-          source.rentals.length === 0
-            ? '0%'
-            : `${Math.round((ordered.length / source.rentals.length) * 100)}%`,
-      },
-    ],
+    summaries: summarizeKepuasanPelanggan(rows, source.rentals.length),
     totalRows: rows.length,
+    baselineRows: source.rentals.length,
   };
 }
 
@@ -856,13 +1002,6 @@ function buildAuditTrail(source: ReportDataSource, range: DateRangeFilter): Repo
     r.generated_at,
   ]);
 
-  const perJenis = new Map<string, number>();
-  for (const r of ordered) {
-    const key = r.report_type.replace(/_/g, ' ');
-    perJenis.set(key, (perJenis.get(key) ?? 0) + 1);
-  }
-  const jenisTerbanyak = [...perJenis.entries()].sort((a, b) => b[1] - a[1])[0];
-
   return {
     id: 'AUDIT_TRAIL',
     title: 'Laporan Audit Trail & Log Sistem',
@@ -876,18 +1015,7 @@ function buildAuditTrail(source: ReportDataSource, range: DateRangeFilter): Repo
       { key: 'generated_at', label: 'Waktu Terbit', format: 'datetime' },
     ],
     rows,
-    summaries: [
-      { label: 'Total Dokumen', value: `${ordered.length} dokumen` },
-      { label: 'Jenis Dokumen', value: `${perJenis.size} jenis` },
-      {
-        label: 'Terbanyak',
-        value: jenisTerbanyak ? `${jenisTerbanyak[0]} (${jenisTerbanyak[1]})` : '-',
-      },
-      {
-        label: 'Penerbit Aktif',
-        value: `${new Set(ordered.map((r) => r.generated_by)).size} pengguna`,
-      },
-    ],
+    summaries: summarizeAuditTrail(rows, rows.length),
     totalRows: rows.length,
   };
 }
@@ -924,6 +1052,91 @@ export function buildReport(
 /** Apakah string ini merupakan id laporan yang dikenal? */
 export function isReportId(value: unknown): value is ReportId {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(BUILDERS, value);
+}
+
+// ---------------------------------------------------------------------------
+// Pencarian & Penyaringan Baris
+// ---------------------------------------------------------------------------
+
+/**
+ * Menormalkan kata kunci pencarian:
+ *   - nilai bukan string (null/undefined/angka) menjadi '',
+ *   - spasi di awal/akhir dibuang, spasi ganda dirapatkan,
+ *   - huruf dikecilkan dengan locale Indonesia sehingga "EXCAVATOR" sama
+ *     dengan "excavator",
+ *   - kata kunci yang lebih panjang dari `MAX_KEYWORD_LENGTH` dipotong agar
+ *     input ekstrem tidak menguras CPU (sama seperti perlakuan filter GPS).
+ */
+export function normalizeKeyword(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.replace(/\s+/g, ' ').trim();
+  if (trimmed === '') return '';
+  return trimmed.slice(0, MAX_KEYWORD_LENGTH).toLocaleLowerCase('id-ID');
+}
+
+/** Bentuk nilai sel yang dicari: angka apa adanya, teks ternormalisasi. */
+function toSearchable(value: ReportCellValue): string {
+  if (typeof value === 'number') return String(value);
+  return String(value ?? '').toLocaleLowerCase('id-ID');
+}
+
+/**
+ * Menyaring baris laporan berdasarkan kata kunci.
+ *
+ * Pencarian bersifat GLOBAL: sebuah baris lolos bila salah satu selnya
+ * memuat kata kunci. Kata kunci kosong mengembalikan seluruh baris
+ * (tidak ada baris yang dibuang), sehingga pemanggil tidak perlu
+ * bercabang antara "sedang mencari" dan "tidak mencari".
+ *
+ * Baris tidak pernah diubah — hanya dipilih — sehingga data asli tetap utuh.
+ */
+export function filterReportRows(
+  rows: readonly ReportCellValue[][],
+  keyword: string
+): ReportCellValue[][] {
+  const needle = normalizeKeyword(keyword);
+  if (needle === '') return rows.map((row) => [...row]);
+
+  const matched: ReportCellValue[][] = [];
+  for (const row of rows) {
+    let cocok = false;
+    for (const cell of row) {
+      if (toSearchable(cell).includes(needle)) {
+        cocok = true;
+        break;
+      }
+    }
+    if (cocok) matched.push([...row]);
+  }
+  return matched;
+}
+
+/**
+ * Menerapkan kata kunci pada sebuah laporan yang sudah tersusun.
+ *
+ * Ringkasan dihitung ULANG dari baris hasil penyaringan, sehingga angka
+ * pada kartu ringkasan selalu menjumlahkan baris yang terlihat. Tanpa ini,
+ * pengguna yang mencari satu pelanggan akan melihat total seluruh periode —
+ * kesalahan fatal pada laporan keuangan.
+ *
+ * Kata kunci kosong mengembalikan laporan apa adanya (tanpa menyalin baris
+ * yang tidak perlu).
+ */
+export function applyKeywordFilter(result: ReportResult, keyword: string): ReportResult {
+  if (normalizeKeyword(keyword) === '') return result;
+
+  const rows = filterReportRows(result.rows, keyword);
+  // Denominator ringkasan diwarisi dari laporan asli: untuk laporan rasio
+  // (Cakupan Umpan Balik) itu adalah seluruh transaksi periode ini, bukan
+  // jumlah baris hasil saringan — kalau tidak, persentasenya selalu 100%.
+  const baseline = result.baselineRows ?? result.totalRows;
+
+  return {
+    ...result,
+    rows,
+    totalRows: rows.length,
+    summaries: SUMMARIZERS[result.id](rows, baseline),
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -294,7 +294,7 @@
       "title": "11 jenis laporan + filter rentang tanggal",
       "category": "REPORTING",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 120,
       "depends_on": [
         "T-0006",
@@ -311,7 +311,8 @@
         "Export CSV tiap laporan"
       ],
       "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
+      "created_at": "2026-09-04T19:00:00Z",
+      "completed_at": "2026-09-10T21:06:07.728Z"
     },
     {
       "id": "T-0013",
@@ -485,7 +486,7 @@
       "title": "Pencarian & penyaringan global pada tabel laporan operasional",
       "category": "REPORTING",
       "priority": "P2",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "estimate_minutes": 45,
       "depends_on": [
         "T-0025"

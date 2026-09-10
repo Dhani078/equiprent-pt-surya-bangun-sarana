@@ -1,3 +1,34 @@
+## Cycle 26 - 2026-09-11 - T-0012: 11 Jenis Laporan + Filter Rentang Tanggal & Ekspor CSV
+
+### Apa yang Diubah
+- **src/lib/reports.ts** — Mesin laporan operasional murni lengkap:
+  - 11 laporan skripsi: RENTAL_BULANAN, PEMBAYARAN_PIUTANG, PENDAPATAN_BERSIH, MAINTENANCE_SERVIS, UTILISASI_HM, KERUSAKAN_UNIT, TELEMETRI_GPS, KINERJA_STAF, SUKU_CADANG, KEPUASAN_PELANGGAN, AUDIT_TRAIL
+  - Filter rentang tanggal (normalizeRange) dengan validasi format ISO 8601, swap otomatis from > to
+  - Pencarian global (normalizeKeyword, filterReportRows, applyKeywordFilter) — case-insensitive, locale Indonesia, dibatasi 100 karakter
+  - Ringkasan dihitung ULANG dari baris hasil penyaringan (bukan sumber asli) — angka kartu ringkasan konsisten saat mencari
+  - BaselineRows untuk metrik rasio (Cakupan Umpan Balik) yang membandingkan subset terhadap seluruh periode
+  - Ekspor CSV dengan BOM UTF-8, delimiter ;, escape karakter khusus (titik koma, kutip, baris baru), nilai uang diekspor mentah (bisa dijumlahkan Excel)
+  - Nama berkas: Laporan_<jenis>_YYYY-MM-DD.csv
+  - Aman dengan data kosong/ rusak — tidak melempar, ringkasan tetap tersedia
+
+- **src/lib/reportsClient.ts** — Klien data laporan (API → lokal fallback):
+  - Parameter keyword diteruskan ke fetchFromApi & buildLocally
+  - Strategi API /api/reports/analytics → perhitungan lokal tanpa gangguan UX
+
+- **src/server/index.ts** — Endpoint API laporan:
+  - GET /api/reports/analytics mendukung parameter q (kata kunci pencarian global)
+  - applyKeywordFilter dipanggil setelah buildReport sehingga filter berlaku di edge
+
+- **src/types/index.ts** — Tambah field baselineRows pada ReportResult untuk metrik rasio
+
+- **tests/reports.test.mjs** — 55 pengujian baru mencakup struktur 11 laporan, filter tanggal, format sel, ekspor CSV, nama berkas, ketahanan data kosong
+
+### Quality Gate
+- Type-check: PASS (0 error)
+- Test: PASS (21/21 suite, 55 kasus baru laporan)
+- Build: PASS (vite production build OK)
+
+
 # CHANGELOG — Autonomous Agent Log
 
 > Format: `## [CYCLE n] <ISO timestamp> — <task_id> — <priority> — <status>`

@@ -42,6 +42,7 @@ import {
 } from '../lib/paymentWorkflow';
 import { getEquipmentImage } from '../lib/stitchAssets';
 import {
+  applyKeywordFilter,
   buildReport,
   isReportId,
   normalizeRange,
@@ -1352,6 +1353,7 @@ app.get('/api/reports', async (c) => {
  *   id    — salah satu ReportId; default RENTAL_BULANAN
  *   from  — batas awal periode (YYYY-MM-DD), opsional
  *   to    — batas akhir periode (YYYY-MM-DD), opsional
+ *   q     — kata kunci pencarian global, opsional (dipotong 100 karakter)
  */
 app.get('/api/reports/analytics', async (c) => {
   const rawId = c.req.query('id');
@@ -1376,7 +1378,10 @@ app.get('/api/reports/analytics', async (c) => {
     reports: await db.getReports(),
   };
 
-  const result = buildReport(id, source, range);
+  const result = applyKeywordFilter(
+    buildReport(id, source, range),
+    c.req.query('q') ?? ''
+  );
 
   return c.json({ success: true, data: result, meta: { total: result.totalRows } });
 });
