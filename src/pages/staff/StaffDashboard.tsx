@@ -1,10 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Rental, Contract, Payment, Maintenance, User, Equipment } from '../../types';
-import { ClipboardCheck, CreditCard, FileCheck, Check, Eye, Bell } from 'lucide-react';
+import { ClipboardCheck, CreditCard, FileCheck, Check, Eye, Bell, X, Search } from 'lucide-react';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { Modal } from '../../components/Modal';
 import { ContractPanel } from '../../components/ContractPanel';
-import { formatRupiah, LATE_PENALTY_PER_DAY } from '../../lib/businessRules';
+import { formatRupiah, LATE_PENALTY_PER_DAY, formatTanggal } from '../../lib/businessRules';
+import {
+  getPaymentStatusLabel,
+  summarizePaymentQueue,
+  isPaymentFinal,
+} from '../../lib/paymentWorkflow';
 
 interface StaffDashboardProps {
   rentals: Rental[];
@@ -16,11 +21,15 @@ interface StaffDashboardProps {
   users: User[];
   currentUser: User;
   onVerifyPayment: (paymentId: number, staffId: number, staffName: string) => Promise<void>;
+  /** Menolak bukti transfer yang tidak sah (Pending Verification → FAILED). */
+  onRejectPayment: (paymentId: number, staffId: number, staffName: string) => Promise<void>;
   onUpdateRentalStatus: (id: number, status: Rental['status']) => Promise<void>;
   /** Menerbitkan kontrak baru — wewenang Staf Operasional. */
   onCreateContract: (rentalId: number) => Promise<void>;
   /** Membubuhkan tanda tangan atas nama perusahaan. */
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
+  /** Umpan balik sederhana (sukses / galat) setelah sebuah aksi. */
+  onNotify?: (message: string, tone: 'success' | 'error') => void;
 }
 
 export const StaffDashboard: React.FC<StaffDashboardProps> = ({
@@ -32,15 +41,78 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   users,
   currentUser,
   onVerifyPayment,
+  onRejectPayment,
   onUpdateRentalStatus,
   onCreateContract,
-  onSignContract
+  onSignContract,
+  onNotify
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'payments' | 'contracts' | 'rentals'>('payments');
   const [viewingPaymentProof, setViewingPaymentProof] = useState<Payment | null>(null);
+  /** Pencarian pada tabel pembayaran: kode bayar, klien, atau kode kontrak. */
+  const [paymentSearch, setPaymentSearch] = useState('');
+  /** ID pembayaran yang sedang diproses — mencegah klik ganda. */
+  const [processingId, setProcessingId] = useState<number | null>(null);
 
   const pendingPayments = payments.filter(p => p.status === 'PENDING_VERIFICATION');
   const pendingRentals = rentals.filter(r => r.status === 'PENDING');
+
+  /** Ringkasan antrean verifikasi: siap diverifikasi vs menunggu bukti. */
+  const antrean = useMemo(() => summarizePaymentQueue(payments), [payments]);
+
+  /**
+   * Daftar pembayaran yang tampil, mengikuti kotak pencarian.
+   * Penyaringan tidak mengubah sumber data — hanya tampilan.
+   */
+  const visiblePayments = useMemo(() => {
+    const kata = paymentSearch.trim().toLowerCase();
+    if (kata === '') return payments;
+
+    return payments.filter((p) =>
+      [p.payment_code, p.customer_name ?? '', p.contract_code ?? '', p.payment_method]
+        .join(' ')
+        .toLowerCase()
+        .includes(kata)
+    );
+  }, [payments, paymentSearch]);
+
+  /**
+   * Menjalankan aksi verifikasi/penolakan dengan penanganan galat.
+   *
+   * `db.*` melempar galat bila aturan bisnis dilanggar (misalnya tagihan
+   * sudah final). Tanpa penanganan di sini, galat itu menjadi unhandled
+   * promise rejection dan antarmuka terdiam tanpa penjelasan.
+   */
+  const jalankanAksi = useCallback(
+    async (
+      payment: Payment,
+      aksi: 'verify' | 'reject',
+      jalankan: () => Promise<void>
+    ): Promise<void> => {
+      if (processingId !== null) return;
+      setProcessingId(payment.id);
+      try {
+        await jalankan();
+        onNotify?.(
+          aksi === 'verify'
+            ? `Pembayaran ${payment.payment_code} ditandai lunas.`
+            : `Bukti transfer ${payment.payment_code} ditolak. Pelanggan dapat melampirkan ulang bukti.`,
+          'success'
+        );
+        setViewingPaymentProof(null);
+      } catch {
+        onNotify?.(
+          aksi === 'verify'
+            ? `Pembayaran ${payment.payment_code} gagal diverifikasi. Muat ulang dan coba lagi.`
+            : `Bukti transfer ${payment.payment_code} gagal ditolak. Muat ulang dan coba lagi.`,
+          'error'
+        );
+      } finally {
+        setProcessingId(null);
+      }
+    },
+    [onNotify, processingId]
+  );
 
   /**
    * Notifikasi jatuh tempo & keterlambatan.
@@ -235,6 +307,9 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-primary)' }}>
             {pendingPayments.length} Menunggu
           </div>
+          <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)', marginTop: '2px' }}>
+            {antrean.readyToVerifyCount} siap · {antrean.awaitingProofCount} tanpa bukti
+          </div>
         </button>
 
         <button
@@ -289,9 +364,62 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       {/* Sub Tab: Payments Verification */}
       {activeSubTab === 'payments' && (
         <div className="card-premium" style={{ padding: '20px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 14px 0' }}>
-            Daftar Pembayaran & Bukti Transfer Klien
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 14px 0', flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+              Daftar Pembayaran & Bukti Transfer Klien
+            </h3>
+
+            {/* Ringkasan antrean: memisahkan yang siap diverifikasi dari
+                yang masih menunggu bukti, agar staf tidak mengklik tombol
+                verifikasi yang pasti gagal. */}
+            <span style={{ fontSize: '11.5px', color: 'var(--color-secondary)' }}>
+              {antrean.pendingCount} menunggu · {antrean.readyToVerifyCount} siap verifikasi ·{' '}
+              {antrean.awaitingProofCount} menunggu bukti · {antrean.paidCount} lunas
+            </span>
+
+            <div style={{ marginLeft: 'auto', position: 'relative', minWidth: '220px' }}>
+              <Search
+                size={14}
+                aria-hidden="true"
+                style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-secondary)' }}
+              />
+              <input
+                type="search"
+                className="input-premium"
+                value={paymentSearch}
+                onChange={(e) => setPaymentSearch(e.target.value)}
+                placeholder="Cari kode bayar, klien, atau kontrak…"
+                aria-label="Cari pembayaran"
+                style={{ paddingLeft: '32px', fontSize: '12.5px' }}
+              />
+            </div>
+          </div>
+
+          {antrean.pendingAmount > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '10px',
+                flexWrap: 'wrap',
+                padding: '10px 14px',
+                marginBottom: '14px',
+                borderRadius: '8px',
+                backgroundColor: '#FFFBEB',
+                border: '1px solid #FDE68A',
+                fontSize: '12.5px',
+              }}
+            >
+              <span style={{ color: '#92400E', fontWeight: 600 }}>
+                Nilai tagihan menunggu verifikasi
+              </span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#92400E' }}>
+                {formatRupiah(antrean.pendingAmount)}
+              </span>
+            </div>
+          )}
+
           <div className="table-container">
             <table className="data-table">
               <thead>
@@ -306,55 +434,113 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {payments.map((p) => (
-                  <tr key={p.id}>
-                    <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                      {p.payment_code}
-                    </td>
-                    <td>
-                      <strong>{p.customer_name || 'Pelanggan SBS'}</strong>
-                    </td>
-                    <td style={{ fontWeight: 700, fontSize: '13.5px', fontFamily: 'monospace' }}>
-                      {formatRupiah(Number(p.amount))}
-                    </td>
-                    <td style={{ fontSize: '12.5px' }}>
-                      {p.payment_method}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => setViewingPaymentProof(p)}
-                        className="btn-secondary"
-                        style={{ padding: '4px 8px', fontSize: '11.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <Eye size={12} />
-                        <span>Lihat Bukti</span>
-                      </button>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${p.status.toLowerCase()}`}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td>
-                      {p.status === 'PENDING_VERIFICATION' ? (
-                        <button
-                          type="button"
-                          onClick={() => onVerifyPayment(p.id, currentUser.id, currentUser.full_name)}
-                          className="btn-primary"
-                          style={{ padding: '5px 12px', fontSize: '12px', backgroundColor: '#10B981' }}
-                        >
-                          <Check size={13} />
-                          <span>Verifikasi Lunas</span>
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '11.5px', color: '#059669', fontWeight: 600 }}>
-                          ✓ Diverifikasi oleh {p.verified_by_name || 'Staf'}
-                        </span>
-                      )}
+                {visiblePayments.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-secondary)' }}>
+                      {paymentSearch.trim() === ''
+                        ? 'Belum ada tagihan pembayaran yang tercatat.'
+                        : `Tidak ada pembayaran yang cocok dengan "${paymentSearch}".`}
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  visiblePayments.map((p) => {
+                    const adaBukti = typeof p.payment_proof_path === 'string' && p.payment_proof_path.trim() !== '';
+                    const siapVerifikasi = p.status === 'PENDING_VERIFICATION' && adaBukti;
+                    const sedangDiproses = processingId === p.id;
+
+                    return (
+                      <tr key={p.id}>
+                        <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
+                          {p.payment_code}
+                        </td>
+                        <td>
+                          <strong>{p.customer_name || 'Pelanggan SBS'}</strong>
+                          <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{p.contract_code}</div>
+                        </td>
+                        <td style={{ fontWeight: 700, fontSize: '13.5px', fontFamily: 'monospace' }}>
+                          {formatRupiah(Number(p.amount))}
+                        </td>
+                        <td style={{ fontSize: '12.5px' }}>
+                          {p.payment_method}
+                        </td>
+                        <td>
+                          {adaBukti ? (
+                            <button
+                              type="button"
+                              onClick={() => setViewingPaymentProof(p)}
+                              className="btn-secondary"
+                              style={{ padding: '4px 8px', fontSize: '11.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              aria-label={`Lihat bukti transfer ${p.payment_code}`}
+                            >
+                              <Eye size={12} />
+                              <span>Lihat Bukti</span>
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: '11.5px', color: '#92400E', fontWeight: 600 }}>
+                              Belum dilampirkan
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`badge badge-${p.status.toLowerCase()}`}>
+                            {getPaymentStatusLabel(p.status)}
+                          </span>
+                          {/* Jejak peninjau: siapa & kapan tagihan ini disahkan/ditolak. */}
+                          {p.verified_at && (
+                            <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', marginTop: '3px' }}>
+                              {p.status === 'FAILED' ? 'Ditolak' : 'Diverifikasi'} {p.verified_by_name || 'Staf'} ·{' '}
+                              {formatTanggal(p.verified_at)}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {siapVerifikasi ? (
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                disabled={sedangDiproses}
+                                onClick={() =>
+                                  jalankanAksi(p, 'verify', () =>
+                                    onVerifyPayment(p.id, currentUser.id, currentUser.full_name)
+                                  )
+                                }
+                                className="btn-primary"
+                                style={{ padding: '5px 12px', fontSize: '12px', backgroundColor: '#10B981', opacity: sedangDiproses ? 0.6 : 1 }}
+                                aria-label={`Verifikasi lunas ${p.payment_code}`}
+                              >
+                                <Check size={13} />
+                                <span>{sedangDiproses ? 'Memproses…' : 'Verifikasi Lunas'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={sedangDiproses}
+                                onClick={() =>
+                                  jalankanAksi(p, 'reject', () =>
+                                    onRejectPayment(p.id, currentUser.id, currentUser.full_name)
+                                  )
+                                }
+                                className="btn-secondary"
+                                style={{ padding: '5px 12px', fontSize: '12px', color: '#DC2626' }}
+                                aria-label={`Tolak bukti transfer ${p.payment_code}`}
+                              >
+                                <X size={13} />
+                                <span>Tolak</span>
+                              </button>
+                            </div>
+                          ) : p.status === 'PENDING_VERIFICATION' ? (
+                            <span style={{ fontSize: '11.5px', color: '#92400E', fontWeight: 600 }}>
+                              Menunggu bukti klien
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '11.5px', color: 'var(--color-secondary)', fontWeight: 600 }}>
+                              {isPaymentFinal(p.status) ? 'Status final' : getPaymentStatusLabel(p.status)}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -475,7 +661,14 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12.5px' }}>
               <div>Klien: <strong>{viewingPaymentProof.customer_name || 'Pelanggan'}</strong></div>
               <div>Jumlah: <strong style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatRupiah(Number(viewingPaymentProof.amount))}</strong></div>
-              <div>Status: <strong>{viewingPaymentProof.status}</strong></div>
+              <div>Kontrak: <strong>{viewingPaymentProof.contract_code || '—'}</strong></div>
+              <div>Status: <strong>{getPaymentStatusLabel(viewingPaymentProof.status)}</strong></div>
+              <div>
+                Berkas bukti:{' '}
+                <span className="serial-code" style={{ fontSize: '11.5px' }}>
+                  {viewingPaymentProof.payment_proof_path || 'Belum dilampirkan'}
+                </span>
+              </div>
             </div>
 
             <div style={{
@@ -495,7 +688,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => setViewingPaymentProof(null)}
@@ -504,18 +697,38 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 Tutup
               </button>
               {viewingPaymentProof.status === 'PENDING_VERIFICATION' && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await onVerifyPayment(viewingPaymentProof.id, currentUser.id, currentUser.full_name);
-                    setViewingPaymentProof(null);
-                  }}
-                  className="btn-primary"
-                  style={{ backgroundColor: '#10B981' }}
-                >
-                  <Check size={14} />
-                  <span>Verifikasi Lunas Sekarang</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    disabled={processingId === viewingPaymentProof.id}
+                    onClick={() =>
+                      jalankanAksi(viewingPaymentProof, 'reject', () =>
+                        onRejectPayment(viewingPaymentProof.id, currentUser.id, currentUser.full_name)
+                      )
+                    }
+                    className="btn-secondary"
+                    style={{ color: '#DC2626', opacity: processingId === viewingPaymentProof.id ? 0.6 : 1 }}
+                    aria-label={`Tolak bukti transfer ${viewingPaymentProof.payment_code}`}
+                  >
+                    <X size={14} />
+                    <span>Tolak Bukti</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={processingId === viewingPaymentProof.id}
+                    onClick={() =>
+                      jalankanAksi(viewingPaymentProof, 'verify', () =>
+                        onVerifyPayment(viewingPaymentProof.id, currentUser.id, currentUser.full_name)
+                      )
+                    }
+                    className="btn-primary"
+                    style={{ backgroundColor: '#10B981', opacity: processingId === viewingPaymentProof.id ? 0.6 : 1 }}
+                    aria-label={`Verifikasi lunas ${viewingPaymentProof.payment_code}`}
+                  >
+                    <Check size={14} />
+                    <span>Verifikasi Lunas Sekarang</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
