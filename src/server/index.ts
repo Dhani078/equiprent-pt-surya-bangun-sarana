@@ -9,7 +9,7 @@ import {
   SESSION_TTL_SECONDS,
 } from '../lib/auth';
 import type { RoleName, ReportId, User } from '../types';
-import type { Equipment, Rental, Maintenance } from '../types';
+import type { Contract, Equipment, Rental, Maintenance } from '../types';
 import {
   buildEquipmentAvailability,
   describeBlockedReason,
@@ -26,7 +26,9 @@ import {
   validateHourMeter,
   validateRentalRate,
   validateMaintenanceType,
+  validateContractSignature,
 } from '../lib/validators';
+import { buildContractPreview, renderContractHtml } from '../lib/contracts';
 import type { ValidatedEquipmentInput, ValidatedUserInput } from '../lib/validators';
 import { getEquipmentImage } from '../lib/stitchAssets';
 import {
@@ -311,6 +313,20 @@ function parseId(raw: string | undefined): number | null {
 
 const BAD_ID = { success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid.' } } as const;
 const BAD_JSON = { success: false, error: { code: 'INVALID_JSON', message: 'Format request tidak valid.' } } as const;
+const NOT_FOUND_CONTRACT = {
+  success: false,
+  error: { code: 'NOT_FOUND', message: 'Kontrak tidak ditemukan.' },
+} as const;
+
+/**
+ * Helper: mencari transaksi sewa berdasarkan ID.
+ * Mengembalikan `null` bila tidak ada — dipakai untuk memperkaya kontrak
+ * dengan rincian unit & periode tanpa menggagalkan seluruh permintaan.
+ */
+async function cariRental(rentalId: number): Promise<Rental | null> {
+  const rentals = await db.getRentals();
+  return rentals.find((r) => r.id === rentalId) ?? null;
+}
 
 /**
  * Membentuk respons 400 untuk kegagalan validasi form.
@@ -762,20 +778,174 @@ app.put('/api/rentals/:id/status', async (c) => {
   });
 });
 
-// Contracts API
+// ---------------------------------------------------------------------------
+// Contracts API — Kontrak Digital & Tanda Tangan Elektronik
+// ---------------------------------------------------------------------------
+
+/**
+ * Kontrak yang sudah diperkaya data terkaitnya.
+ *
+ * Pratinjau dibentuk di server agar kode, nama penandatangan, dan waktu
+ * yang tampil di dokumen tidak bisa menyimpang dari data tersimpan.
+ */
 app.get('/api/contracts', async (c) => {
   const items = await db.getContracts();
-  return c.json(items);
+
+  const payload = items.map((kontrak) => ({
+    ...kontrak,
+    preview: buildContractPreview({ contract: kontrak }),
+  }));
+
+  return c.json({ success: true, data: payload, meta: { total: payload.length } });
 });
 
+/** Pratinjau satu kontrak (kode, para pihak, syarat, tanda tangan). */
+app.get('/api/contracts/:id/preview', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  const items = await db.getContracts();
+  const kontrak = items.find((x) => x.id === id);
+  if (!kontrak) return c.json(NOT_FOUND_CONTRACT, 404);
+
+  const preview = buildContractPreview({
+    contract: kontrak,
+    rental: await cariRental(kontrak.rental_id),
+  });
+
+  return c.json({
+    success: true,
+    data: {
+      ...preview,
+      // Berkas HTML disusun di server agar hasil cetak identik dengan
+      // pratinjau di layar — bukan dua implementasi yang perlahan beda.
+      html: renderContractHtml(preview),
+    },
+  });
+});
+
+/**
+ * Menentukan apakah pengguna boleh menandatangani kontrak ini.
+ *
+ * Pelanggan hanya boleh menandatangani kontrak MILIKNYA — tanpa pemeriksaan
+ * ini, pelanggan dapat membubuhkan tanda tangan (dan karena itu mengesahkan
+ * kewajiban finansial) atas kontrak pelanggan lain hanya dengan menebak ID.
+ * Admin & Staf Operasional bertindak atas nama perusahaan, jadi diizinkan.
+ */
+async function maySignContract(
+  kontrak: Pick<Contract, 'customer_id'>,
+  role: RoleName,
+  userId: number
+): Promise<boolean> {
+  if (role === 'ADMIN' || role === 'STAFF') return true;
+  return kontrak.customer_id === userId;
+}
+
+/** Menerbitkan kontrak baru untuk sebuah transaksi sewa. */
+app.post('/api/contracts', async (c) => {
+  // Penerbitan kontrak adalah wewenang perusahaan: pelanggan tidak boleh
+  // membuat dokumen kontrak sendiri.
+  if (c.get('role') === 'CUSTOMER') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Penerbitan kontrak dilakukan oleh Admin atau Staf Operasional.',
+        },
+      },
+      403
+    );
+  }
+
+  const body = await readJsonBody<{ rentalId?: unknown }>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  const rentalIdRaw = typeof body.rentalId === 'string' ? body.rentalId : String(body.rentalId ?? '');
+  const rentalId = parseId(rentalIdRaw);
+  if (rentalId === null) {
+    return c.json(
+      { success: false, error: { code: 'INVALID_ID', message: 'ID transaksi sewa tidak valid.' } },
+      400
+    );
+  }
+
+  try {
+    const kontrak = await db.createContract(rentalId);
+    if (!kontrak) {
+      return c.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Transaksi sewa tidak ditemukan.' } },
+        404
+      );
+    }
+    return c.json({ success: true, item: kontrak }, 201);
+  } catch (err) {
+    // Satu kontrak per transaksi — mencegah duplikasi nomor kontrak.
+    const msg = err instanceof Error ? err.message : '';
+    if (msg === 'KONTRAK_SUDAH_ADA') {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: msg,
+            message: 'Transaksi sewa ini sudah memiliki kontrak. Tidak dapat menerbitkan kontrak ganda.',
+          },
+        },
+        409
+      );
+    }
+    throw err;
+  }
+});
+
+/** Membubuhkan tanda tangan elektronik pada kontrak. */
 app.post('/api/contracts/:id/sign', async (c) => {
   const id = parseId(c.req.param('id'));
   if (id === null) return c.json(BAD_ID, 400);
 
+  const body = await readJsonBody<{ signerName?: unknown; signature?: unknown }>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  // Validasi terpusat — pesan galat identik dengan yang tampil di form klien.
+  const hasil = validateContractSignature(body);
+  if (!hasil.ok) return c.json(badValidation(hasil.errors), 400);
+
+  // Otorisasi kepemilikan: pelanggan hanya boleh menandatangani kontraknya
+  // sendiri. Dicek SETELAH validasi agar penyerang tidak bisa membedakan
+  // "kontrak orang lain" dari "kontrak tidak ada" lewat kode status.
+  const daftar = await db.getContracts();
+  const kontrak = daftar.find((x) => x.id === id);
+  if (!kontrak) return c.json(NOT_FOUND_CONTRACT, 404);
+
+  const role = c.get('role');
+  const userId = c.get('userId');
+
+  if ((await maySignContract(kontrak, role, userId)) !== true) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Anda hanya dapat menandatangani kontrak atas nama akun Anda sendiri.',
+        },
+      },
+      403
+    );
+  }
+
   try {
-    const updated = await db.signContract(id);
-    if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Kontrak tidak ditemukan.' } }, 404);
-    return c.json({ success: true, item: updated });
+    const updated = await db.signContract(id, hasil.value.signerName, hasil.value.signature);
+    if (!updated) return c.json(NOT_FOUND_CONTRACT, 404);
+
+    return c.json({
+      success: true,
+      item: updated,
+      meta: {
+        signedAt: updated.signed_at ?? null,
+        signerName: updated.signer_name ?? null,
+        hasSignature: typeof updated.signature_data_url === 'string' && updated.signature_data_url !== '',
+      },
+    });
   } catch (err) {
     // Kontrak sudah ditandatangani sebelumnya → jangan timpa bukti waktu.
     const msg = err instanceof Error ? err.message : '';

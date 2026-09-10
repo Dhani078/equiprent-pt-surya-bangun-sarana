@@ -1,22 +1,22 @@
 {
-  "cycle": 21,
-  "last_run": "2026-09-09T19:40:00Z",
-  "current_task_id": "T-0007",
+  "cycle": 22,
+  "last_run": "2026-09-10T11:30:00Z",
+  "current_task_id": "T-0008",
   "current_phase": "PENDING",
   "completed_this_cycle": [
-    "T-0006"
+    "T-0007"
   ],
-  "session_summary": "Cycle 21: T-0006 — Alur status rental kini dijamin oleh SATU mesin transisi bersama. Modul murni baru src/lib/rentalWorkflow.ts menjadi sumber kebenaran tunggal: matriks transisi (PENDING→APPROVED/REJECTED, APPROVED→ON_GOING/REJECTED, ON_GOING→COMPLETED; COMPLETED & REJECTED status akhir), efek samping per transisi (penalti keterlambatan, status unit), serta helper countLateDays. businessRules.ts diekstrak ke helper countLateDays yang dipakai bersama sehingga perhitungan denda UI, server, dan laporan tidak bisa lagi menyimpang (inkonsistensi sebelumnya: UI memakai tarif tetap 10% sementara server memakai LP), dan calculateRentalCost kini mengembalikan subtotal+denda+durasi sekaligus. Endpoint PUT /api/rentals/:id/status memakai mesin yang sama: menolak lompatan status dengan HTTP 409 INVALID_STATUS_TRANSITION (beserta daftar transisi yang diizinkan), 404 bila rental tak ada, dan mengembalikan meta { lateDays, penalty, allowedNext } untuk kejelasan UI. db.updateRentalStatus diselaraskan: ON_GOING mengunci unit RENTED, COMPLETED/REJECTED membebaskan unit. Halaman RentalManagement ditulis ulang: filter status, pencarian, ringkasan total denda keterlambatan, penanda visual keterlambatan, tombol aksi hanya untuk transisi yang sah, konfirmasi sebelum menyelesaikan, serta penanganan error 409 yang jelas. Semua tanpa `any` dan tanpa concat SQL.",
+  "session_summary": "Cycle 22: T-0007 — Kontrak digital kini lengkap end-to-end dan terhubung ke SELURUH peran. Siklus kontrak hidup di satu modul murni src/lib/contracts.ts: penomoran SBS/CONTRACT/<YYYY>/<MM>/<SEQ-4digit> (urut per periode, memakai maksimum+1 agar nomor tidak dipakai ulang setelah kontrak dihapus), syarat & ketentuan baku yang memakai tarif dari LATE_PENALTY_PER_DAY (tidak ada angka denda hardcode), status penandatanganan, pratinjau kontrak, serta render HTML cetak A4 dengan escape HTML dan penolakan data URL berbahaya. Penerbitan kontrak (db.createContract) menolak duplikasi per transaksi lewat KONTRAK_SUDAH_ADA; penandatanganan (db.signContract) menyimpan nama penandatangan + goresan PNG dan menolak tanda tangan ulang (KONTRAK_SUDAH_DITANDATANGANI) agar bukti waktu audit tidak tertimpa. API memverifikasi kepemilikan: pelanggan hanya boleh menandatangani kontrak MILIKNYA (403 FORBIDDEN), dan pelanggan dilarang menerbitkan kontrak (403). Panel kontrak ContractPanel kini dipakai di tiga tempat — Admin (sub-tab baru di Manajemen Transaksi Penyewaan), Staf (menggantikan tabel kontrak pasif), dan Pelanggan — dengan prop canIssue/canSign yang menyembunyikan aksi di luar wewenang. Kanvas tanda tangan memakai Pointer Events + skala DPR agar stylus/tablet bekerja dan goresan tidak pecah. Empat `Promise<any>` pada props StaffDashboard diganti `Promise<void>`.",
   "quality_gate": {
     "type_check": "PASS",
     "build": "PASS",
     "test": "PASS"
   },
-  "test_suites": 15,
-  "commits": 16,
+  "test_suites": 17,
+  "commits": 17,
   "deploy": {
     "status": "READY",
     "note": "deploy:cloud sudah benar; deploy sungguhan butuh login Cloudflare"
   },
-  "next_focus": "T-0007: Manajemen Kontrak + e-signature canvas (kode kontrak SBS/CONTRACT/YYYY/MM/SEQ)"
+  "next_focus": "T-0008: Manajemen Pembayaran — unggah bukti bayar + verifikasi staf (sewa hanya aktif bila pembayaran terverifikasi)"
 }

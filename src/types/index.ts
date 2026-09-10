@@ -68,6 +68,20 @@ export interface Contract {
   terms_conditions: string;
   is_signed_customer: boolean | number;
   signed_at?: string | null;
+  /**
+   * Nama terang penandatangan yang tercetak pada dokumen.
+   * Diisi bersamaan dengan `signature_data_url` saat e-sign dibubuhkan.
+   */
+  signer_name?: string | null;
+  /**
+   * Goresan tanda tangan elektronik dalam bentuk data URL PNG
+   * (`data:image/png;base64,...`) hasil kanvas peramban.
+   *
+   * Sengaja disimpan sebagai data URL agar dokumen dapat dicetak tanpa
+   * bergantung pada layanan penyimpanan berkas eksternal. Ukuran dibatasi
+   * (lihat `LIMIT_SIGNATURE_CHARS_MAX`) supaya tidak membebani basis data.
+   */
+  signature_data_url?: string | null;
 }
 
 export interface Payment {

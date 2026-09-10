@@ -21,6 +21,44 @@ export type PrintResult =
   | { ok: true }
   | { ok: false; message: string };
 
+/**
+ * Menulis HTML mentah ke jendela baru lalu memanggil dialog cetak.
+ *
+ * Dipakai untuk dokumen yang sudah jadi HTML-nya (misalnya kontrak yang
+ * disusun server), sehingga tidak perlu mengikuti struktur `OfficialDocument`.
+ * Tidak pernah melempar — selalu mengembalikan `PrintResult`.
+ */
+export function printHtmlDocument(input: { html: string; title: string }): PrintResult {
+  if (typeof window === 'undefined') {
+    return { ok: false, message: PESAN_TANPA_WINDOW };
+  }
+
+  const jendela = window.open('', '_blank', 'width=900,height=1200,noopener');
+  if (!jendela) {
+    return { ok: false, message: PESAN_POPUP_DIBLOKIR };
+  }
+
+  try {
+    jendela.document.open();
+    jendela.document.write(input.html);
+    jendela.document.close();
+
+    // Judul jendela dipakai peramban sebagai nama berkas bawaan saat
+    // menyimpan ke PDF.
+    jendela.document.title = input.title;
+
+    // `print()` dipanggil setelah satu frame agar konten selesai dilayout.
+    jendela.setTimeout(() => {
+      jendela.focus();
+      jendela.print();
+    }, 120);
+
+    return { ok: true };
+  } catch {
+    return { ok: false, message: 'Berkas cetak gagal dibuat. Silakan coba lagi.' };
+  }
+}
+
 /** Fallback bila `window` tidak tersedia (render di server). */
 const PESAN_TANPA_WINDOW = 'Pencetakan hanya dapat dilakukan dari dalam peramban.';
 

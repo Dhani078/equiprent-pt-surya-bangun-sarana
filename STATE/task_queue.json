@@ -163,14 +163,28 @@
       "title": "Manajemen Kontrak + e-signature canvas",
       "category": "CORE",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 75,
       "depends_on": [
         "T-0006"
       ],
+      "completed_at": "2026-09-10T11:30:00Z",
+      "completed_cycle": 22,
       "files": [
+        "src/lib/contracts.ts",
+        "src/components/ContractPanel.tsx",
+        "src/components/ContractViewer.tsx",
+        "src/components/SignatureCanvas.tsx",
         "src/pages/admin/RentalManagement.tsx",
-        "src/server/index.ts"
+        "src/pages/staff/StaffDashboard.tsx",
+        "src/pages/customer/CustomerPortal.tsx",
+        "src/server/index.ts",
+        "src/lib/db.ts",
+        "src/lib/validators.ts",
+        "src/lib/documentPrinter.ts",
+        "src/types/index.ts",
+        "tests/contracts.test.mjs",
+        "tests/contractPanel.test.mjs"
       ],
       "acceptance_criteria": [
         "Kode kontrak format SBS/CONTRACT/YYYY/MM/SEQ",
@@ -485,7 +499,9 @@
       "title": "Pratinjau kontrak digital siap cetak A4 (mengikuti pola BAST)",
       "category": "REPORTING",
       "priority": "P2",
-      "status": "PENDING",
+      "status": "DONE",
+      "completed_at": "2026-09-10T11:30:00Z",
+      "completed_cycle": 22,
       "estimate_minutes": 60,
       "depends_on": [
         "T-0007",
