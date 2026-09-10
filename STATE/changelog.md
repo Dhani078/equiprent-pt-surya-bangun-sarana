@@ -795,3 +795,46 @@ atau menolak bukti tersebut.
 
 **Verifikasi:** typecheck PASS · build PASS (614,72 KB) · npm test 20/20 suite PASS
 **Catatan:** Nol `any`, nol penyambungan string SQL, tanpa kredensial pada berkas.
+
+## Cycle 25 — T-0011 · Portal Customer: katalog, pengajuan, kontrak, pembayaran, tracking
+
+**Status:** DONE · **Prioritas:** P1 · **Kategori:** CORE
+
+**Kriteria penerimaan & pembuktiannya** (diuji pada data seed 50 unit / 50 sewa):
+- "Katalog hanya tampilkan unit available" — katalog hanya berisi unit yang
+  benar-benar bisa disewa pada periode yang dipilih: **24 unit tampil, 0 unit
+  MAINTENANCE/UNAVAILABLE bocor, semua 24 dapat diajukan**. 13 unit yang
+  bentrok disembunyikan secara bawaan (tetap dilaporkan pada ringkasan, dan
+  dapat dimunculkan lewat tombol "Tampilkan N unit terpesan").
+- "Pengajuan rental masuk ke antrean staff" — divalidasi oleh checkRentalRequest()
+  sebelum dikirim; status PENDING sehingga muncul di antrean Staf/Admin.
+- "Tracking GPS unit miliknya sendiri" — penyaringan fleetTelemetry dengan
+  role CUSTOMER + equipmentIds miliknya sendiri (sudah ada, tetap diuji).
+
+**Yang ditambahkan:**
+- src/lib/customerPortal.ts (modul murni baru) — SATU sumber kebenaran untuk
+  kepemilikan, katalog, perjalanan sewa, dan ringkasan tagihan.
+- tests/customerPortal.test.mjs — 55 pengujian.
+- src/pages/customer/CustomerPortal.tsx — katalog memakai modul; filter kata
+  kunci/kategori/urutan harga + pemilih periode; kartu menampilkan alasan
+  penolakan; kolom "Tahap Berikutnya" dengan tautan aksi; ringkasan 4 kartu
+  pada tab tagihan; badge tab memakai angka nyata.
+
+**3 cacat nyata yang ditemukan pengujian & diperbaiki sebelum commit:**
+1. customer_id === 0 pada dua baris berbeda saling cocok sehingga pelanggan
+   dapat melihat data pelanggan lain. Kini ID <= 0 tidak pernah cocok.
+2. Pencocokan nama gagal bila ada sapaan ("Bapak Anton Wijaya" vs
+   "CV Anton Wijaya Sejahtera") sehingga riwayat hilang. Kini memakai token
+   bermakna, dan nama yang hanya beririsan sebagian tidak lagi cocok.
+3. Ringkasan tagihan tidak konsisten: FAILED menambah belumBayarAmount tanpa
+   belumBayarCount, sehingga total tidak pernah sama dengan jumlah bagiannya.
+   Kini FAILED termasuk kewajiban belum lunas, dan invariant
+   total = lunas + verifikasi + belum bayar diuji secara eksplisit.
+
+**Perbaikan konsistensi finansial:** portal dulu menghitung hari sewa dengan
+Math.round, sedangkan dokumen & laporan memakai ceil + 1 (minimal 1 hari) —
+selisih 1 hari = jutaan rupiah. Kini portal, modal estimasi, dan penyimpanan
+memakai calculateRentalCost() yang sama.
+
+**Verifikasi:** typecheck PASS · build PASS (628,18 KB) · npm test 21/21 suite PASS
+**Catatan:** Nol any, nol penyambungan string SQL, tanpa kredensial pada berkas.

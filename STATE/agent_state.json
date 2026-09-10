@@ -1,22 +1,23 @@
 {
-  "cycle": 24,
-  "last_run": "2026-09-10T13:10:00Z",
-  "current_task_id": "T-0011",
-  "current_phase": "PENDING",
+  "cycle": 25,
+  "last_run": "2026-09-10T18:34:12.500Z",
+  "current_task_id": "T-0012",
+  "current_phase": "FASE 3: Fitur Inti",
   "completed_this_cycle": [
-    "T-0010"
+    "T-0011"
   ],
-  "session_summary": "Cycle 24: T-0010 — GPS Tracking: peta real-time + popup telemetry SELESAI. Inti perubahan adalah modul murni baru src/lib/fleetTelemetry.ts (476 baris, tanpa DOM, tanpa jaringan, tanpa akses data) yang menjadi SATU sumber kebenaran bagi API dan antarmuka. Modul ini mereduksi deret waktu GPS menjadi tepat satu titik TERBARU per unit (data seed berisi 55 titik pada 50 unit, sehingga halaman lama memunculkan marker bertumpuk), lalu mengklasifikasi setiap unit: pergerakan (BERGERAK/DIAM), bahan bakar (KRITIS/RENDAH/NORMAL), dan keusangan sinyal (SEGAR/WASPADA/USANG) berdasarkan umur titik rekam. Seluruh nilai kolom string dinormalkan (spasi ganda, huruf, koma desimal) dan tanggal basis data berformat 'YYYY-MM-DD HH:mm:ss' diparse sebagai UTC — perbaikan ini menyelesaikan 2 kegagalan uji awal akibat perbedaan interpretasi zona. Modul juga mengekspor formatCoordinate, formatSpeed, formatRelativeTime, getMovementLabel, getFuelLabel, getStalenessLabel, normalizeFleetFilter (memotong kata kunci pada SEARCH_MAX_LENGTH dan menolak nilai filter tak dikenal), serta DEFAULT_FLEET_FILTER. Endpoint GET /api/tracking ditulis ulang: kini ber-envelope {success,data:{rows,summary},meta:{total,scope,raw_points}} dan ber-RBAC ketat — ADMIN/STAFF melihat SELURUH_ARMADA, sedangkan CUSTOMER discope ke UNIT_SEWA_SAYA (hanya equipment_id dari rental ON_GOING/APPROVED miliknya). src/pages/admin/GpsTrackingPage.tsx ditulis ulang (523 baris): panel penyaringan (status mesin, pergerakan, BBM, pencarian) dengan label aria di setiap kontrol, kartu ringkasan, peta, dan daftar armada; mendukung props title/subtitle/initialFilter sehingga bisa dipakai ulang di portal pelanggan. src/components/LeafletMap.tsx kini menerima FleetTelemetryRow (bukan GpsTracking mentah) dan popup-nya di-escape agar nama unit tidak bisa menyuntik HTML. Pelanggan mendapat tab kelima 'Lacak Unit Saya' di CustomerPortal (App.tsx meneruskan trackingData). Pengujian: tests/fleetTelemetry.test.mjs (117 uji) + tests/gpsPage.test.mjs (37 uji smoke render dengan stub Leaflet, termasuk empty state, hasil penyaringan kosong, dan data rusak) + ~28 uji API baru untuk telemetri & RBAC.",
+  "session_summary": "T-0011 Portal Customer: modul murni customerPortal.ts (katalog, pengajuan, perjalanan sewa, ringkasan tagihan) + 55 pengujian; kriteria penerimaan terverifikasi pada data seed.",
   "quality_gate": {
     "type_check": "PASS",
+    "test": "PASS (21/21 suite, 55 kasus baru)",
     "build": "PASS",
-    "test": "PASS"
+    "verified_at": "2026-09-10T18:34:12.501Z"
   },
-  "test_suites": 20,
+  "test_suites": 21,
   "commits": 19,
   "deploy": {
     "status": "READY",
     "note": "deploy:cloud sudah benar; deploy sungguhan butuh login Cloudflare"
   },
-  "next_focus": "T-0011: Portal Customer — katalog, pengajuan, kontrak, pembayaran, tracking (pelacakan GPS pelanggan sudah beres; tinggal penyempurnaan katalog & alur pengajuan)"
+  "next_focus": "T-0012 — 11 jenis laporan + filter rentang tanggal"
 }
