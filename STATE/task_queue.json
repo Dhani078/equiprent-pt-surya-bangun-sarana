@@ -5,7 +5,7 @@
       "title": "API Rate Limiting & Security Headers",
       "category": "SECURITY",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 45,
       "depends_on": [],
       "files": ["src/server/index.ts"],
@@ -15,14 +15,15 @@
         "Tambahkan strict CORS"
       ],
       "created_by": "agent-ideation",
-      "created_at": "2026-09-11T10:00:00Z"
+      "created_at": "2026-09-11T10:00:00Z",
+      "completed_at": "2026-09-11T10:15:00Z"
     },
     {
       "id": "T-0030",
       "title": "Optimasi Query Dashboard Admin",
       "category": "PERFORMANCE",
       "priority": "P2",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "estimate_minutes": 60,
       "depends_on": [],
       "files": ["src/lib/dashboard.ts"],

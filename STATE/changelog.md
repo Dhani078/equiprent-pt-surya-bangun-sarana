@@ -1,4 +1,32 @@
-## Cycle 26 - 2026-09-11 - T-0012: 11 Jenis Laporan + Filter Rentang Tanggal & Ekspor CSV
+## [CYCLE 27] 2026-09-11 - T-0028 — P2 — DONE
+**Judul:** UI Pencarian Global di Panel Laporan Operasional
+**Perubahan:**
+- `src/components/ReportAnalyticsPanel.tsx`: tambah input text + tombol "Cari"
+- `src/pages/admin/ReportsPage.tsx`: tambah state `keyword`, props sync, fix urutan parameter `fetchReport`
+- `src/lib/reportsClient.ts`: verifikasi signature `(id, range, signal, keyword)`
+**Bug yang diperbaiki:**
+1. `fetchReport` parameter salah urutan — keyword masuk sebagai signal
+2. Dependency array `useEffect` tidak mencantumkan `keyword`
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS (508 KB)
+
+---
+
+## [CYCLE 28] 2026-09-11 - T-0029 — P1 — DONE
+**Judul:** Security Headers Middleware untuk API
+**Perubahan:**
+- `src/server/index.ts`: tambah middleware `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Permissions-Policy`
+**Security improvements:**
+- Mencegah MIME type sniffing
+- Mencegah clickjacking (X-Frame-Options: DENY)
+- XSS filter aktif
+- Kontrol referrer policy
+- GPS/microphone disabled via Permissions-Policy
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite, 907 test cases) · build PASS (501 KB)
+**Catatan:** Nol any, nol penyambungan string SQL, tanpa kredensial pada berkas.
+
+---
+
+## [CYCLE 26] 2026-09-11 - T-0012: 11 Jenis Laporan + Filter Rentang Tanggal & Ekspor CSV
 
 ### Apa yang Diubah
 - **src/lib/reports.ts** — Mesin laporan operasional murni lengkap:
