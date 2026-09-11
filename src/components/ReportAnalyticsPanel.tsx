@@ -1,8 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { ReportCellValue, ReportResult, ReportId, DateRangeFilter, ReportColumnFormat } from '../types';
 import { REPORT_CATALOG, EMPTY_RANGE, formatCell, buildCsv, buildCsvFilename } from '../lib/reports';
-import { downloadCsv } from '../lib/reportsClient';
-import { Download, CalendarRange, FileSpreadsheet, Inbox, AlertTriangle, RefreshCw, BarChart3 } from 'lucide-react';
+import { downloadCsv, fetchReport } from '../lib/reportsClient';
+import { Download, CalendarRange, FileSpreadsheet, Inbox, AlertTriangle, RefreshCw, BarChart3, Search } from 'lucide-react';
 
 interface ReportAnalyticsPanelProps {
   /** Laporan yang sedang dimuat dari API atau perhitungan lokal. */
@@ -15,6 +15,8 @@ interface ReportAnalyticsPanelProps {
   onSelectReport: (id: ReportId) => void;
   range: DateRangeFilter;
   onRangeChange: (range: DateRangeFilter) => void;
+  keyword: string;
+  onKeywordChange: (keyword: string) => void;
   onRetry: () => void;
 }
 
@@ -34,6 +36,8 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
   onSelectReport,
   range,
   onRangeChange,
+  keyword,
+  onKeywordChange,
   onRetry,
 }) => {
   const [exportError, setExportError] = useState<string | null>(null);
@@ -90,6 +94,34 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
             <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--color-secondary-light)' }}>
               {activeDefinition?.description ?? 'Pilih jenis laporan untuk menampilkan datanya.'}
             </p>
+          </div>
+        </div>
+
+        {/* Kotak pencarian global */}
+        <div style={{ flex: '1 1 280px', maxWidth: '400px' }}>
+          <label htmlFor="global-search" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--color-secondary)', marginBottom: '4px' }}>
+            CARI GLOBAL
+          </label>
+          <div style={{ position: 'relative' }}>
+            <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <input
+              id="global-search"
+              type="text"
+              className="input-premium"
+              placeholder="Cari di semua kolom..."
+              value={keyword}
+              onChange={(e) => {
+                const val = e.target.value.slice(0, 100);
+                onKeywordChange(val);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onRetry(); // Trigger reload dengan keyword baru
+                }
+              }}
+              style={{ padding: '8px 12px 8px 36px', fontSize: '13px', minWidth: '200px' }}
+              aria-label="Pencarian global pada tabel laporan"
+            />
           </div>
         </div>
 
