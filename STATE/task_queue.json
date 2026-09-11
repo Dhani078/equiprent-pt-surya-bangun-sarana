@@ -1,555 +1,88 @@
 {
   "tasks": [
     {
-      "id": "T-0001",
-      "title": "Verifikasi koneksi TiDB Cloud & error handling di src/lib/db.ts",
-      "category": "FOUNDATION",
-      "priority": "P0",
+      "id": "T-0029",
+      "title": "API Rate Limiting & Security Headers",
+      "category": "SECURITY",
+      "priority": "P1",
       "status": "PENDING",
-      "estimate_minutes": 40,
+      "estimate_minutes": 45,
       "depends_on": [],
-      "files": [
-        "src/lib/db.ts"
-      ],
+      "files": ["src/server/index.ts"],
       "acceptance_criteria": [
-        "Helper query tunggal dipakai semua modul",
-        "Semua query parameterized (tanpa concat string)",
-        "Ada try/catch + pesan error terstandar"
+        "Tambah rate limiting per-IP untuk endpoint login",
+        "Set Security Headers (Helmet/mirip)",
+        "Tambahkan strict CORS"
       ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-11T10:00:00Z"
     },
     {
-      "id": "T-0002",
-      "title": "Migrasi 9 tabel + seed data ke TiDB (scripts/migrate_to_tidb.js)",
-      "category": "FOUNDATION",
-      "priority": "P0",
-      "status": "DONE",
-      "estimate_minutes": 60,
-      "depends_on": [
-        "T-0001"
-      ],
-      "files": [
-        "scripts/migrate_to_tidb.js",
-        "tidb_schema_and_data.sql"
-      ],
-      "acceptance_criteria": [
-        "9 tabel ter-create",
-        "Seed: 50 users, 50 equipments, 50 rentals, 50 contracts, 50 payments, 25 maintenance, 55 gps, 20 reports",
-        "Script idempotent (aman dijalankan ulang)"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
-    },
-    {
-      "id": "T-0003",
-      "title": "Auth: login, session, proteksi route per role",
-      "category": "FOUNDATION",
-      "priority": "P0",
-      "status": "DONE",
-      "estimate_minutes": 60,
-      "depends_on": [
-        "T-0002"
-      ],
-      "files": [
-        "src/pages/Login.tsx",
-        "src/App.tsx",
-        "src/server/index.ts"
-      ],
-      "acceptance_criteria": [
-        "Login 3 role berbeda (admin/staff/user)",
-        "Route admin/staff/customer terproteksi",
-        "Logout bersih (session hapus)",
-        "RBAC diverifikasi di sisi server"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
-    },
-    {
-      "id": "T-0004",
-      "title": "CRUD master users & equipments (Admin)",
-      "category": "CORE",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 90,
-      "depends_on": [
-        "T-0003"
-      ],
-      "files": [
-        "src/lib/validators.ts",
-        "src/server/index.ts",
-        "src/pages/admin/EquipmentManagement.tsx",
-        "src/pages/admin/UserManagement.tsx",
-        "src/pages/admin/MaintenanceManagement.tsx",
-        "src/App.tsx",
-        "src/lib/db.ts",
-        "src/types/index.ts",
-        "tests/validators.test.mjs",
-        "tests/api.test.mjs",
-        "tests/run-tests.mjs"
-      ],
-      "acceptance_criteria": [
-        "Tambah/ubah/hapus user & unit berfungsi",
-        "Validasi form client + server",
-        "Konfirmasi sebelum hapus",
-        "Pagination/search"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z",
-      "completed_at": "2026-09-09T16:30:00Z",
-      "completed_cycle": 19
-    },
-    {
-      "id": "T-0005",
-      "title": "Dashboard Admin — semua angka real dari DB (bukan mock)",
-      "category": "CORE",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 45,
-      "depends_on": [
-        "T-0002"
-      ],
-      "files": [
-        "src/pages/admin/AdminDashboard.tsx",
-        "src/lib/dashboard.ts",
-        "src/lib/dashboardClient.ts",
-        "src/server/index.ts",
-        "src/types/index.ts",
-        "src/App.tsx",
-        "tests/dashboard.test.mjs",
-        "tests/api.test.mjs",
-        "tests/run-tests.mjs"
-      ],
-      "acceptance_criteria": [
-        "Stat card dari query agregat DB",
-        "Ada loading skeleton & error state",
-        "Tidak ada import dari mockData.ts"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z",
-      "completed_at": "2026-09-09T11:26:14.406Z",
-      "completed_cycle": 20
-    },
-    {
-      "id": "T-0006",
-      "title": "Manajemen Rental: alur ajukan → approve → aktif → selesai",
-      "category": "CORE",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 90,
-      "depends_on": [
-        "T-0004"
-      ],
-      "files": [
-        "src/pages/admin/RentalManagement.tsx",
-        "src/lib/rentalWorkflow.ts",
-        "src/lib/businessRules.ts",
-        "src/server/index.ts",
-        "src/lib/db.ts",
-        "src/pages/staff/StaffDashboard.tsx"
-      ],
-      "acceptance_criteria": [
-        "Perubahan status rental konsisten",
-        "Unit unavailable tidak bisa dipilih",
-        "Hitung denda keterlambatan otomatis"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z",
-      "completed_at": "2026-09-09T19:40:00Z",
-      "completed_cycle": 21
-    },
-    {
-      "id": "T-0007",
-      "title": "Manajemen Kontrak + e-signature canvas",
-      "category": "CORE",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 75,
-      "depends_on": [
-        "T-0006"
-      ],
-      "completed_at": "2026-09-10T11:30:00Z",
-      "completed_cycle": 22,
-      "files": [
-        "src/lib/contracts.ts",
-        "src/components/ContractPanel.tsx",
-        "src/components/ContractViewer.tsx",
-        "src/components/SignatureCanvas.tsx",
-        "src/pages/admin/RentalManagement.tsx",
-        "src/pages/staff/StaffDashboard.tsx",
-        "src/pages/customer/CustomerPortal.tsx",
-        "src/server/index.ts",
-        "src/lib/db.ts",
-        "src/lib/validators.ts",
-        "src/lib/documentPrinter.ts",
-        "src/types/index.ts",
-        "tests/contracts.test.mjs",
-        "tests/contractPanel.test.mjs"
-      ],
-      "acceptance_criteria": [
-        "Kode kontrak format SBS/CONTRACT/YYYY/MM/SEQ",
-        "Tanda tangan canvas tersimpan",
-        "Preview kontrak bisa dibuka"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
-    },
-    {
-      "id": "T-0008",
-      "title": "Manajemen Pembayaran: upload bukti + verifikasi staff",
-      "category": "CORE",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 75,
-      "depends_on": [
-        "T-0006"
-      ],
-      "files": [
-        "src/pages/staff/StaffDashboard.tsx",
-        "src/server/index.ts"
-      ],
-      "acceptance_criteria": [
-        "Upload bukti bayar berfungsi",
-        "Status pending → verified/rejected",
-        "Rental aktif hanya jika payment verified"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z",
-      "completed_at": "2026-09-10T12:30:00Z",
-      "completed_in_cycle": 23
-    },
-    {
-      "id": "T-0009",
-      "title": "Manajemen Maintenance berbasis 250 HM",
-      "category": "CORE",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 60,
-      "depends_on": [
-        "T-0004"
-      ],
-      "files": [
-        "src/pages/admin/MaintenanceManagement.tsx"
-      ],
-      "acceptance_criteria": [
-        "Unit yang HM-nya lewat 250 tampil di 'Jadwal Servis'",
-        "Log sparepart & biaya tersimpan",
-        "Status unit otomatis jadi maintenance saat servis"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
-    },
-    {
-      "id": "T-0010",
-      "title": "GPS Tracking: peta real-time + popup telemetry",
-      "category": "CORE",
-      "priority": "P1",
-      "status": "DONE",
-      "completed_at": "2026-09-10T13:10:00Z",
-      "completed_by": "agent24t-cycle-24",
-      "estimate_minutes": 60,
-      "depends_on": [
-        "T-0002"
-      ],
-      "files": [
-        "src/pages/admin/GpsTrackingPage.tsx",
-        "src/components/LeafletMap.tsx"
-      ],
-      "acceptance_criteria": [
-        "Marker per unit tampil (reduksi deret waktu → 1 titik TERBARU per unit; tanpa marker tumpang-tindih)",
-        "Popup berisi status mesin, kecepatan, BBM, cap waktu (format koordinat & kecepatan terpusat)",
-        "Filter status mesin ON/OFF (+ filter pergerakan, level BBM, pencarian; nilai tak dikenal dinormalkan)"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z",
-      "result": "Modul murni src/lib/fleetTelemetry.ts menjadi satu sumber kebenaran bagi API dan antarmuka. GET /api/tracking ber-RBAC: ADMIN/STAFF melihat seluruh armada, CUSTOMER hanya unit yang sedang ia sewa."
-    },
-    {
-      "id": "T-0011",
-      "title": "Portal Customer: katalog, pengajuan, kontrak, pembayaran, tracking",
-      "category": "CORE",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 90,
-      "depends_on": [
-        "T-0007",
-        "T-0008",
-        "T-0010"
-      ],
-      "files": [
-        "src/pages/customer/CustomerPortal.tsx"
-      ],
-      "acceptance_criteria": [
-        "Katalog hanya tampilkan unit available",
-        "Pengajuan rental masuk ke antrean staff",
-        "Tracking GPS unit miliknya sendiri"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z",
-      "completed_at": "2026-09-10T18:33:53.286Z",
-      "completed_by": "agent24t-cycle24"
-    },
-    {
-      "id": "T-0012",
-      "title": "11 jenis laporan + filter rentang tanggal",
-      "category": "REPORTING",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 120,
-      "depends_on": [
-        "T-0006",
-        "T-0008",
-        "T-0009"
-      ],
-      "files": [
-        "src/pages/admin/ReportsPage.tsx",
-        "src/server/index.ts"
-      ],
-      "acceptance_criteria": [
-        "11 laporan sesuai KODINGAN_UNTUK_LAPORAN/6_*.php",
-        "Filter tanggal, unit, pelanggan, status",
-        "Export CSV tiap laporan"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z",
-      "completed_at": "2026-09-10T21:06:07.728Z"
-    },
-    {
-      "id": "T-0013",
-      "title": "Export PDF: BAST IN, BAST OUT, Surat Jalan",
-      "category": "REPORTING",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 90,
-      "depends_on": [
-        "T-0012"
-      ],
-      "files": [
-        "src/pages/admin/ReportsPage.tsx",
-        "src/server/index.ts"
-      ],
-      "acceptance_criteria": [
-        "Cetak BAST OUT (unit keluar)",
-        "Cetak BAST IN (unit kembali)",
-        "Cetak Surat Jalan",
-        "Format A4 siap print"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
-    },
-    {
-      "id": "T-0014",
-      "title": "Audit trail logging",
-      "category": "POLISH",
+      "id": "T-0030",
+      "title": "Optimasi Query Dashboard Admin",
+      "category": "PERFORMANCE",
       "priority": "P2",
-      "status": "DONE",
-      "estimate_minutes": 45,
-      "depends_on": [
-        "T-0003"
-      ],
-      "files": [
-        "src/server/index.ts"
-      ],
-      "acceptance_criteria": [
-        "Setiap mutasi tercatat (user, aksi, entitas, waktu)",
-        "Halaman audit bisa difilter"
-      ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
-    },
-    {
-      "id": "T-0015",
-      "title": "Update dokumentasi: README, API_DOCUMENTATION.md, PANDUAN_SIDANG_SKRIPSI.md",
-      "category": "DOCS",
-      "priority": "P2",
-      "status": "DONE",
+      "status": "PENDING",
       "estimate_minutes": 60,
-      "depends_on": [
-        "T-0011"
-      ],
-      "files": [
-        "README.md",
-        "API_DOCUMENTATION.md",
-        "PANDUAN_SIDANG_SKRIPSI.md"
-      ],
+      "depends_on": [],
+      "files": ["src/lib/dashboard.ts"],
       "acceptance_criteria": [
-        "Semua endpoint terdokumentasi",
-        "Panduan demo sidang step-by-step",
-        "Screenshot ter-update"
+        "Kurangi jumlah N+1 query",
+        "Tambahkan indeks (atau simulasi) pada db.ts if needed",
+        "Test kecepatan load di terminal"
       ],
-      "created_by": "agent24t-init",
-      "created_at": "2026-09-04T19:00:00Z"
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-11T10:00:00Z"
     },
     {
-      "id": "T-0024",
-      "title": "Ekspor PDF dokumen BAST IN / BAST OUT / Surat Jalan siap cetak A4",
-      "category": "REPORTING",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 90,
-      "depends_on": [
-        "T-0025"
-      ],
-      "files": [
-        "src/lib/documents.ts",
-        "src/lib/documentPrinter.ts",
-        "src/components/DocumentPreview.tsx",
-        "src/components/DocumentPrintPanel.tsx",
-        "src/pages/admin/ReportsPage.tsx",
-        "src/index.css",
-        "tests/documents.test.mjs"
-      ],
+      "id": "T-0031",
+      "title": "Dark Mode Toggle",
+      "category": "UX",
+      "priority": "P3",
+      "status": "PENDING",
+      "estimate_minutes": 45,
+      "depends_on": [],
+      "files": ["src/App.tsx", "src/index.css"],
       "acceptance_criteria": [
-        "Tombol cetak tersedia pada tiap dokumen BAST IN / BAST OUT / Surat Jalan",
-        "Layout kop surat PT SBS ukuran A4 siap cetak (@page + print CSS)",
-        "Tidak menambah dependensi baru"
+        "Switch toggle di Navbar",
+        "CSS custom properties update via Tailwind dark mode",
+        "Save preferensi di localStorage"
       ],
-      "created_by": "agent",
-      "created_at": "2026-09-09T10:00:00Z"
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-11T10:00:00Z"
     },
     {
-      "id": "T-0025",
-      "title": "Panel 11 laporan operasional: pemilih, filter tanggal, ekspor CSV",
-      "category": "REPORTING",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 75,
-      "depends_on": [
-        "T-0012"
-      ],
-      "files": [
-        "src/pages/admin/ReportsPage.tsx",
-        "src/lib/reports.ts",
-        "src/server/index.ts",
-        "tests/reports.test.mjs"
-      ],
+      "id": "T-0032",
+      "title": "Perbaiki Warning 'any' di Test Suite",
+      "category": "QUALITY",
+      "priority": "P2",
+      "status": "PENDING",
+      "estimate_minutes": 30,
+      "depends_on": [],
+      "files": ["tests/api.test.mjs"],
       "acceptance_criteria": [
-        "Pemilih 11 jenis laporan lengkap dengan deskripsi tiap laporan",
-        "Filter rentang tanggal (from/to) menormalkan input yang tidak valid",
-        "Tabel dinamis mengikuti kolom laporan; angka rata kanan & format Rupiah",
-        "Tombol Ekspor CSV menghasilkan berkas Laporan_<jenis>_<YYYY-MM-DD>.csv",
-        "Ada state loading, error + tombol coba ulang, dan empty state"
+        "Cek file tests dan hilangkan sisa any atau type tak jelas",
+        "Pastikan strict mode full tanpa fallback"
       ],
-      "created_by": "agent",
-      "created_at": "2026-09-09T10:00:00Z"
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-11T10:00:00Z"
     },
     {
-      "id": "T-0026",
-      "title": "Notifikasi stok suku cadang menipis pada modul maintenance",
+      "id": "T-0033",
+      "title": "Selesaikan Notifikasi Stok Suku Cadang (T-0026 yang terpending)",
       "category": "POLISH",
       "priority": "P2",
       "status": "PENDING",
       "estimate_minutes": 60,
-      "depends_on": [
-        "T-0009"
-      ],
-      "files": [
-        "src/pages/admin/MaintenanceManagement.tsx",
-        "src/lib/businessRules.ts"
-      ],
+      "depends_on": ["T-0009"],
+      "files": ["src/pages/admin/MaintenanceManagement.tsx", "src/lib/businessRules.ts"],
       "acceptance_criteria": [
         "Daftar suku cadang dengan stok di bawah ambang tampil sebagai peringatan",
         "Ambang stok dapat diubah Admin (tersimpan, tidak di-hardcode)",
         "Ada badge warna mengikuti design system & empty state"
       ],
-      "created_by": "agent",
-      "created_at": "2026-09-09T12:00:00Z"
-    },
-    {
-      "id": "T-0027",
-      "title": "Ringkasan utilitas armada (utilization rate) pada dashboard admin",
-      "category": "CORE",
-      "priority": "P2",
-      "status": "DONE",
-      "estimate_minutes": 60,
-      "depends_on": [
-        "T-0005"
-      ],
-      "files": [
-        "src/pages/admin/AdminDashboard.tsx",
-        "src/lib/dashboard.ts",
-        "src/lib/dashboardClient.ts",
-        "tests/dashboard.test.mjs"
-      ],
-      "acceptance_criteria": [
-        "Persentase unit tersewa vs total unit dihitung dari data nyata",
-        "Distribusi status unit tampil sebagai badge/bar",
-        "Ada loading & empty state; tanpa import mockData"
-      ],
-      "created_by": "agent",
-      "created_at": "2026-09-09T12:00:00Z",
-      "completed_at": "2026-09-09T11:26:26.033Z",
-      "completed_cycle": 20
-    },
-    {
-      "id": "T-0028",
-      "title": "Pencarian & penyaringan global pada tabel laporan operasional",
-      "category": "REPORTING",
-      "priority": "P2",
-      "status": "IN_PROGRESS",
-      "estimate_minutes": 45,
-      "depends_on": [
-        "T-0025"
-      ],
-      "files": [
-        "src/components/ReportAnalyticsPanel.tsx"
-      ],
-      "acceptance_criteria": [
-        "Kotak pencarian menyaring baris tanpa mengubah sumber data",
-        "Jumlah baris hasil penyaringan ditampilkan",
-        "Ekspor CSV mengikuti hasil penyaringan"
-      ],
-      "created_by": "agent",
-      "created_at": "2026-09-09T12:00:00Z"
-    },
-    {
-      "id": "T-0029",
-      "title": "Pratinjau kontrak digital siap cetak A4 (mengikuti pola BAST)",
-      "category": "REPORTING",
-      "priority": "P2",
-      "status": "DONE",
-      "completed_at": "2026-09-10T11:30:00Z",
-      "completed_cycle": 22,
-      "estimate_minutes": 60,
-      "depends_on": [
-        "T-0007",
-        "T-0024"
-      ],
-      "files": [
-        "src/pages/admin/RentalManagement.tsx",
-        "src/lib/documents.ts"
-      ],
-      "acceptance_criteria": [
-        "Kontrak dapat dicetak pada kertas A4 dengan kop surat",
-        "Tanda tangan digital tersemat pada hasil cetak",
-        "Memakai helper render/print yang sudah ada (tanpa duplikasi)"
-      ],
-      "created_by": "agent",
-      "created_at": "2026-09-09T12:00:00Z"
-    },
-    {
-      "id": "T-0030",
-      "title": "Validasi unavailability unit pada form rental (cegah double booking)",
-      "category": "CORE",
-      "priority": "P1",
-      "status": "DONE",
-      "estimate_minutes": 60,
-      "depends_on": [
-        "T-0006"
-      ],
-      "files": [
-        "src/pages/admin/RentalManagement.tsx",
-        "src/server/index.ts"
-      ],
-      "acceptance_criteria": [
-        "Unit yang bentrok tidak bisa dipilih di form rental",
-        "Validasi ulang di sisi server (bukan hanya client)",
-        "Pesan galat berbahasa Indonesia & jelas"
-      ],
-      "created_by": "agent",
-      "created_at": "2026-09-09T12:00:00Z",
-      "completed_at": "2026-09-09T14:30:00Z",
-      "completed_cycle": 18
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-11T10:00:00Z"
     }
   ]
 }
