@@ -32,6 +32,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
   // --- State panel 11 laporan operasional -----------------------------------
   const [activeId, setActiveId] = useState<ReportId>(DEFAULT_REPORT_ID);
   const [range, setRange] = useState<DateRangeFilter>({ from: '', to: '' });
+  const [keyword, setKeyword] = useState<string>('');
   const [result, setResult] = useState<ReportResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
     setLoading(true);
     setError(null);
 
-    void fetchReport(activeId, range, controller.signal).then((hasil) => {
+    void fetchReport(activeId, range, controller.signal, keyword).then((hasil) => {
       if (!aktif) return;
       if (hasil.ok) {
         setResult(hasil.result);
@@ -66,7 +67,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
       aktif = false;
       controller.abort();
     };
-  }, [activeId, range, attempt]);
+  }, [activeId, range, keyword, attempt]);
 
   const handleSelectReport = useCallback((id: ReportId) => {
     setActiveId(id);
@@ -270,6 +271,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
         onSelectReport={handleSelectReport}
         range={range}
         onRangeChange={setRange}
+        keyword={keyword}
+        onKeywordChange={setKeyword}
         onRetry={handleRetry}
       />
 
