@@ -1,10 +1,13 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { db, isDatabaseConnected } from '../lib/db';
+import { db, getDataMode, isDatabaseConnected } from '../lib/db';
 import {
+  configureSessionSecret,
   createSessionToken,
+  isSessionSecretEphemeral,
   verifySessionToken,
   isPathAllowedForRole,
+  PUBLIC_API_PATHS,
   SESSION_HEADER,
   SESSION_TTL_SECONDS,
 } from '../lib/auth';
@@ -66,10 +69,19 @@ import type { RentalStatus } from '../lib/rentalWorkflow';
 /** Laporan yang tampil pertama kali saat halaman dibuka. */
 const DEFAULT_REPORT_ID: ReportId = REPORT_CATALOG[0].id;
 
+/** Panjang minimum password pengguna. */
+const MIN_PASSWORD_LENGTH = 8;
+
 type Bindings = {
   ASSETS: { fetch: (req: Request) => Promise<Response> };
   DATABASE_URL?: string;
   TIDB_HOST?: string;
+  /** Kunci penanda tangan session token (wajib di produksi, minimal 32 karakter). */
+  SESSION_SECRET?: string;
+  /** Daftar origin yang boleh memanggil API lintas domain, dipisah koma. */
+  ALLOWED_ORIGINS?: string;
+  /** Setel "false" untuk mematikan login akun demo (admin/staff/user). */
+  ALLOW_DEMO_ACCOUNTS?: string;
 };
 
 type Variables = {
@@ -97,8 +109,41 @@ interface PublicUser {
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-// Enable CORS for API requests
-app.use('/api/*', cors());
+/** Daftar origin yang diizinkan, dibaca dari binding `ALLOWED_ORIGINS`. */
+function daftarOriginDiizinkan(env: Bindings | undefined): string[] {
+  const raw = env?.ALLOWED_ORIGINS;
+  if (typeof raw !== 'string') return [];
+  return raw
+    .split(',')
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0);
+}
+
+/** `false` hanya bila operator mematikan akun demo secara eksplisit. */
+function bolehAkunDemo(env: Bindings | undefined): boolean {
+  return String(env?.ALLOW_DEMO_ACCOUNTS ?? 'true').toLowerCase() !== 'false';
+}
+
+// ---------------------------------------------------------------------------
+// CORS
+// ---------------------------------------------------------------------------
+// PERBAIKAN KEAMANAN: `cors()` tanpa argumen memantulkan origin mana pun
+// (Access-Control-Allow-Origin: *), sehingga situs pihak ketiga bebas
+// memanggil API ini dari browser korban. Sekarang hanya origin yang
+// terdaftar pada ALLOWED_ORIGINS yang diizinkan. Bila tidak disetel, tidak
+// ada header CORS yang dikirim — aman untuk SPA yang satu domain dengan API.
+app.use('/api/*', async (c, next) => {
+  const allowList = daftarOriginDiizinkan(c.env);
+  if (allowList.length === 0) return next();
+
+  const middleware = cors({
+    origin: (origin) => (allowList.includes(origin) ? origin : null),
+    allowHeaders: ['Content-Type', SESSION_HEADER],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: false,
+  });
+  return middleware(c, next);
+});
 
 // ---------------------------------------------------------------------------
 // Security Headers Middleware
@@ -109,6 +154,7 @@ app.use('/api/*', async (c, next) => {
   c.header('X-XSS-Protection', '1; mode=block');
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
   c.header('Permissions-Policy', 'geolocation=(), microphone=()');
+  c.header('Cache-Control', 'no-store');
   await next();
 });
 
@@ -116,7 +162,10 @@ app.use('/api/*', async (c, next) => {
 // Global Error Handler
 // ---------------------------------------------------------------------------
 app.onError((err, c) => {
-  // Jangan pernah membocorkan detail exception ke client (stack trace, path file, dll).
+  // Detail exception dicatat di log server (observability Workers) supaya
+  // insiden bisa ditelusuri, tetapi TIDAK pernah dikirim ke client.
+  console.error('[API_ERROR]', new URL(c.req.url).pathname, err);
+
   return c.json(
     {
       success: false,
@@ -131,10 +180,15 @@ app.onError((err, c) => {
 // Berjalan untuk semua route /api/* KECUALI health & login.
 // ---------------------------------------------------------------------------
 app.use('/api/*', async (c, next) => {
+  // Kunci penanda tangan token hanya tersedia lewat binding environment
+  // Workers (bukan process.env), jadi diteruskan di sini. Nilainya dicache
+  // di modul auth sehingga pemanggilan berulang tidak mahal.
+  configureSessionSecret(c.env?.SESSION_SECRET);
+
   const path = new URL(c.req.url).pathname;
 
   // Endpoint publik — tidak butuh autentikasi.
-  if (path === '/api/health' || path === '/api/auth/login') {
+  if (PUBLIC_API_PATHS.includes(path)) {
     await next();
     return;
   }
@@ -154,6 +208,16 @@ app.use('/api/*', async (c, next) => {
   }
 
   const role = result.payload.rol;
+  const userId = result.payload.uid;
+
+  // Sesi yang identitasnya tidak utuh tidak boleh dipakai: seluruh
+  // pemeriksaan kepemilikan data bergantung pada userId ini.
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return c.json(
+      { success: false, error: { code: 'MALFORMED', message: 'Sesi tidak valid. Silakan masuk kembali.' } },
+      401
+    );
+  }
 
   // Otorisasi berbasis role — dicek di server, bukan di client.
   if (!isPathAllowedForRole(path, role)) {
@@ -170,7 +234,7 @@ app.use('/api/*', async (c, next) => {
   }
 
   c.set('role', role);
-  c.set('userId', result.payload.uid);
+  c.set('userId', userId);
   await next();
 });
 
@@ -182,6 +246,12 @@ app.get('/api/health', (c) => {
     runtime: 'Cloudflare Workers Edge',
     database: 'TiDB Cloud Serverless',
     database_connected: isDatabaseConnected(),
+    // Dilaporkan apa adanya: pada IN_MEMORY_DEMO seluruh perubahan hanya
+    // hidup di memori isolate dan hilang saat isolate diganti.
+    data_mode: getDataMode(),
+    // true = SESSION_SECRET belum dikonfigurasi, kunci acak sementara dipakai
+    // sehingga semua sesi gugur setiap isolate baru dimuat.
+    session_secret_ephemeral: isSessionSecretEphemeral(),
     timestamp: new Date().toISOString()
   });
 });
@@ -198,10 +268,15 @@ function isRateLimited(key: string): boolean {
   const now = Date.now();
   const entry = loginAttempts.get(key);
 
+  // Jendela baru (atau percobaan pertama) — hitungan dimulai dari nol.
   if (!entry || now - entry.firstAt > LOGIN_WINDOW_MS) {
     loginAttempts.set(key, { count: 1, firstAt: now });
     return false;
   }
+
+  // Sudah melewati batas: jangan menambah hitungan lagi supaya jendela
+  // blokir tidak ikut memanjang tanpa batas selama penyerang terus mencoba.
+  if (entry.count > LOGIN_MAX_ATTEMPTS) return true;
 
   entry.count += 1;
   return entry.count > LOGIN_MAX_ATTEMPTS;
@@ -255,14 +330,18 @@ app.post('/api/auth/login', async (c) => {
     );
   }
 
-  const check = await db.verifyCredentials(username, password);
+  const check = await db.verifyCredentials(username, password, {
+    allowDemoAccounts: bolehAkunDemo(c.env),
+  });
 
   if (!check.ok) {
     // Pesan sengaja dibuat seragam untuk mencegah username enumeration.
     const message =
       check.reason === 'SUSPENDED'
         ? 'Akun Anda telah dinonaktifkan. Silakan hubungi administrator.'
-        : 'Username atau password salah.';
+        : check.reason === 'NO_PASSWORD_SET'
+          ? 'Akun ini belum memiliki password. Hubungi administrator untuk menetapkannya.'
+          : 'Username atau password salah.';
     return c.json(
       { success: false, error: { code: check.reason, message } },
       401
@@ -298,6 +377,61 @@ app.post('/api/auth/login', async (c) => {
       company_name: user.company_name
     }
   });
+});
+
+/**
+ * Mengganti password sendiri.
+ *
+ * Password lama wajib dibuktikan lebih dulu: tanpa itu, token yang tercuri
+ * bisa dipakai untuk mengunci pemilik akun yang sah keluar dari sistemnya.
+ */
+app.post('/api/auth/change-password', async (c) => {
+  const body = await readJsonBody<{ oldPassword?: unknown; newPassword?: unknown }>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  const oldPassword = typeof body.oldPassword === 'string' ? body.oldPassword : '';
+  const newPassword = typeof body.newPassword === 'string' ? body.newPassword : '';
+
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    return c.json(
+      badValidation({ newPassword: `Password baru minimal ${MIN_PASSWORD_LENGTH} karakter.` }),
+      400
+    );
+  }
+
+  if (newPassword === oldPassword) {
+    return c.json(badValidation({ newPassword: 'Password baru harus berbeda dari password lama.' }), 400);
+  }
+
+  const userId = c.get('userId');
+  const user = await db.getUserById(userId);
+  if (!user) {
+    return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pengguna tidak ditemukan.' } }, 404);
+  }
+
+  const check = await db.verifyCredentials(user.username, oldPassword, {
+    allowDemoAccounts: bolehAkunDemo(c.env),
+  });
+  if (!check.ok) {
+    return c.json(
+      { success: false, error: { code: 'BAD_PASSWORD', message: 'Password lama tidak sesuai.' } },
+      401
+    );
+  }
+
+  await db.setUserPassword(userId, newPassword);
+
+  auditLog({
+    user_id: userId,
+    username: user.username,
+    role: c.get('role') ?? 'UNKNOWN',
+    action: 'PASSWORD_CHANGED',
+    entity: 'user',
+    entity_id: userId,
+    detail: 'Pengguna mengganti passwordnya sendiri',
+  });
+
+  return c.json({ success: true });
 });
 
 /**
@@ -500,8 +634,22 @@ app.delete('/api/equipments/:id', async (c) => {
 });
 
 // Rentals API
+
+/**
+ * Daftar transaksi sewa.
+ *
+ * PERBAIKAN KEAMANAN (IDOR): sebelumnya seluruh transaksi seluruh pelanggan
+ * dikirim ke siapa pun yang punya sesi — termasuk pelanggan lain. Sekarang
+ * pelanggan hanya menerima transaksi miliknya sendiri.
+ */
 app.get('/api/rentals', async (c) => {
   const items = await db.getRentals();
+
+  if (c.get('role') === 'CUSTOMER') {
+    const userId = c.get('userId');
+    return c.json(items.filter((r) => r.customer_id === userId));
+  }
+
   return c.json(items);
 });
 
@@ -584,7 +732,15 @@ app.post('/api/rentals', async (c) => {
     );
   }
 
-  const newItem = await db.addRental(body);
+  // Pelanggan hanya boleh memesan atas namanya sendiri: `customer_id` dari
+  // body diabaikan dan diganti identitas sesi, sehingga tidak ada transaksi
+  // yang bisa dibuat atas nama pelanggan lain.
+  const payload =
+    c.get('role') === 'CUSTOMER'
+      ? { ...body, customer_id: c.get('userId') }
+      : body;
+
+  const newItem = await db.addRental(payload);
   return c.json({ success: true, item: newItem }, 201);
 });
 
@@ -654,7 +810,9 @@ app.get('/api/rentals/availability', async (c) => {
         from,
         to,
         isBookable,
-        conflicts,
+        // Rincian bentrokan memuat data transaksi pelanggan lain, jadi hanya
+        // dibuka untuk pengguna internal. Pelanggan cukup tahu bisa/tidak.
+        conflicts: c.get('role') === 'CUSTOMER' ? [] : conflicts,
         reason: conflicts.length > 0 ? 'Terbentur jadwal sewa lain.' : null,
       },
     });
@@ -726,6 +884,21 @@ app.get('/api/rentals/bookable', async (c) => {
 });
 
 app.put('/api/rentals/:id/status', async (c) => {
+  // Perubahan status sewa adalah wewenang perusahaan. Pelanggan tidak boleh
+  // menyetujui atau mengoperasikan sewanya sendiri.
+  if (c.get('role') === 'CUSTOMER') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Perubahan status sewa dilakukan oleh Admin atau Staf Operasional.',
+        },
+      },
+      403
+    );
+  }
+
   const id = parseId(c.req.param('id'));
   if (id === null) return c.json(BAD_ID, 400);
 
@@ -888,11 +1061,18 @@ app.put('/api/rentals/:id/status', async (c) => {
  *
  * Pratinjau dibentuk di server agar kode, nama penandatangan, dan waktu
  * yang tampil di dokumen tidak bisa menyimpang dari data tersimpan.
+ *
+ * PERBAIKAN KEAMANAN (IDOR): pelanggan hanya menerima kontrak miliknya.
  */
 app.get('/api/contracts', async (c) => {
   const items = await db.getContracts();
 
-  const payload = items.map((kontrak) => ({
+  const terlihat =
+    c.get('role') === 'CUSTOMER'
+      ? items.filter((kontrak) => kontrak.customer_id === c.get('userId'))
+      : items;
+
+  const payload = terlihat.map((kontrak) => ({
     ...kontrak,
     preview: buildContractPreview({ contract: kontrak }),
   }));
@@ -908,6 +1088,13 @@ app.get('/api/contracts/:id/preview', async (c) => {
   const items = await db.getContracts();
   const kontrak = items.find((x) => x.id === id);
   if (!kontrak) return c.json(NOT_FOUND_CONTRACT, 404);
+
+  // Dokumen kontrak memuat identitas & nilai transaksi pihak lain.
+  // Pelanggan hanya boleh melihat kontraknya sendiri; dijawab 404 agar
+  // keberadaan kontrak milik orang lain tidak bisa ditebak dari kode status.
+  if (c.get('role') === 'CUSTOMER' && kontrak.customer_id !== c.get('userId')) {
+    return c.json(NOT_FOUND_CONTRACT, 404);
+  }
 
   const preview = buildContractPreview({
     contract: kontrak,
@@ -1064,13 +1251,30 @@ app.post('/api/contracts/:id/sign', async (c) => {
 // Payments API — unggah bukti, verifikasi staf, penolakan (T-0008)
 // ---------------------------------------------------------------------------
 
-/** Daftar pembayaran + ringkasan antrean verifikasi untuk dashboard staf. */
+/**
+ * Daftar pembayaran + ringkasan antrean verifikasi untuk dashboard staf.
+ *
+ * PERBAIKAN KEAMANAN (IDOR): pelanggan hanya melihat tagihannya sendiri,
+ * dan ringkasan antrean hanya relevan (serta hanya dikirim) untuk internal.
+ */
 app.get('/api/payments', async (c) => {
-  const items = await db.getPayments();
+  const semua = await db.getPayments();
+  const role = c.get('role');
+
+  if (role === 'CUSTOMER') {
+    const userId = c.get('userId');
+    const milikSaya = semua.filter((p) => mayTouchPayment(p, role, userId));
+    return c.json({
+      success: true,
+      data: milikSaya,
+      meta: { total: milikSaya.length, queue: summarizePaymentQueue(milikSaya) },
+    });
+  }
+
   return c.json({
     success: true,
-    data: items,
-    meta: { total: items.length, queue: summarizePaymentQueue(items) },
+    data: semua,
+    meta: { total: semua.length, queue: summarizePaymentQueue(semua) },
   });
 });
 
@@ -1156,9 +1360,15 @@ app.post('/api/payments/:id/proof', async (c) => {
     return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
   }
 
+  // `return` wajib: tanpa itu, pemeriksaan kepemilikan hanya menyusun respons
+  // lalu tetap melanjutkan eksekusi ke perubahan data di bawahnya.
   if (!mayTouchPayment(target, c.get('role'), c.get('userId'))) {
     const respon = toPaymentErrorResponse('BUKAN_PEMILIK_PEMBAYARAN');
     if (respon) return c.json(respon.body, respon.status);
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Tagihan ini bukan milik akun Anda.' } },
+      403
+    );
   }
 
   try {
@@ -1204,20 +1414,27 @@ app.post('/api/payments/:id/verify', async (c) => {
   if (body === null) return c.json(BAD_JSON, 400);
 
   // Identitas pengesah diambil dari session (bukan dari body) agar tidak
-  // bisa dipalsukan. Body hanya dipakai sebagai pelengkap nama bila
-  // session tidak memuatnya.
-  const sessionUserId = c.get('userId');
-  const staffId = Number.isInteger(sessionUserId) && sessionUserId > 0 ? sessionUserId : 3;
+  // bisa dipalsukan. Sesi tanpa identitas ditolak — sebelumnya jatuh ke
+  // `staffId = 3`, sehingga pengesahan tercatat atas nama staf yang salah.
+  const staffId = c.get('userId');
+  if (!Number.isInteger(staffId) || staffId <= 0) {
+    return c.json(
+      { success: false, error: { code: 'MALFORMED', message: 'Sesi tidak valid. Silakan masuk kembali.' } },
+      401
+    );
+  }
+
+  const pengesah = await db.getUserById(staffId);
   const staffName =
-    typeof body.staffName === 'string' && body.staffName.trim() ? body.staffName.trim() : 'Staf Operasional';
+    pengesah?.full_name?.trim() ||
+    (typeof body.staffName === 'string' && body.staffName.trim() ? body.staffName.trim() : 'Staf Operasional');
 
   try {
     const updated = await db.verifyPayment(id, staffId, staffName);
     if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
-    const sesiV = c.get('userId');
     auditLog({
-      user_id: sesiV ?? null,
-      username: String(sesiV ?? 'system'),
+      user_id: staffId,
+      username: pengesah?.username ?? String(staffId),
       role: c.get('role') ?? 'UNKNOWN',
       action: 'PAYMENT_VERIFIED',
       entity: 'payment',
@@ -1264,16 +1481,24 @@ app.post('/api/payments/:id/reject', async (c) => {
   if (body === null) return c.json(BAD_JSON, 400);
 
   const staffId = c.get('userId');
+  if (!Number.isInteger(staffId) || staffId <= 0) {
+    return c.json(
+      { success: false, error: { code: 'MALFORMED', message: 'Sesi tidak valid. Silakan masuk kembali.' } },
+      401
+    );
+  }
+
+  const peninjau = await db.getUserById(staffId);
   const staffName =
-    typeof body.staffName === 'string' && body.staffName.trim() ? body.staffName.trim() : 'Staf Operasional';
+    peninjau?.full_name?.trim() ||
+    (typeof body.staffName === 'string' && body.staffName.trim() ? body.staffName.trim() : 'Staf Operasional');
 
   try {
     const updated = await db.rejectPayment(id, staffId, staffName);
     if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
-    const sesiR = c.get('userId');
     auditLog({
-      user_id: sesiR ?? null,
-      username: String(sesiR ?? 'system'),
+      user_id: staffId,
+      username: peninjau?.username ?? String(staffId),
       role: c.get('role') ?? 'UNKNOWN',
       action: 'PAYMENT_REJECTED',
       entity: 'payment',
@@ -1356,6 +1581,8 @@ app.post('/api/maintenance', async (c) => {
 
 // ---------------------------------------------------------------------------
 // Audit Trail API
+// Hanya ADMIN (lihat RBAC_MATRIX di src/lib/auth.ts): catatan ini memuat
+// jejak seluruh pengguna, termasuk IP dan aktivitas akun lain.
 // ---------------------------------------------------------------------------
 app.get('/api/audit-log', async (c) => {
   const limitRaw = c.req.query('limit');
@@ -1506,9 +1733,9 @@ app.get('/api/users', async (c) => {
  * Pendaftaran pengguna baru oleh Administrator.
  *
  * Password TIDAK diterima lewat endpoint ini: Admin mendaftarkan identitas,
- * lalu pemilik akun menetapkan password sendiri melalui alur registrasi yang
- * memanggil `hashPassword()`. Karena itu `password_hash` disetel `null` dan
- * akun belum bisa login sampai password ditetapkan.
+ * lalu password ditetapkan lewat `POST /api/users/:id/password`. Karena itu
+ * `password_hash` disetel `null` dan akun belum bisa login sampai password
+ * ditetapkan.
  */
 app.post('/api/users', async (c) => {
   const body = await readJsonBody<unknown>(c);
@@ -1549,6 +1776,45 @@ app.post('/api/users', async (c) => {
   return c.json({ success: true, item: ringkasUser(newUser) }, 201);
 });
 
+/**
+ * Administrator menetapkan / mereset password sebuah akun.
+ *
+ * Tanpa endpoint ini, akun yang dibuat lewat `POST /api/users` tidak pernah
+ * memiliki `password_hash` sehingga selamanya tidak bisa login.
+ */
+app.post('/api/users/:id/password', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  const body = await readJsonBody<{ password?: unknown }>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  const password = typeof body.password === 'string' ? body.password : '';
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return c.json(
+      badValidation({ password: `Password minimal ${MIN_PASSWORD_LENGTH} karakter.` }),
+      400
+    );
+  }
+
+  const updated = await db.setUserPassword(id, password);
+  if (!updated) {
+    return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pengguna tidak ditemukan.' } }, 404);
+  }
+
+  auditLog({
+    user_id: c.get('userId') ?? null,
+    username: String(c.get('userId') ?? 'system'),
+    role: c.get('role') ?? 'UNKNOWN',
+    action: 'PASSWORD_RESET',
+    entity: 'user',
+    entity_id: id,
+    detail: `Password akun ${updated.username} ditetapkan ulang oleh Administrator`,
+  });
+
+  return c.json({ success: true, item: ringkasUser(updated) });
+});
+
 app.post('/api/users/:id/toggle', async (c) => {
   const id = parseId(c.req.param('id'));
   if (id === null) return c.json(BAD_ID, 400);
@@ -1565,7 +1831,7 @@ app.post('/api/users/:id/toggle', async (c) => {
   const updated = await db.toggleUserStatus(id);
   if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pengguna tidak ditemukan.' } }, 404);
 
-  return c.json({ success: true, item: updated });
+  return c.json({ success: true, item: ringkasUser(updated) });
 });
 
 // Fallback to Cloudflare Static Assets
