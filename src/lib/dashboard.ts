@@ -114,6 +114,18 @@ export function buildDashboardStats(
   // ---------------------------------------------------------------------
   // Servis preventif berbasis 250 HM (aturan bisnis §4.3)
   // ---------------------------------------------------------------------
+
+  // Pre-group riwayat servis SELESAI per unit: O(maintenance) sekali,
+  // bukan O(equipment × maintenance) di dalam loop.
+  // ponytail: index DB pada (equipment_id, status) saat data > 10k baris.
+  const maintSelesaiPerUnit = new Map<number, Maintenance[]>();
+  for (const m of maintenance) {
+    if (m.status !== 'COMPLETED') continue;
+    const bucket = maintSelesaiPerUnit.get(m.equipment_id);
+    if (bucket) bucket.push(m);
+    else maintSelesaiPerUnit.set(m.equipment_id, [m]);
+  }
+
   let serviceDueCount = 0;
   let serviceApproachingCount = 0;
   const serviceDueCodes: string[] = [];
@@ -122,7 +134,7 @@ export function buildDashboardStats(
     // Unit yang sedang/telah ditangani tidak perlu diperingatkan lagi.
     if (e.status === 'MAINTENANCE') continue;
 
-    const status = getServiceStatus(e, maintenance);
+    const status = getServiceStatus(e, maintSelesaiPerUnit.get(e.id) ?? []);
     if (status.isDue) {
       serviceDueCount += 1;
       if (serviceDueCodes.length < SERVICE_CODE_PREVIEW_LIMIT) {
