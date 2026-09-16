@@ -1,3 +1,16 @@
+## [CYCLE 29] 2026-09-16 - T-0030 — P2 — DONE
+**Judul:** Optimasi Query Dashboard Admin (Eliminasi N+1)
+**Perubahan:**
+- `src/lib/dashboard.ts`: pre-group riwayat servis SELESAI ke `Map<equipment_id, Maintenance[]>` sebelum loop armada. Kompleksitas turun dari O(equipment × maintenance) → O(equipment + maintenance).
+**Detail optimasi:**
+- Loop `buildDashboardStats` memanggil `getServiceStatus(e, maintenance)` per unit — tiap panggilan `.filter()` seluruh array maintenance
+- Dengan 50 unit × 25 baris maintenance = 1250 iterasi ulang → kini 1 pass saja
+- `getServiceStatus` sekarang menerima slice sudah-terfilter per unit (array lebih pendek, logika tidak berubah)
+- Komentar `ponytail:` menandai batas: DB index pada `(equipment_id, status)` saat data > 10k baris
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS (630 KB)
+
+---
+
 ## [CYCLE 27] 2026-09-11 - T-0028 — P2 — DONE
 **Judul:** UI Pencarian Global di Panel Laporan Operasional
 **Perubahan:**
