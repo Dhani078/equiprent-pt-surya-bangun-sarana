@@ -18,6 +18,9 @@ import {
   summarizeLatePenalties,
 } from '../../lib/rentalWorkflow';
 import type { RentalStatus } from '../../lib/rentalWorkflow';
+import { Paginator, usePagination } from '../../components/Paginator';
+
+const PAGE_SIZE_RENTAL = 20;
 
 interface RentalManagementProps {
   rentals: Rental[];
@@ -195,6 +198,10 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
     const matchesStatus = filterStatus === 'ALL' || r.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  const [rentalPage, setRentalPage] = useState(1);
+  React.useEffect(() => setRentalPage(1), [searchTerm, filterStatus]);
+  const pagedRentals = usePagination(filteredRentals, PAGE_SIZE_RENTAL, rentalPage);
 
   /** Baris status + tombol aksi untuk satu rental. */
   const renderAksi = (r: Rental) => {
@@ -397,7 +404,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
             </tr>
           </thead>
           <tbody>
-            {filteredRentals.map((r) => {
+            {pagedRentals.map((r) => {
               const imgUrl = getEquipmentImage(r.equipment_code);
               const denda = petaDenda.get(r.id);
               const tone = getRentalStatusTone(r.status);
@@ -471,6 +478,12 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
             })}
           </tbody>
         </table>
+        <Paginator
+          total={filteredRentals.length}
+          page={rentalPage}
+          limit={PAGE_SIZE_RENTAL}
+          onPageChange={setRentalPage}
+        />
 
         {filteredRentals.length === 0 && (
           <div

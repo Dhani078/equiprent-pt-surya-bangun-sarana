@@ -1,3 +1,14 @@
+## [CYCLE 34] 2026-09-16 - T-0035 — P2 — DONE
+**Judul:** Pagination Client-Side (Equipment & Rental)
+**Perubahan:**
+- `src/components/Paginator.tsx`: komponen reusable `<Paginator>` + hook `usePagination<T>` — potong array, render prev/next + nomor halaman dengan ellipsis, aria-label lengkap
+- `src/pages/admin/EquipmentManagement.tsx`: import Paginator, state `equipPage`, `React.useEffect` reset ke hal 1 saat filter berubah, render `pagedEquipments`, sisipkan `<Paginator>` di bawah tabel
+- `src/pages/admin/RentalManagement.tsx`: sama, state `rentalPage`, `pagedRentals`
+**Detail:** limit 20/halaman; Paginator hidden bila total ≤ 1 halaman; tidak ada API change
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS
+
+---
+
 ## [CYCLE 33] 2026-09-16 - T-0034 — P2 — DONE
 **Judul:** Notifikasi In-App — Badge Counter di Sidebar
 **Perubahan:**
