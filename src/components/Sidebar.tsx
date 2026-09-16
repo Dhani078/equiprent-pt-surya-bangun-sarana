@@ -14,21 +14,59 @@ import {
   UserCircle 
 } from 'lucide-react';
 
+export interface SidebarBadges {
+  /** Jumlah pembayaran menunggu verifikasi. */
+  payments?: number;
+  /** Jumlah unit jatuh tempo servis. */
+  maintenance?: number;
+  /** Jumlah rental menunggu persetujuan. */
+  rentals?: number;
+}
+
 interface SidebarProps {
   role: RoleName;
   activeTab: string;
   onSelectTab: (tab: string) => void;
+  badges?: SidebarBadges;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab }) => {
+/** Dot badge bulat kecil di pojok kanan atas menu item. */
+function Badge({ count, tone }: { count: number; tone: 'error' | 'warning' }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      aria-label={`${count} item memerlukan perhatian`}
+      style={{
+        marginLeft: 'auto',
+        minWidth: '20px',
+        height: '20px',
+        padding: '0 5px',
+        borderRadius: '999px',
+        fontSize: '10.5px',
+        fontWeight: 800,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: tone === 'error' ? '#DC2626' : '#F59E0B',
+        color: '#FFFFFF',
+        lineHeight: 1,
+        flexShrink: 0,
+      }}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, badges = {} }) => {
   const getMenuItems = () => {
     switch (role) {
       case 'ADMIN':
         return [
           { id: 'dashboard', label: 'Dashboard Utama', icon: LayoutDashboard },
           { id: 'equipment', label: 'Inventaris Alat Berat', icon: Truck },
-          { id: 'rentals', label: 'Transaksi Rental', icon: ClipboardList },
-          { id: 'maintenance', label: 'Perawatan & Servis', icon: Wrench },
+          { id: 'rentals', label: 'Transaksi Rental', icon: ClipboardList, badge: badges.rentals, badgeTone: 'warning' as const },
+          { id: 'maintenance', label: 'Perawatan & Servis', icon: Wrench, badge: badges.maintenance, badgeTone: 'warning' as const },
           { id: 'tracking', label: 'Pelacakan GPS Telemetri', icon: MapPin },
           { id: 'reports', label: 'Laporan & Dokumen', icon: FileText },
           { id: 'users', label: 'Manajemen Pengguna', icon: Users },
@@ -37,10 +75,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab }
       case 'STAFF':
         return [
           { id: 'dashboard', label: 'Dashboard Operasional', icon: LayoutDashboard },
-          { id: 'rentals', label: 'Rental Orders', icon: ClipboardList },
+          { id: 'rentals', label: 'Rental Orders', icon: ClipboardList, badge: badges.rentals, badgeTone: 'warning' as const },
           { id: 'contracts', label: 'Kontrak Sewa Digital', icon: FileCheck },
-          { id: 'payments', label: 'Verifikasi Pembayaran', icon: CreditCard },
-          { id: 'maintenance', label: 'Penjadwalan Servis', icon: Wrench },
+          { id: 'payments', label: 'Verifikasi Pembayaran', icon: CreditCard, badge: badges.payments, badgeTone: 'error' as const },
+          { id: 'maintenance', label: 'Penjadwalan Servis', icon: Wrench, badge: badges.maintenance, badgeTone: 'warning' as const },
           { id: 'tracking', label: 'Monitoring Posisi GPS', icon: MapPin },
           { id: 'reports', label: 'Cetak Laporan BAST', icon: FileText },
           { id: 'settings', label: 'Pengaturan Akun', icon: Settings },
@@ -125,7 +163,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab }
                 }}
               >
                 <Icon size={18} color={isActive ? '#FFFFFF' : 'currentColor'} />
-                <span>{item.label}</span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <Badge count={item.badge} tone={item.badgeTone ?? 'warning'} />
+                )}
               </button>
             );
           })}

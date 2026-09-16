@@ -1,3 +1,17 @@
+## [CYCLE 33] 2026-09-16 - T-0034 — P2 — DONE
+**Judul:** Notifikasi In-App — Badge Counter di Sidebar
+**Perubahan:**
+- `src/components/Sidebar.tsx`: export `SidebarBadges` interface, komponen `Badge` (bulat, merah/kuning, max 99+), prop `badges?` di `SidebarProps`, badge muncul di Rental/Maintenance/Payments menu item
+- `src/App.tsx`: import `SidebarBadges`, hitung `sidebarBadges` dari state reaktif yang sudah ada (tidak ada request tambahan), pass ke `<Sidebar badges={sidebarBadges} />`
+**Detail:**
+- payments badge = PENDING_VERIFICATION (merah — butuh tindakan segera)
+- rentals badge = PENDING (kuning — menunggu persetujuan)
+- maintenance badge = SCHEDULED + IN_PROGRESS (kuning — sedang berjalan)
+- Badge hilang otomatis saat count = 0
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS
+
+---
+
 ## [CYCLE 32] 2026-09-16 - T-0033 — P2 — DONE
 **Judul:** Notifikasi Suku Cadang Sering Dipakai
 **Perubahan:**

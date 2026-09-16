@@ -3,6 +3,7 @@ import { User, RoleName, Equipment, Rental, Contract, Payment, Maintenance, GpsT
 import { db, stateStore } from './lib/db';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import type { SidebarBadges } from './components/Sidebar';
 import { Login } from './pages/Login';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { EquipmentManagement } from './pages/admin/EquipmentManagement';
@@ -38,6 +39,15 @@ export const App: React.FC = () => {
 
   /** Notifikasi sederhana di pojok kanan atas (sukses / galat). */
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+
+  /** Badge counter Sidebar — dihitung dari state reaktif yang sudah ada. */
+  const sidebarBadges: SidebarBadges = {
+    payments: payments.filter((p) => p.status === 'PENDING_VERIFICATION').length,
+    rentals: rentals.filter((r) => r.status === 'PENDING').length,
+    maintenance: maintenance.filter(
+      (m) => m.status === 'SCHEDULED' || m.status === 'IN_PROGRESS'
+    ).length,
+  };
 
   const notify = (message: string, tone: 'success' | 'error') => {
     setToast({ message, tone });
@@ -165,6 +175,7 @@ export const App: React.FC = () => {
           role={currentUser.role_name || 'ADMIN'}
           activeTab={activeTab}
           onSelectTab={setActiveTab}
+          badges={sidebarBadges}
         />
 
         <main style={{ flex: 1, padding: '24px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
