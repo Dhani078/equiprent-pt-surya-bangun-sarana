@@ -1,187 +1,101 @@
 {
   "tasks": [
+    { "id": "T-0029", "title": "API Rate Limiting & Security Headers", "category": "SECURITY", "priority": "P1", "status": "DONE", "estimate_minutes": 45, "depends_on": [], "files": ["src/server/index.ts"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-11T10:00:00Z", "completed_at": "2026-09-11T10:15:00Z" },
+    { "id": "T-0030", "title": "Optimasi Query Dashboard Admin", "category": "PERFORMANCE", "priority": "P2", "status": "DONE", "estimate_minutes": 60, "depends_on": [], "files": ["src/lib/dashboard.ts"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-11T10:00:00Z", "completed_at": "2026-09-16T02:18:22.000Z" },
+    { "id": "T-0031", "title": "Dark Mode Toggle", "category": "UX", "priority": "P3", "status": "DONE", "estimate_minutes": 45, "depends_on": [], "files": ["src/App.tsx", "src/index.css"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-11T10:00:00Z", "completed_at": "2026-09-16T02:23:12.000Z" },
+    { "id": "T-0032", "title": "Perbaiki Warning 'any' di Test Suite", "category": "QUALITY", "priority": "P2", "status": "DONE", "estimate_minutes": 30, "depends_on": [], "files": ["tests/api.test.mjs"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-11T10:00:00Z", "completed_at": "2026-09-16T02:26:36.000Z" },
+    { "id": "T-0033", "title": "Notifikasi Stok Suku Cadang", "category": "POLISH", "priority": "P2", "status": "DONE", "estimate_minutes": 60, "depends_on": [], "files": ["src/pages/admin/MaintenanceManagement.tsx"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-11T10:00:00Z", "completed_at": "2026-09-16T02:32:10.000Z" },
+    { "id": "T-0034", "title": "Notifikasi In-App Badge Sidebar", "category": "UX", "priority": "P2", "status": "DONE", "estimate_minutes": 45, "depends_on": [], "files": ["src/components/Sidebar.tsx"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-16T02:34:00Z", "completed_at": "2026-09-16T02:38:07.000Z" },
+    { "id": "T-0035", "title": "Pagination Tabel Data", "category": "PERFORMANCE", "priority": "P2", "status": "DONE", "estimate_minutes": 75, "depends_on": [], "files": ["src/components/Paginator.tsx"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-16T02:34:00Z", "completed_at": "2026-09-16T02:50:01.000Z" },
+    { "id": "T-0036", "title": "Prediksi Tanggal Servis Regresi Linear", "category": "FEATURE", "priority": "P3", "status": "DONE", "estimate_minutes": 60, "depends_on": [], "files": ["src/lib/businessRules.ts"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-16T02:34:00Z", "completed_at": "2026-09-16T02:54:32.000Z" },
+    { "id": "T-0037", "title": "README & API_DOCUMENTATION.md", "category": "DOCS", "priority": "P2", "status": "DONE", "estimate_minutes": 45, "depends_on": [], "files": ["README.md", "API_DOCUMENTATION.md"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-16T02:34:00Z", "completed_at": "2026-09-16T02:58:43.000Z" },
+    { "id": "T-0038", "title": "Audit Trail Logging", "category": "SECURITY", "priority": "P1", "status": "DONE", "estimate_minutes": 60, "depends_on": [], "files": ["src/lib/auditLog.ts", "src/server/index.ts"], "acceptance_criteria": [], "created_by": "agent-ideation", "created_at": "2026-09-16T02:34:00Z", "completed_at": "2026-09-16T03:11:13.000Z" },
     {
-      "id": "T-0029",
-      "title": "API Rate Limiting & Security Headers",
-      "category": "SECURITY",
-      "priority": "P1",
+      "id": "T-0039",
+      "title": "Panel Top 5 Unit Tersewa di Dashboard Admin",
+      "category": "FEATURE",
+      "priority": "P2",
       "status": "DONE",
+      "completed_at": "2026-09-16T03:41:26.000Z",
       "estimate_minutes": 45,
       "depends_on": [],
-      "files": ["src/server/index.ts"],
+      "files": ["src/lib/dashboard.ts", "src/types/index.ts", "src/pages/admin/AdminDashboard.tsx"],
       "acceptance_criteria": [
-        "Tambah rate limiting per-IP untuk endpoint login",
-        "Set Security Headers (Helmet/mirip)",
-        "Tambahkan strict CORS"
+        "Hitung frekuensi sewa per unit dari data rentals",
+        "Tampilkan top 5 unit tersewa (nama, kode, jumlah rental, foto) di card baru Dashboard",
+        "Data real dari seed/DB, bukan mock",
+        "Empty state bila tidak ada rental"
       ],
       "created_by": "agent-ideation",
-      "created_at": "2026-09-11T10:00:00Z",
-      "completed_at": "2026-09-11T10:15:00Z"
+      "created_at": "2026-09-16T03:12:00Z"
     },
     {
-      "id": "T-0030",
-      "title": "Optimasi Query Dashboard Admin",
+      "id": "T-0040",
+      "title": "Pagination UserManagement & Payment List",
       "category": "PERFORMANCE",
       "priority": "P2",
-      "status": "DONE",
-      "completed_at": "2026-09-16T02:18:22.000Z",
-      "estimate_minutes": 60,
-      "depends_on": [],
-      "files": ["src/lib/dashboard.ts"],
+      "status": "PENDING",
+      "estimate_minutes": 40,
+      "depends_on": ["T-0035"],
+      "files": ["src/pages/admin/UserManagement.tsx", "src/pages/staff/StaffDashboard.tsx"],
       "acceptance_criteria": [
-        "Kurangi jumlah N+1 query",
-        "Tambahkan indeks (atau simulasi) pada db.ts if needed",
-        "Test kecepatan load di terminal"
+        "Terapkan Paginator.tsx di tabel UserManagement (20/hal)",
+        "Terapkan Paginator.tsx di tabel Payment list StaffDashboard",
+        "Reset page saat filter/search berubah"
       ],
       "created_by": "agent-ideation",
-      "created_at": "2026-09-11T10:00:00Z"
+      "created_at": "2026-09-16T03:12:00Z"
     },
     {
-      "id": "T-0031",
-      "title": "Dark Mode Toggle",
-      "category": "UX",
-      "priority": "P3",
-      "status": "DONE",
-      "completed_at": "2026-09-16T02:23:12.000Z",
-      "estimate_minutes": 45,
-      "depends_on": [],
-      "files": ["src/App.tsx", "src/index.css"],
-      "acceptance_criteria": [
-        "Switch toggle di Navbar",
-        "CSS custom properties update via Tailwind dark mode",
-        "Save preferensi di localStorage"
-      ],
-      "created_by": "agent-ideation",
-      "created_at": "2026-09-11T10:00:00Z"
-    },
-    {
-      "id": "T-0032",
-      "title": "Perbaiki Warning 'any' di Test Suite",
-      "category": "QUALITY",
-      "priority": "P2",
-      "status": "DONE",
-      "completed_at": "2026-09-16T02:26:36.000Z",
-      "estimate_minutes": 30,
-      "depends_on": [],
-      "files": ["tests/api.test.mjs"],
-      "acceptance_criteria": [
-        "Cek file tests dan hilangkan sisa any atau type tak jelas",
-        "Pastikan strict mode full tanpa fallback"
-      ],
-      "created_by": "agent-ideation",
-      "created_at": "2026-09-11T10:00:00Z"
-    },
-    {
-      "id": "T-0033",
-      "title": "Selesaikan Notifikasi Stok Suku Cadang (T-0026 yang terpending)",
-      "category": "POLISH",
-      "priority": "P2",
-      "status": "DONE",
-      "completed_at": "2026-09-16T02:32:10.000Z",
-      "estimate_minutes": 60,
-      "depends_on": ["T-0009"],
-      "files": ["src/pages/admin/MaintenanceManagement.tsx", "src/lib/businessRules.ts"],
-      "acceptance_criteria": [
-        "Daftar suku cadang dengan stok di bawah ambang tampil sebagai peringatan",
-        "Ambang stok dapat diubah Admin (tersimpan, tidak di-hardcode)",
-        "Ada badge warna mengikuti design system & empty state"
-      ],
-      "created_by": "agent-ideation",
-      "created_at": "2026-09-11T10:00:00Z"
-    },
-    {
-      "id": "T-0034",
-      "title": "Notifikasi In-App — badge counter di Sidebar",
-      "category": "UX",
-      "priority": "P2",
-      "status": "DONE",
-      "completed_at": "2026-09-16T02:38:07.000Z",
-      "estimate_minutes": 45,
-      "depends_on": [],
-      "files": ["src/components/Sidebar.tsx", "src/lib/dashboardClient.ts"],
-      "acceptance_criteria": [
-        "Badge merah di menu Pembayaran bila ada PENDING_VERIFICATION",
-        "Badge kuning di menu Perawatan bila ada unit jatuh tempo servis",
-        "Badge kuning di menu Rental bila ada PENDING",
-        "Data badge dari stats yang sudah di-fetch (tidak ada request tambahan)"
-      ],
-      "created_by": "agent-ideation",
-      "created_at": "2026-09-16T02:34:00Z"
-    },
-    {
-      "id": "T-0035",
-      "title": "Pagination Tabel Data (Rental, Equipment, Payment)",
-      "category": "PERFORMANCE",
-      "priority": "P2",
-      "status": "DONE",
-      "completed_at": "2026-09-16T02:50:01.000Z",
-      "estimate_minutes": 75,
-      "depends_on": [],
-      "files": ["src/server/index.ts", "src/pages/admin/RentalManagement.tsx", "src/pages/admin/EquipmentManagement.tsx"],
-      "acceptance_criteria": [
-        "Endpoint menerima ?page=&limit= (default limit=20)",
-        "Respons menyertakan meta: { total, page, limit, totalPages }",
-        "Komponen UI tampilkan tombol prev/next + info 'Halaman X dari Y'",
-        "Tidak memuat seluruh data ke memori bila belum diperlukan"
-      ],
-      "created_by": "agent-ideation",
-      "created_at": "2026-09-16T02:34:00Z"
-    },
-    {
-      "id": "T-0036",
-      "title": "Prediksi Tanggal Servis Berikutnya — regresi linear tren HM",
+      "id": "T-0041",
+      "title": "Heatmap Sebaran Lokasi Armada di Leaflet",
       "category": "FEATURE",
       "priority": "P3",
-      "status": "DONE",
-      "completed_at": "2026-09-16T02:54:32.000Z",
+      "status": "PENDING",
       "estimate_minutes": 60,
       "depends_on": [],
-      "files": ["src/lib/businessRules.ts", "src/pages/admin/MaintenanceManagement.tsx"],
+      "files": ["src/pages/admin/GpsTrackingPage.tsx", "src/components/LeafletMap.tsx"],
       "acceptance_criteria": [
-        "Dari riwayat HM unit, hitung rata-rata kenaikan HM per hari",
-        "Estimasi tanggal servis berikutnya ditampilkan di panel peringatan",
-        "Bila data kurang dari 2 titik, tampilkan '-' (tidak error)",
-        "Murni kalkulasi lokal, tidak butuh API baru"
+        "Overlay cluster marker berbasis kepadatan GPS di Leaflet",
+        "Toggle on/off dari panel kontrol",
+        "Tidak butuh library baru — pakai Leaflet CircleMarker dengan opacity bertumpuk"
       ],
       "created_by": "agent-ideation",
-      "created_at": "2026-09-16T02:34:00Z"
+      "created_at": "2026-09-16T03:12:00Z"
     },
     {
-      "id": "T-0037",
-      "title": "README & API_DOCUMENTATION.md untuk Sidang Skripsi",
-      "category": "DOCS",
+      "id": "T-0042",
+      "title": "Revenue Trend — ringkasan pendapatan per bulan di Dashboard",
+      "category": "FEATURE",
       "priority": "P2",
-      "status": "DONE",
-      "completed_at": "2026-09-16T02:58:43.000Z",
-      "estimate_minutes": 45,
+      "status": "PENDING",
+      "estimate_minutes": 50,
       "depends_on": [],
-      "files": ["README.md", "API_DOCUMENTATION.md"],
+      "files": ["src/lib/dashboard.ts", "src/types/index.ts", "src/pages/admin/AdminDashboard.tsx"],
       "acceptance_criteria": [
-        "README: setup lokal, cara deploy, kredensial demo (admin/admin, staff/staff, user/user)",
-        "API_DOCUMENTATION.md: semua endpoint, method, auth, contoh request/response",
-        "Panduan singkat untuk demo sidang (urutan klik yang direkomendasikan)"
+        "Agregat pendapatan PAID per bulan (12 bulan terakhir) dari data payments",
+        "Tampilkan sebagai bar chart CSS-only (tidak butuh library chart)",
+        "Nilai rupiah di tooltip/label setiap bar"
       ],
       "created_by": "agent-ideation",
-      "created_at": "2026-09-16T02:34:00Z"
+      "created_at": "2026-09-16T03:12:00Z"
     },
     {
-      "id": "T-0038",
-      "title": "Audit Trail Logging — catat mutasi penting",
-      "category": "SECURITY",
-      "priority": "P1",
-      "status": "DONE",
-      "completed_at": "2026-09-16T03:11:13.000Z",
-      "estimate_minutes": 60,
+      "id": "T-0043",
+      "title": "PWA Manifest + Installable",
+      "category": "FEATURE",
+      "priority": "P3",
+      "status": "PENDING",
+      "estimate_minutes": 30,
       "depends_on": [],
-      "files": ["src/server/index.ts", "src/lib/db.ts"],
+      "files": ["public/manifest.json", "index.html", "vite.config.ts"],
       "acceptance_criteria": [
-        "Setiap aksi mutasi penting (login, ubah status rental, verifikasi pembayaran, jadwal maintenance) dicatat dengan user_id, action, entity, entity_id, timestamp",
-        "Log disimpan in-memory (Map) sebagai fallback bila DB belum tersedia",
-        "Endpoint GET /api/audit-log untuk Admin",
-        "Zero any, zero SQL concat"
+        "manifest.json dengan name, short_name, icons, theme_color, display standalone",
+        "Link rel=manifest di index.html",
+        "App bisa di-install dari browser Chrome/Edge"
       ],
       "created_by": "agent-ideation",
-      "created_at": "2026-09-16T02:34:00Z"
+      "created_at": "2026-09-16T03:12:00Z"
     }
   ]
 }

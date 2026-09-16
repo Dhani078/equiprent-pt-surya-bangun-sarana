@@ -5,7 +5,7 @@
  * bukan konstanta — syarat utama T-0005 ("semua angka real dari DB").
  */
 
-const { buildDashboardStats, emptyDashboardStats, RECENT_RENTAL_LIMIT, SERVICE_QUEUE_LIMIT } =
+const { buildDashboardStats, emptyDashboardStats, RECENT_RENTAL_LIMIT, SERVICE_QUEUE_LIMIT, TOP_EQUIPMENT_LIMIT } =
   await import('../.tmp_dashboard.mjs');
 
 let pass = 0, fail = 0;
@@ -294,6 +294,47 @@ for (const sumber of [
   }
 }
 t('nilai aneh tidak melempar & tidak menghasilkan NaN', tidakMelempar);
+
+// ---------------------------------------------------------------------------
+console.log('\n== Top Unit Tersewa ==');
+// Unit 1 disewa 3x, unit 2 disewa 2x, unit 3 disewa 1x, unit 4 tidak pernah.
+s = buildDashboardStats({
+  equipments: [
+    unit(1, { equipment_code: 'EXC-01', name: 'Excavator A' }),
+    unit(2, { equipment_code: 'DOZ-02', name: 'Dozer B' }),
+    unit(3, { equipment_code: 'LDR-03', name: 'Loader C' }),
+    unit(4, { equipment_code: 'RLR-04', name: 'Roller D' }),
+  ],
+  rentals: [
+    sewa(1, { equipment_id: 1 }),
+    sewa(2, { equipment_id: 1 }),
+    sewa(3, { equipment_id: 1 }),
+    sewa(4, { equipment_id: 2 }),
+    sewa(5, { equipment_id: 2 }),
+    sewa(6, { equipment_id: 3 }),
+  ],
+  maintenance: [], payments: [], users: [],
+});
+t('top unit — peringkat 1 tersewa 3x', s.topEquipments[0]?.rental_count === 3);
+t('top unit — peringkat 1 kode benar', s.topEquipments[0]?.equipment_code === 'EXC-01');
+t('top unit — peringkat 2 tersewa 2x', s.topEquipments[1]?.rental_count === 2);
+t('top unit — peringkat 3 tersewa 1x', s.topEquipments[2]?.rental_count === 1);
+t('top unit — unit tanpa sewa tidak masuk', s.topEquipments.every(e => e.equipment_id !== 4));
+t('top unit — dibatasi TOP_EQUIPMENT_LIMIT', s.topEquipments.length <= TOP_EQUIPMENT_LIMIT);
+
+// Lebih dari 5 unit berbeda — pastikan dibatasi.
+const rentalsEnam = [1,2,3,4,5,6].map((id) => sewa(id, { equipment_id: id }));
+s = buildDashboardStats({
+  equipments: [1,2,3,4,5,6].map((id) => unit(id)),
+  rentals: rentalsEnam,
+  maintenance: [], payments: [], users: [],
+});
+t('top unit — maks 5 saat ada 6 unit', s.topEquipments.length === TOP_EQUIPMENT_LIMIT);
+
+// Sumber kosong — harus array kosong, bukan error.
+s = buildDashboardStats({ equipments: [], rentals: [], maintenance: [], payments: [], users: [] });
+t('top unit — kosong bila tidak ada rental', Array.isArray(s.topEquipments) && s.topEquipments.length === 0);
+t('emptyDashboardStats topEquipments kosong', Array.isArray(emptyDashboardStats().topEquipments) && emptyDashboardStats().topEquipments.length === 0);
 
 // ---------------------------------------------------------------------------
 console.log('\n== Konsistensi dengan Data Nyata (stateStore) ==');

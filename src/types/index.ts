@@ -174,6 +174,14 @@ export interface DashboardServiceRow {
   status: Maintenance['status'];
 }
 
+/** Baris top unit tersewa untuk panel dashboard. */
+export interface DashboardTopEquipmentRow {
+  equipment_id: number;
+  equipment_code: string;
+  equipment_name: string;
+  rental_count: number;
+}
+
 /**
  * Agregat dashboard eksekutif.
  *
@@ -213,6 +221,8 @@ export interface AdminDashboardStats {
   recentRentals: DashboardRentalRow[];
   /** Antrean servis terdekat. */
   serviceQueue: DashboardServiceRow[];
+  /** Top 5 unit paling sering disewa. */
+  topEquipments: DashboardTopEquipmentRow[];
   /** Waktu agregat dihitung (ISO 8601). */
   generatedAt: string;
 }

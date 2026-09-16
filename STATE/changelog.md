@@ -1005,3 +1005,17 @@ memakai calculateRentalCost() yang sama.
 
 **Verifikasi:** typecheck PASS · build PASS (628,18 KB) · npm test 21/21 suite PASS
 **Catatan:** Nol any, nol penyambungan string SQL, tanpa kredensial pada berkas.
+
+---
+
+## Cycle 38 — T-0039 — 2026-09-16T03:41:26Z
+
+**Task:** Panel Top 5 Unit Tersewa di Dashboard Admin
+
+**File diubah:**
+- `src/lib/dashboard.ts` — import DashboardTopEquipmentRow, konstanta TOP_EQUIPMENT_LIMIT=5, kalkulasi frekuensi rental per unit via Map O(n), topEquipments di return + emptyDashboardStats
+- `src/pages/admin/AdminDashboard.tsx` — import Trophy icon, panel card baru di bawah grid 2 kolom: rank badge (emas/perak/perunggu), foto unit, nama, kode, jumlah sewa, progress bar CSS-only dengan aria-label, empty state
+- `tests/dashboard.test.mjs` — import TOP_EQUIPMENT_LIMIT, 9 test baru di seksi "Top Unit Tersewa"
+
+**Verifikasi:** typecheck PASS · build PASS (642.36 kB) · npm test 21/21 suite PASS
+**Catatan:** Nol any, nol mock, tanpa kredensial pada berkas.

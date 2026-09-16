@@ -19,6 +19,7 @@ import type {
   AdminDashboardStats,
   DashboardRentalRow,
   DashboardServiceRow,
+  DashboardTopEquipmentRow,
   Equipment,
   Maintenance,
   Payment,
@@ -41,6 +42,9 @@ export const RECENT_RENTAL_LIMIT = 5;
 
 /** Jumlah baris pada panel "Antrean Servis & Pemeliharaan". */
 export const SERVICE_QUEUE_LIMIT = 4;
+
+/** Jumlah unit pada panel "Top Unit Tersewa". */
+export const TOP_EQUIPMENT_LIMIT = 5;
 
 /** Jumlah kode unit yang ditampilkan pada peringatan servis. */
 const SERVICE_CODE_PREVIEW_LIMIT = 5;
@@ -168,6 +172,30 @@ export function buildDashboardStats(
   ).length;
 
   // ---------------------------------------------------------------------
+  // Top N unit tersewa — hitung frekuensi, ambil top N, gabung nama unit
+  // ---------------------------------------------------------------------
+  const rentalCountPerUnit = new Map<number, number>();
+  for (const r of rentals) {
+    rentalCountPerUnit.set(r.equipment_id, (rentalCountPerUnit.get(r.equipment_id) ?? 0) + 1);
+  }
+
+  const equipmentById = new Map<number, Equipment>();
+  for (const e of equipments) equipmentById.set(e.id, e);
+
+  const topEquipments: DashboardTopEquipmentRow[] = [...rentalCountPerUnit.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0] - b[0])
+    .slice(0, TOP_EQUIPMENT_LIMIT)
+    .map(([equipment_id, rental_count]) => {
+      const e = equipmentById.get(equipment_id);
+      return {
+        equipment_id,
+        equipment_code: e?.equipment_code ?? `ID-${equipment_id}`,
+        equipment_name: e?.name ?? '-',
+        rental_count,
+      };
+    });
+
+  // ---------------------------------------------------------------------
   // Tabel turunan
   // ---------------------------------------------------------------------
   const namaPelanggan = new Map<number, User>();
@@ -237,6 +265,7 @@ export function buildDashboardStats(
     pendingMaintenanceCount,
     recentRentals,
     serviceQueue,
+    topEquipments,
     generatedAt: now.toISOString(),
   };
 }
@@ -262,6 +291,7 @@ export function emptyDashboardStats(now: Date = new Date()): AdminDashboardStats
     pendingMaintenanceCount: 0,
     recentRentals: [],
     serviceQueue: [],
+    topEquipments: [],
     generatedAt: now.toISOString(),
   };
 }
