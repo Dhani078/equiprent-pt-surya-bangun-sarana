@@ -5,6 +5,9 @@ import { Modal } from '../../components/Modal';
 import { getUserAvatar } from '../../lib/stitchAssets';
 import { validateUserInput } from '../../lib/validators';
 import type { ValidatedUserInput } from '../../lib/validators';
+import { Paginator, usePagination } from '../../components/Paginator';
+
+const PAGE_SIZE_USERS = 20;
 
 interface UserManagementProps {
   users: User[];
@@ -22,6 +25,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('ALL');
+  const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   /** Galat per-field dari validator terpusat. */
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ValidatedUserInput, string>>>({});
@@ -128,7 +132,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             className="input-premium"
             placeholder="Cari nama pengguna, username, email, atau perusahaan..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             style={{ paddingLeft: '36px', height: '40px' }}
           />
         </div>
@@ -137,7 +141,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
           className="input-premium"
           style={{ width: 'auto', height: '40px', padding: '0 12px' }}
           value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
+          onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
         >
           <option value="ALL">Semua Hak Akses</option>
           <option value="ADMIN">ADMIN (Superuser)</option>
@@ -160,7 +164,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((u) => {
+            {usePagination(filteredUsers, PAGE_SIZE_USERS, page).map((u) => {
               const avatar = getUserAvatar(u.role_name);
               return (
                 <tr key={u.id}>
@@ -225,6 +229,12 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             })}
           </tbody>
         </table>
+        <Paginator
+          total={filteredUsers.length}
+          page={page}
+          limit={PAGE_SIZE_USERS}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* Modal Add User */}
