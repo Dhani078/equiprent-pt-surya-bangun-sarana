@@ -1043,3 +1043,16 @@ File diubah:
 - src/pages/admin/GpsTrackingPage.tsx - state showHeatmap, tombol toggle Layers icon + aria-pressed, pass heatmapData=trackingData ke LeafletMap
 
 Verifikasi: typecheck PASS - build PASS (644.33 kB) - npm test 21/21 suite PASS
+
+---
+
+## Cycle 41 - T-0042 - 2026-09-16T06:12:49Z
+
+Task: Revenue Trend bar chart CSS-only di Dashboard
+
+File diubah:
+- src/types/index.ts - DashboardRevenueTrendItem interface, field revenueTrend di AdminDashboardStats
+- src/lib/dashboard.ts - import DashboardRevenueTrendItem, kalkulasi 12 slot bulan (Map PAID per bulan lama-ke-baru), revenueTrend di return + emptyDashboardStats
+- src/pages/admin/AdminDashboard.tsx - import TrendingUp, panel bar chart CSS-only: label bulan singkat, nilai rupiah di atas bar, warna primary utk bar tertinggi, empty state
+
+Verifikasi: typecheck PASS - build PASS (647.07 kB) - npm test 21/21 suite PASS

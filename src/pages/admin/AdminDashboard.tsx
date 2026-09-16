@@ -14,6 +14,7 @@ import {
   Hourglass,
   Gauge,
   Trophy,
+  TrendingUp,
 } from 'lucide-react';
 import type { AdminDashboardStats } from '../../types';
 import { getEquipmentImage } from '../../lib/stitchAssets';
@@ -609,6 +610,99 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             })}
           </div>
         )}
+      </div>
+      {/* Revenue Trend — bar chart CSS-only 12 bulan */}
+      <div className="card-premium" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TrendingUp size={18} color="var(--color-primary)" />
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+              Tren Pendapatan 12 Bulan Terakhir
+            </h3>
+          </div>
+          <span style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
+            Hanya pembayaran berstatus LUNAS
+          </span>
+        </div>
+
+        {stats.revenueTrend.length === 0 ? (
+          <EmptyState
+            pesan="Belum ada data pendapatan"
+            keterangan="Grafik akan muncul setelah ada pembayaran yang diverifikasi lunas."
+            ariaLabel="Belum ada data tren pendapatan"
+          />
+        ) : (() => {
+          const maxAmount = Math.max(...stats.revenueTrend.map(d => d.amount), 1);
+          return (
+            <div
+              role="img"
+              aria-label="Bar chart tren pendapatan 12 bulan terakhir"
+              style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '180px', paddingBottom: '28px', position: 'relative' }}
+            >
+              {stats.revenueTrend.map((item) => {
+                const pct = Math.round((item.amount / maxAmount) * 100);
+                const isCurrentMonth = item.amount === maxAmount && maxAmount > 0;
+                return (
+                  <div
+                    key={`${item.year}-${item.month}`}
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'flex-end' }}
+                  >
+                    {/* Nilai rupiah di atas bar — hanya tampil bila ada */}
+                    {item.amount > 0 && (
+                      <span
+                        title={formatRupiah(item.amount)}
+                        style={{
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          color: isCurrentMonth ? 'var(--color-primary)' : 'var(--color-secondary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          maxWidth: '100%',
+                          textAlign: 'center',
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {item.amount >= 1_000_000_000
+                          ? `${(item.amount / 1_000_000_000).toFixed(1)}M`
+                          : `${Math.round(item.amount / 1_000_000)}jt`}
+                      </span>
+                    )}
+                    {/* Batang */}
+                    <div
+                      style={{
+                        width: '100%',
+                        height: `${Math.max(pct, item.amount > 0 ? 4 : 0)}%`,
+                        borderRadius: '4px 4px 0 0',
+                        background: isCurrentMonth
+                          ? 'var(--color-primary)'
+                          : item.amount > 0
+                            ? 'rgba(0,51,102,0.45)'
+                            : 'var(--color-border)',
+                        transition: 'height 0.4s cubic-bezier(0.25,0.8,0.25,1)',
+                        minHeight: item.amount > 0 ? '4px' : '2px',
+                      }}
+                      role="presentation"
+                    />
+                    {/* Label bulan */}
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        fontSize: '9.5px',
+                        color: 'var(--color-secondary)',
+                        textAlign: 'center',
+                        width: `calc(${100 / stats.revenueTrend.length}% - 6px)`,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
