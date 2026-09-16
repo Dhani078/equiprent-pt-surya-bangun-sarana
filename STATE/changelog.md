@@ -1082,3 +1082,15 @@ File diubah:
 - src/pages/admin/UserManagement.tsx - ConfirmDialog sebelum toggle status akun + state confirmToggleUser
 
 Verifikasi: typecheck PASS - build PASS (651.08 kB) - npm test 21/21 suite PASS
+
+---
+
+## Cycle 44 - T-0045 - 2026-09-16T06:36:28Z
+
+Task: Print Media Query untuk Halaman Laporan
+
+File diubah:
+- src/index.css - tambah .no-print (hidden saat print) + .print-only (visible saat print) ke @media print block
+- src/pages/admin/ReportsPage.tsx - print header: nama perusahaan, judul laporan, tanggal cetak (class print-only)
+
+Verifikasi: typecheck PASS - build PASS (651.67 kB) - npm test 21/21 suite PASS

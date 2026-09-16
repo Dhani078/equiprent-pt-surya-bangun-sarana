@@ -204,6 +204,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Print header — hanya tampil saat cetak */}
+      <div className="print-only" style={{ display: 'none', marginBottom: '16px', borderBottom: '2px solid #003366', paddingBottom: '10px' }}>
+        <div style={{ fontSize: '14pt', fontWeight: 800, color: '#003366' }}>PT. SURYA BANGUN SARANA BANJARMASIN</div>
+        <div style={{ fontSize: '11pt', fontWeight: 600, marginTop: '4px' }} id="print-report-title">Laporan Operasional</div>
+        <div style={{ fontSize: '9pt', color: '#475569', marginTop: '2px' }}>
+          Dicetak: {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </div>
+      </div>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
