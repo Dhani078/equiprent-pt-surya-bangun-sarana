@@ -93,13 +93,100 @@
       "estimate_minutes": 30,
       "depends_on": [],
       "files": ["public/manifest.json", "index.html", "vite.config.ts"],
-      "acceptance_criteria": [
-        "manifest.json dengan name, short_name, icons, theme_color, display standalone",
-        "Link rel=manifest di index.html",
-        "App bisa di-install dari browser Chrome/Edge"
-      ],
+      "acceptance_criteria": [],
       "created_by": "agent-ideation",
       "created_at": "2026-09-16T03:12:00Z"
+    },
+    {
+      "id": "T-0044",
+      "title": "Konfirmasi Modal Sebelum Aksi Destruktif",
+      "category": "UX",
+      "priority": "P1",
+      "status": "DONE",
+      "completed_at": "2026-09-16T06:31:09.000Z",
+      "estimate_minutes": 40,
+      "depends_on": [],
+      "files": ["src/components/ConfirmDialog.tsx", "src/pages/admin/UserManagement.tsx", "src/pages/admin/EquipmentManagement.tsx"],
+      "acceptance_criteria": [
+        "Komponen ConfirmDialog reusable (judul, pesan, tone danger/warning, tombol konfirmasi/batal)",
+        "Terapkan sebelum nonaktifkan/aktifkan akun user",
+        "Terapkan sebelum hapus unit alat berat",
+        "ESC dan klik overlay menutup dialog",
+        "aria-modal + focus trap"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-16T06:23:00Z"
+    },
+    {
+      "id": "T-0045",
+      "title": "Print Media Query untuk Halaman Laporan",
+      "category": "FEATURE",
+      "priority": "P2",
+      "status": "PENDING",
+      "estimate_minutes": 35,
+      "depends_on": [],
+      "files": ["src/index.css", "src/pages/admin/ReportsPage.tsx"],
+      "acceptance_criteria": [
+        "@media print: sembunyikan sidebar, header nav, filter bar, tombol",
+        "Tabel laporan tampil penuh di halaman cetak",
+        "Font size 10pt, border hitam, background putih",
+        "Judul laporan dan tanggal cetak tampil di print header"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-16T06:23:00Z"
+    },
+    {
+      "id": "T-0046",
+      "title": "Skeleton Loading di Halaman Equipment & Rental",
+      "category": "UX",
+      "priority": "P2",
+      "status": "PENDING",
+      "estimate_minutes": 45,
+      "depends_on": [],
+      "files": ["src/pages/admin/EquipmentManagement.tsx", "src/pages/admin/RentalManagement.tsx"],
+      "acceptance_criteria": [
+        "Skeleton shimmer saat data sedang dimuat (konsisten dengan AdminDashboard)",
+        "Grid skeleton untuk kartu unit (3 kolom, 6 kartu)",
+        "Tabel skeleton untuk daftar rental (5 baris placeholder)",
+        "Tidak ada flash of empty content"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-16T06:23:00Z"
+    },
+    {
+      "id": "T-0047",
+      "title": "Tooltip HM Progress Bar di Halaman Equipment",
+      "category": "UX",
+      "priority": "P3",
+      "status": "PENDING",
+      "estimate_minutes": 30,
+      "depends_on": [],
+      "files": ["src/pages/admin/EquipmentManagement.tsx", "src/components/HmProgressBar.tsx"],
+      "acceptance_criteria": [
+        "Komponen HmProgressBar: bar progress HM saat ini / target servis 250 HM berikutnya",
+        "Warna hijau (aman) / kuning (mendekati) / merah (lewat jadwal)",
+        "Tooltip: HM saat ini, target, sisa HM",
+        "Dipakai di kartu unit EquipmentManagement"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-16T06:23:00Z"
+    },
+    {
+      "id": "T-0048",
+      "title": "Ringkasan Status di Header Kartu Unit (Equipment Card)",
+      "category": "FEATURE",
+      "priority": "P2",
+      "status": "PENDING",
+      "estimate_minutes": 35,
+      "depends_on": ["T-0047"],
+      "files": ["src/pages/admin/EquipmentManagement.tsx"],
+      "acceptance_criteria": [
+        "Setiap kartu unit tampilkan: status badge, HM bar, tarif/hari, tanggal servis terakhir",
+        "Quick-action button: Jadwalkan Servis (jika mendekati/lewat jadwal)",
+        "Animasi card lift on hover sesuai design system"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-16T06:23:00Z"
     }
   ]
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, RoleName } from '../../types';
 import { Plus, Search, Shield, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { getUserAvatar } from '../../lib/stitchAssets';
 import { validateUserInput } from '../../lib/validators';
 import type { ValidatedUserInput } from '../../lib/validators';
@@ -26,6 +27,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('ALL');
   const [page, setPage] = useState(1);
+  /** User yang sedang menunggu konfirmasi toggle status. */
+  const [confirmToggleUser, setConfirmToggleUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   /** Galat per-field dari validator terpusat. */
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ValidatedUserInput, string>>>({});
@@ -201,13 +204,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <button
-                      onClick={() => {
-                        onToggleStatus(u.id).catch((err: unknown) => {
-                          const pesan =
-                            err instanceof Error && err.message ? err.message : 'Gagal mengubah status akun.';
-                          onNotify?.(pesan, 'error');
-                        });
-                      }}
+                      onClick={() => setConfirmToggleUser(u)}
                       className="btn-secondary"
                       style={{ padding: '5px 10px', fontSize: '12px' }}
                       title={u.status === 'ACTIVE' ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
@@ -458,6 +455,33 @@ export const UserManagement: React.FC<UserManagementProps> = ({
           </div>
         </form>
       </Modal>
+
+      {/* Konfirmasi Toggle Status Akun */}
+      <ConfirmDialog
+        open={confirmToggleUser !== null}
+        title={confirmToggleUser?.status === 'ACTIVE' ? 'Nonaktifkan Akun Pengguna' : 'Aktifkan Akun Pengguna'}
+        message={
+          <>
+            {confirmToggleUser?.status === 'ACTIVE'
+              ? <>Nonaktifkan akun <strong>{confirmToggleUser?.full_name}</strong> ({confirmToggleUser?.username})? Pengguna tidak akan bisa login sampai diaktifkan kembali.</>
+              : <>Aktifkan kembali akun <strong>{confirmToggleUser?.full_name}</strong> ({confirmToggleUser?.username})?</>
+            }
+          </>
+        }
+        confirmLabel={confirmToggleUser?.status === 'ACTIVE' ? 'Ya, Nonaktifkan' : 'Ya, Aktifkan'}
+        tone={confirmToggleUser?.status === 'ACTIVE' ? 'danger' : 'warning'}
+        onConfirm={() => {
+          if (!confirmToggleUser) return;
+          const u = confirmToggleUser;
+          setConfirmToggleUser(null);
+          onToggleStatus(u.id).catch((err: unknown) => {
+            const pesan =
+              err instanceof Error && err.message ? err.message : 'Gagal mengubah status akun.';
+            onNotify?.(pesan, 'error');
+          });
+        }}
+        onCancel={() => setConfirmToggleUser(null)}
+      />
     </div>
   );
 };

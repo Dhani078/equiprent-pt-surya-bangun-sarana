@@ -1069,3 +1069,16 @@ File diubah:
 - index.html - link rel=manifest, meta theme-color, mobile-web-app-capable, apple-touch-icon
 
 Verifikasi: typecheck PASS - build PASS (647.07 kB) - npm test 21/21 suite PASS
+
+---
+
+## Cycle 43 - T-0044 - 2026-09-16T06:31:09Z
+
+Task: Konfirmasi Modal Sebelum Aksi Destruktif
+
+File diubah:
+- src/components/ConfirmDialog.tsx - komponen baru: aria-modal, focus trap, ESC close, overlay click close, tone danger/warning, props: title/message/confirmLabel/cancelLabel
+- src/pages/admin/EquipmentManagement.tsx - ganti confirm() native dengan ConfirmDialog + state confirmDeleteItem
+- src/pages/admin/UserManagement.tsx - ConfirmDialog sebelum toggle status akun + state confirmToggleUser
+
+Verifikasi: typecheck PASS - build PASS (651.08 kB) - npm test 21/21 suite PASS
