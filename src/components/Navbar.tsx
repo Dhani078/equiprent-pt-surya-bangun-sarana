@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, RoleName } from '../types';
-import { LogOut, Shield, RefreshCw, UserCheck, ChevronDown, Settings, LayoutDashboard } from 'lucide-react';
+import { LogOut, Shield, RefreshCw, Moon, Sun, ChevronDown } from 'lucide-react';
 import { getUserAvatar } from '../lib/stitchAssets';
 
 interface NavbarProps {
@@ -9,9 +9,24 @@ interface NavbarProps {
   onSwitchRole: (role: RoleName) => void;
 }
 
+const STORAGE_KEY = 'sbs-theme';
+
+function initTheme(): boolean {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  const dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  return dark;
+}
+
 export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout, onSwitchRole }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dark, setDark] = useState(() => initTheme());
   const avatarUrl = getUserAvatar(currentUser.role_name);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    localStorage.setItem(STORAGE_KEY, dark ? 'dark' : 'light');
+  }, [dark]);
 
   return (
     <header style={{
@@ -56,7 +71,20 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout, onSwitchR
 
       {/* Role Switcher & User Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        
+
+        {/* Dark Mode Toggle */}
+        <button
+          type="button"
+          onClick={() => setDark((d) => !d)}
+          className="btn-secondary"
+          title={dark ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
+          aria-label={dark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
+          style={{ padding: '6px 10px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          {dark ? <Sun size={15} /> : <Moon size={15} />}
+          <span style={{ fontSize: '11.5px', fontWeight: 600 }}>{dark ? 'Terang' : 'Gelap'}</span>
+        </button>
+
         {/* Multi-Role Quick Context Switcher */}
         <div style={{
           display: 'flex',

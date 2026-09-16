@@ -357,6 +357,92 @@ table.data-table tbody tr:hover {
   }
 }
 
+/* ==========================================================================
+   Dark Mode — token override via [data-theme="dark"] pada <html>
+   Semua komponen yang memakai var(--color-*) otomatis adaptif.
+   Komponen dengan warna hardcode akan ditangani di sini via selector CSS.
+   ========================================================================== */
+[data-theme="dark"] {
+  --color-primary:           #4A90D9;
+  --color-primary-dark:      #2E6FAD;
+  --color-primary-light:     #5FA8E8;
+  --color-secondary:         #94A3B8;
+  --color-secondary-light:   #CBD5E1;
+  --color-background:        #0F172A;
+  --color-surface:           #1E293B;
+  --color-border:            #2D3F55;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md:   0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -1px rgba(0,0,0,0.3);
+  --shadow-lg:   0 10px 15px -3px rgba(0,0,0,0.6), 0 4px 6px -2px rgba(0,0,0,0.3);
+}
+
+[data-theme="dark"] body {
+  background-color: #0F172A;
+  color: #E2E8F0;
+}
+
+/* Navbar */
+[data-theme="dark"] header {
+  background-color: #1E293B !important;
+  border-bottom-color: #2D3F55 !important;
+}
+
+/* Cards & surfaces */
+[data-theme="dark"] .card-premium {
+  background-color: #1E293B !important;
+  border-color: #2D3F55 !important;
+}
+[data-theme="dark"] .card-premium:hover {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4) !important;
+}
+
+/* Table */
+[data-theme="dark"] .table-container {
+  background-color: #1E293B !important;
+  border-color: #2D3F55 !important;
+}
+[data-theme="dark"] table.data-table th {
+  background-color: #162032 !important;
+  color: #94A3B8 !important;
+  border-bottom-color: #2D3F55 !important;
+}
+[data-theme="dark"] table.data-table td {
+  color: #CBD5E1 !important;
+  border-bottom-color: #2D3F55 !important;
+}
+[data-theme="dark"] table.data-table tbody tr:hover {
+  background-color: #243450 !important;
+}
+
+/* Input */
+[data-theme="dark"] .input-premium {
+  background-color: #162032 !important;
+  border-color: #2D3F55 !important;
+  color: #E2E8F0 !important;
+}
+
+/* Modal */
+[data-theme="dark"] .modal-box {
+  background: #1E293B !important;
+  color: #E2E8F0 !important;
+}
+
+/* Dropdown & inline surfaces */
+[data-theme="dark"] .btn-secondary {
+  background-color: #243450 !important;
+  border-color: #2D3F55 !important;
+  color: #CBD5E1 !important;
+}
+[data-theme="dark"] .btn-secondary:hover {
+  background-color: #2D3F55 !important;
+  color: #E2E8F0 !important;
+}
+
+/* Scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar-track { background: #1E293B; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #334155; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
 /* Leaflet Map Styling */
 .map-container {
   width: 100%;
