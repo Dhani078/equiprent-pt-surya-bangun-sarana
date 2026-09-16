@@ -1,3 +1,18 @@
+## [CYCLE 30] 2026-09-16 - T-0031 — P3 — DONE
+**Judul:** Dark Mode Toggle
+**Perubahan:**
+- `src/index.css`: blok `[data-theme="dark"]` — override semua CSS variable + selector hardcode (navbar, card, table, input, modal, btn-secondary, scrollbar)
+- `src/components/Navbar.tsx`: tambah `initTheme()` (baca localStorage → fallback `prefers-color-scheme`), state `dark`, `useEffect` sync ke `document.documentElement`, tombol Moon/Sun di kiri action bar dengan `aria-label`
+**Detail:**
+- Toggle persist ke `localStorage` key `sbs-theme`
+- Respects OS dark mode saat pertama buka (belum pernah klik toggle)
+- Tidak menyentuh App.tsx — Navbar manage `<html data-theme>` sendiri
+- Semua komponen pakai `var(--color-*)` otomatis adaptif tanpa perubahan
+- Satu bug diperbaiki saat QG: `ChevronDown` masih dipakai dropdown tapi terhapus dari import
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS
+
+---
+
 ## [CYCLE 29] 2026-09-16 - T-0030 — P2 — DONE
 **Judul:** Optimasi Query Dashboard Admin (Eliminasi N+1)
 **Perubahan:**
