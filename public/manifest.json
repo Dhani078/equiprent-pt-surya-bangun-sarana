@@ -1,0 +1,27 @@
+{
+  "name": "EquipRent MS — PT. Surya Bangun Sarana",
+  "short_name": "EquipRent",
+  "description": "Sistem Monitoring & Rental Alat Berat PT. Surya Bangun Sarana Banjarmasin",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#003366",
+  "background_color": "#F1F5F9",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots": []
+}

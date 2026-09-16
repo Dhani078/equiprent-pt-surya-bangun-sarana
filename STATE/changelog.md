@@ -1056,3 +1056,16 @@ File diubah:
 - src/pages/admin/AdminDashboard.tsx - import TrendingUp, panel bar chart CSS-only: label bulan singkat, nilai rupiah di atas bar, warna primary utk bar tertinggi, empty state
 
 Verifikasi: typecheck PASS - build PASS (647.07 kB) - npm test 21/21 suite PASS
+
+---
+
+## Cycle 42 - T-0043 - 2026-09-16T06:21:47Z
+
+Task: PWA Manifest + Installable
+
+File diubah:
+- public/manifest.json - name, short_name, icons 192+512, theme_color #003366, display standalone, lang id
+- public/icon-192.png + public/icon-512.png - pure Python PNG (background navy #003366)
+- index.html - link rel=manifest, meta theme-color, mobile-web-app-capable, apple-touch-icon
+
+Verifikasi: typecheck PASS - build PASS (647.07 kB) - npm test 21/21 suite PASS
