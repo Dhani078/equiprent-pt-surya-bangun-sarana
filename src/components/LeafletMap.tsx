@@ -33,12 +33,23 @@ interface LeafletMapProps {
   trackingData: FleetTelemetryRow[];
   selectedUnitId?: number | null;
   onSelectUnit?: (unitId: number) => void;
+  /** Titik mentah untuk overlay heatmap kepadatan — semua raw GPS points. */
+  heatmapData?: { latitude: number; longitude: number }[];
+  /** Tampilkan overlay heatmap kepadatan atau tidak. */
+  showHeatmap?: boolean;
 }
 
-export const LeafletMap: React.FC<LeafletMapProps> = ({ trackingData, selectedUnitId, onSelectUnit }) => {
+export const LeafletMap: React.FC<LeafletMapProps> = ({
+  trackingData,
+  selectedUnitId,
+  onSelectUnit,
+  heatmapData = [],
+  showHeatmap = false,
+}) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [id: number]: L.Marker }>({});
+  const heatLayerRef = useRef<L.LayerGroup | null>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -62,6 +73,49 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({ trackingData, selectedUn
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // Heatmap overlay — CircleMarker bertumpuk, opacity rendah, no library baru
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Bersihkan layer lama
+    if (heatLayerRef.current) {
+      heatLayerRef.current.remove();
+      heatLayerRef.current = null;
+    }
+
+    if (!showHeatmap || heatmapData.length === 0) return;
+
+    const group = L.layerGroup();
+
+    // Hitung kepadatan sederhana: grid 0.01° (~1 km) → warna makin merah
+    const cellCount = new Map<string, number>();
+    for (const pt of heatmapData) {
+      const key = `${(pt.latitude / 0.01).toFixed(0)}_${(pt.longitude / 0.01).toFixed(0)}`;
+      cellCount.set(key, (cellCount.get(key) ?? 0) + 1);
+    }
+    const maxCount = Math.max(...cellCount.values(), 1);
+
+    for (const pt of heatmapData) {
+      const key = `${(pt.latitude / 0.01).toFixed(0)}_${(pt.longitude / 0.01).toFixed(0)}`;
+      const density = (cellCount.get(key) ?? 1) / maxCount; // 0–1
+      // Interpolasi hijau→kuning→merah
+      const r = Math.round(density * 220);
+      const g = Math.round((1 - density) * 180);
+      const color = `rgb(${r},${g},40)`;
+      L.circleMarker([pt.latitude, pt.longitude], {
+        radius: 14,
+        color: 'transparent',
+        fillColor: color,
+        fillOpacity: 0.18 + density * 0.22, // 0.18–0.40
+        interactive: false,
+      }).addTo(group);
+    }
+
+    group.addTo(map);
+    heatLayerRef.current = group;
+  }, [heatmapData, showHeatmap]);
 
   // Update Markers
   useEffect(() => {

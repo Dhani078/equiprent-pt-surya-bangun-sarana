@@ -1031,3 +1031,15 @@ File diubah:
 - src/pages/staff/StaffDashboard.tsx - Paginator+usePagination, PAGE_SIZE_PAYMENTS=20, reset saat search berubah
 
 Verifikasi: typecheck PASS - build PASS (642.59 kB) - npm test 21/21 suite PASS
+
+---
+
+## Cycle 40 - T-0041 - 2026-09-16T03:55:07Z
+
+Task: Heatmap Sebaran Lokasi Armada di Leaflet
+
+File diubah:
+- src/components/LeafletMap.tsx - prop heatmapData+showHeatmap, useEffect heatmap: L.layerGroup+circleMarker bertumpuk, grid density 0.01deg, interpolasi warna hijau-kuning-merah, opacity 0.18-0.40, no library baru
+- src/pages/admin/GpsTrackingPage.tsx - state showHeatmap, tombol toggle Layers icon + aria-pressed, pass heatmapData=trackingData ke LeafletMap
+
+Verifikasi: typecheck PASS - build PASS (644.33 kB) - npm test 21/21 suite PASS
