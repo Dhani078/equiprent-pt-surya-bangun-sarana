@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Equipment } from '../../types';
 import { Plus, Search, Filter, Edit, Trash2, Gauge, AlertCircle, MapPin, Eye } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { getEquipmentImage } from '../../lib/stitchAssets';
 import { formatRupiah } from '../../lib/businessRules';
 import { validateEquipmentInput, EQUIPMENT_TYPES } from '../../lib/validators';
@@ -33,6 +34,8 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Equipment | null>(null);
+  /** Unit yang sedang menunggu konfirmasi hapus. */
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<Equipment | null>(null);
   /** Galat per-field dari validator terpusat (kunci = nama field form). */
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ValidatedEquipmentInput, string>>>({});
   /** Galat tingkat form: misal kode unit sudah dipakai (dari server). */
@@ -347,17 +350,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                         <span>Edit</span>
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm(`Hapus unit alat berat ${eq.equipment_code} (${eq.name})?`)) {
-                            onDeleteEquipment(eq.id).catch((err: unknown) => {
-                              const pesan =
-                                err instanceof Error && err.message
-                                  ? err.message
-                                  : 'Gagal menghapus unit.';
-                              onNotify?.(pesan, 'error');
-                            });
-                          }
-                        }}
+                        onClick={() => setConfirmDeleteItem(eq)}
                         disabled={isProtected(eq.status)}
                         className="btn-secondary"
                         style={{
@@ -658,6 +651,31 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
           </div>
         </form>
       </Modal>
+
+      {/* Konfirmasi Hapus Unit */}
+      <ConfirmDialog
+        open={confirmDeleteItem !== null}
+        title="Hapus Unit Alat Berat"
+        message={
+          <>
+            Hapus unit <strong>{confirmDeleteItem?.equipment_code}</strong> — {confirmDeleteItem?.name}?{' '}
+            Tindakan ini tidak dapat dibatalkan dan akan menghapus data unit dari sistem.
+          </>
+        }
+        confirmLabel="Ya, Hapus Unit"
+        tone="danger"
+        onConfirm={() => {
+          if (!confirmDeleteItem) return;
+          const item = confirmDeleteItem;
+          setConfirmDeleteItem(null);
+          onDeleteEquipment(item.id).catch((err: unknown) => {
+            const pesan =
+              err instanceof Error && err.message ? err.message : 'Gagal menghapus unit.';
+            onNotify?.(pesan, 'error');
+          });
+        }}
+        onCancel={() => setConfirmDeleteItem(null)}
+      />
     </div>
   );
 };
