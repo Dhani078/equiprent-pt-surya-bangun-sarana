@@ -6,6 +6,9 @@ import { getEquipmentImage } from '../../lib/stitchAssets';
 import { formatRupiah } from '../../lib/businessRules';
 import { validateEquipmentInput, EQUIPMENT_TYPES } from '../../lib/validators';
 import type { ValidatedEquipmentInput } from '../../lib/validators';
+import { Paginator, usePagination } from '../../components/Paginator';
+
+const PAGE_SIZE_EQUIPMENT = 20;
 
 interface EquipmentManagementProps {
   equipments: Equipment[];
@@ -147,6 +150,11 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
     return matchesSearch && matchesType && matchesStatus;
   });
 
+  const [equipPage, setEquipPage] = useState(1);
+  // Reset ke halaman 1 bila filter berubah.
+  React.useEffect(() => setEquipPage(1), [searchTerm, filterType, filterStatus]);
+  const pagedEquipments = usePagination(filteredEquipments, PAGE_SIZE_EQUIPMENT, equipPage);
+
   // Mini Bento Stats
   const totalUnit = equipments.length;
   const availableUnit = equipments.filter(e => e.status === 'AVAILABLE').length;
@@ -280,7 +288,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             </tr>
           </thead>
           <tbody>
-            {filteredEquipments.map((eq) => {
+            {pagedEquipments.map((eq) => {
               const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
               return (
                 <tr key={eq.id} className="hover:bg-surface-container-low transition-colors">
@@ -374,6 +382,12 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             })}
           </tbody>
         </table>
+        <Paginator
+          total={filteredEquipments.length}
+          page={equipPage}
+          limit={PAGE_SIZE_EQUIPMENT}
+          onPageChange={setEquipPage}
+        />
       </div>
 
       {/* Modal Add / Edit */}
