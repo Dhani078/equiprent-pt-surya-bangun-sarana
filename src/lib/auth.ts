@@ -24,18 +24,98 @@ const PBKDF2_ITERATIONS = 600_000;
 /** Panjang salt dalam byte (16 byte = 128 bit). */
 const SALT_BYTES = 16;
 
-/** Masa berlaku session token: 8 jam (dalam detik). */
-export const SESSION_TTL_SECONDS = 8 * 60 * 60;
+/**
+ * Masa berlaku session token: 4 jam (dalam detik).
+ *
+ * Token bersifat stateless (tidak ada daftar pencabutan), sehingga masa
+ * berlaku sengaja dipendekkan agar jendela penyalahgunaan token yang
+ * tercuri ikut mengecil.
+ */
+export const SESSION_TTL_SECONDS = 4 * 60 * 60;
 
 /** Nama header yang membawa session token. */
 export const SESSION_HEADER = 'X-SBS-Session';
 
-/** Secret untuk menandatangani token. Diambil dari environment; fallback hanya untuk dev. */
-const TOKEN_SECRET: string =
-  (typeof globalThis !== 'undefined' &&
-    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
-      ?.SESSION_SECRET) ||
-  'SBS-DEV-INSECURE-FALLBACK-CHANGE-IN-PRODUCTION';
+/** Panjang minimum kunci penanda tangan token. */
+export const MIN_SESSION_SECRET_LENGTH = 32;
+
+// ---------------------------------------------------------------------------
+// Kunci Penanda Tangan Token
+// ---------------------------------------------------------------------------
+//
+// PERBAIKAN KEAMANAN:
+// Versi sebelumnya memakai nilai cadangan yang ditulis langsung di dalam
+// source code (`SBS-DEV-INSECURE-FALLBACK-...`). Karena `process.env` tidak
+// tersedia di Cloudflare Workers, nilai cadangan itulah yang SELALU dipakai
+// di produksi — siapa pun yang membaca repositori ini dapat menempa session
+// token untuk role ADMIN.
+//
+// Sekarang kunci diambil dari environment (`SESSION_SECRET`, diteruskan oleh
+// lapisan API melalui `configureSessionSecret()`). Bila belum dikonfigurasi,
+// dibuat kunci ACAK saat proses berjalan: tidak ada rahasia yang ikut
+// ter-commit, dengan konsekuensi seluruh sesi gugur setiap kali isolate baru
+// dimuat (pengguna cukup login ulang).
+
+let configuredSecret: string | null = null;
+let ephemeralSecret: string | null = null;
+let cachedKey: CryptoKey | null = null;
+let cachedKeySecret: string | null = null;
+
+/** Membaca SESSION_SECRET dari environment bila runtime menyediakannya. */
+function readEnvSecret(): string | null {
+  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+  const value = proc?.env?.SESSION_SECRET;
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length >= MIN_SESSION_SECRET_LENGTH ? trimmed : null;
+}
+
+/**
+ * Menetapkan kunci penanda tangan token dari environment binding Workers.
+ * Dipanggil lapisan API pada setiap request (nilai dicache, jadi murah).
+ *
+ * @returns `true` bila kunci diterima, `false` bila kosong/terlalu pendek.
+ */
+export function configureSessionSecret(secret: string | null | undefined): boolean {
+  if (typeof secret !== 'string') return false;
+  const trimmed = secret.trim();
+  if (trimmed.length < MIN_SESSION_SECRET_LENGTH) return false;
+
+  if (configuredSecret !== trimmed) {
+    configuredSecret = trimmed;
+    cachedKey = null;
+    cachedKeySecret = null;
+  }
+  return true;
+}
+
+/** Kunci yang sedang dipakai: dari environment, atau kunci acak sementara. */
+function getTokenSecret(): string {
+  if (configuredSecret) return configuredSecret;
+
+  const fromEnv = readEnvSecret();
+  if (fromEnv) {
+    configuredSecret = fromEnv;
+    return configuredSecret;
+  }
+
+  if (!ephemeralSecret) {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    ephemeralSecret = Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  return ephemeralSecret;
+}
+
+/**
+ * `true` bila server masih memakai kunci acak sementara (SESSION_SECRET belum
+ * dikonfigurasi). Dilaporkan oleh endpoint /api/health agar operator sadar
+ * sesi akan gugur saat isolate berganti.
+ */
+export function isSessionSecretEphemeral(): boolean {
+  return configuredSecret === null;
+}
 
 // ---------------------------------------------------------------------------
 // Demo Password Hash (hanya untuk akun seed saat database belum terhubung)
@@ -65,6 +145,13 @@ export const DEMO_PASSWORD_HASHES: Readonly<Record<string, string>> = Object.fre
 /** Daftar akun yang menggunakan password demo. */
 export function isDemoAccount(username: string): boolean {
   return username.toLowerCase() in DEMO_PASSWORD_HASHES;
+}
+
+/** `true` bila string benar-benar berbentuk hash PBKDF2 tersimpan. */
+export function isStoredPasswordHash(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const parts = value.split('$');
+  return parts.length === 4 && parts[0] === 'pbkdf2';
 }
 
 // ---------------------------------------------------------------------------
@@ -101,14 +188,21 @@ function base64ToBytes(b64: string): Uint8Array {
 }
 
 async function importHmacKey(): Promise<CryptoKey> {
+  const secret = getTokenSecret();
+  if (cachedKey && cachedKeySecret === secret) return cachedKey;
+
   const encoder = new TextEncoder();
-  return crypto.subtle.importKey(
+  const key = await crypto.subtle.importKey(
     'raw',
-    encoder.encode(TOKEN_SECRET),
+    encoder.encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign', 'verify']
   );
+
+  cachedKey = key;
+  cachedKeySecret = secret;
+  return key;
 }
 
 // ---------------------------------------------------------------------------
@@ -117,7 +211,7 @@ async function importHmacKey(): Promise<CryptoKey> {
 
 /**
  * Menghasilkan hash PBKDF2-SHA256 dengan salt acak.
- * Format tersimpan: `pbkdf2$<iterations>$<hexHash>`
+ * Format tersimpan: `pbkdf2$<iterations>$<saltB64>$<hexHash>`
  * Salt di-embed ke dalam proses derive bersama username agar tidak perlu
  * kolom terpisah (kompatibel dengan skema `users` yang sudah ada).
  */
@@ -154,18 +248,29 @@ export async function hashPassword(password: string, username: string): Promise<
 /**
  * Memverifikasi password terhadap hash tersimpan.
  * Menggunakan perbandingan constant-time untuk mencegah timing attack.
+ *
+ * PERBAIKAN KEAMANAN: hash milik pengguna diperiksa LEBIH DULU. Jalur akun
+ * demo hanya dipakai bila akun memang belum memiliki hash sendiri dan mode
+ * demo diizinkan (`options.allowDemoAccounts`, bawaan: diizinkan). Dengan
+ * begitu, pengguna bernama `admin` yang sudah menyetel password sendiri tidak
+ * bisa lagi ditembus memakai password demo.
  */
 export async function verifyPassword(
   password: string,
   storedHash: string,
-  username: string
+  username: string,
+  options: { allowDemoAccounts?: boolean } = {}
 ): Promise<boolean> {
-  // Akun demo: bandingkan dengan hash demo yang sudah dihitung sebelumnya.
-  if (isDemoAccount(username)) {
+  const encoder = new TextEncoder();
+
+  // ---- Akun tanpa hash tersimpan: pertimbangkan jalur akun demo ----
+  if (!isStoredPasswordHash(storedHash)) {
+    const allowDemo = options.allowDemoAccounts !== false;
+    if (!allowDemo || !isDemoAccount(username)) return false;
+
     const demoHash = DEMO_PASSWORD_HASHES[username.toLowerCase()];
     if (!demoHash) return false;
 
-    const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
       'raw',
       encoder.encode(password),
@@ -185,17 +290,15 @@ export async function verifyPassword(
     return timingSafeEqual(candidate, expected);
   }
 
-  // Akun normal: parse format pbkdf2$iterations$salt$hash
+  // ---- Akun normal: parse format pbkdf2$iterations$salt$hash ----
   const parts = storedHash.split('$');
-  if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
-
   const iterations = Number(parts[1]);
   if (!Number.isFinite(iterations) || iterations <= 0) return false;
 
   const saltB64 = parts[2];
   const expectedHash = parts[3];
+  if (!saltB64 || !expectedHash) return false;
 
-  const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     encoder.encode(password),
@@ -353,8 +456,11 @@ function isSessionPayload(value: unknown): value is SessionPayload {
 
 /** Matriks hak akses: endpoint prefix → role yang diizinkan. */
 const RBAC_MATRIX: ReadonlyArray<{ prefix: string; roles: readonly RoleName[] }> = [
+  // Ganti password diri sendiri boleh dilakukan semua role.
+  { prefix: '/api/auth/change-password', roles: ['ADMIN', 'STAFF', 'CUSTOMER'] },
   { prefix: '/api/users', roles: ['ADMIN'] },
   { prefix: '/api/equipments', roles: ['ADMIN'] },
+  { prefix: '/api/audit-log', roles: ['ADMIN'] },
   { prefix: '/api/maintenance', roles: ['ADMIN', 'STAFF'] },
   { prefix: '/api/reports', roles: ['ADMIN', 'STAFF'] },
   { prefix: '/api/contracts', roles: ['ADMIN', 'STAFF', 'CUSTOMER'] },
@@ -365,15 +471,28 @@ const RBAC_MATRIX: ReadonlyArray<{ prefix: string; roles: readonly RoleName[] }>
 ];
 
 /**
+ * Endpoint yang memang terbuka tanpa sesi (dicek sebelum RBAC).
+ * Disimpan di sini agar satu daftar dipakai bersama lapisan API.
+ */
+export const PUBLIC_API_PATHS: readonly string[] = ['/api/health', '/api/auth/login'];
+
+/**
  * Menentukan apakah suatu role boleh mengakses path tertentu.
- * Endpoint yang tidak ada dalam matriks diizinkan secara default
- * (misalnya /api/health dan /api/auth/login).
+ *
+ * PERBAIKAN KEAMANAN: sebelumnya endpoint yang tidak terdaftar pada matriks
+ * diizinkan secara default, sehingga endpoint baru (mis. `/api/audit-log`)
+ * otomatis terbuka untuk semua role. Sekarang berlaku DEFAULT-DENY: hanya
+ * path publik dan path yang terdaftar eksplisit yang diizinkan.
  */
 export function isPathAllowedForRole(path: string, role: RoleName): boolean {
+  if (PUBLIC_API_PATHS.includes(path)) return true;
+
   for (const rule of RBAC_MATRIX) {
-    if (path.startsWith(rule.prefix)) {
+    if (path === rule.prefix || path.startsWith(`${rule.prefix}/`) || path.startsWith(`${rule.prefix}?`)) {
       return rule.roles.includes(role);
     }
   }
-  return true;
+
+  // Tidak dikenal → tolak. Endpoint baru harus didaftarkan secara sadar.
+  return false;
 }

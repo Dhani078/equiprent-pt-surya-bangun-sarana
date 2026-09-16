@@ -1,6 +1,6 @@
 import { connect } from '@tidbcloud/serverless';
 import { User, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from '../types';
-import { verifyPassword } from './auth';
+import { hashPassword, isDemoAccount, isStoredPasswordHash, verifyPassword } from './auth';
 import { getTransitionEffect } from './rentalWorkflow';
 import { canChangePaymentStatus, summarizeRentalPayment } from './paymentWorkflow';
 import { CONTRACT_TERMS_TEXT, generateContractCode } from './contracts';
@@ -60,12 +60,23 @@ if (databaseUrl && !databaseUrl.includes('your_username')) {
 export const isDatabaseConnected = (): boolean => tidbClient !== null;
 
 /**
+ * Mode sumber data yang sedang aktif.
+ *
+ * Dilaporkan apa adanya oleh `/api/health` agar tidak ada kesalahpahaman:
+ * pada mode `IN_MEMORY_DEMO`, seluruh perubahan hanya hidup di memori
+ * isolate yang sedang menangani request dan akan hilang saat isolate diganti.
+ */
+export type DataMode = 'TIDB' | 'IN_MEMORY_DEMO';
+
+export const getDataMode = (): DataMode => (tidbClient !== null ? 'TIDB' : 'IN_MEMORY_DEMO');
+
+/**
  * Hasil verifikasi kredensial.
  * Discriminated union — memaksa pemanggil mengecek `ok` sebelum memakai `user`.
  */
 export type AuthCheck =
   | { ok: true; user: User }
-  | { ok: false; reason: 'NOT_FOUND' | 'BAD_PASSWORD' | 'SUSPENDED' };
+  | { ok: false; reason: 'NOT_FOUND' | 'BAD_PASSWORD' | 'SUSPENDED' | 'NO_PASSWORD_SET' };
 
 // In-Memory Reactive Cache for Edge & Offline Simulation
 export const stateStore = {
@@ -115,8 +126,19 @@ export const db = {
   /**
    * Memverifikasi kredensial login: username + password + status akun.
    * Password di-hash dengan PBKDF2 (lihat src/lib/auth.ts).
+   *
+   * PERBAIKAN KEAMANAN: versi sebelumnya memanggil
+   * `verifyPassword(password, '', user.username)` sehingga `password_hash`
+   * milik pengguna SELALU diabaikan — hanya akun demo yang bisa login, dan
+   * pengguna sungguhan tidak pernah bisa masuk walau password benar.
+   * Sekarang hash tersimpan yang dipakai; jalur akun demo hanya berlaku bila
+   * akun belum punya hash DAN mode demo diizinkan.
    */
-  verifyCredentials: async (username: string, password: string): Promise<AuthCheck> => {
+  verifyCredentials: async (
+    username: string,
+    password: string,
+    options: { allowDemoAccounts?: boolean } = {}
+  ): Promise<AuthCheck> => {
     const user = stateStore.users.find(
       u => u.username.toLowerCase() === username.trim().toLowerCase()
     );
@@ -125,10 +147,35 @@ export const db = {
     // Akun yang disuspend tidak boleh login meski password benar.
     if (user.status === 'SUSPENDED') return { ok: false, reason: 'SUSPENDED' };
 
-    const passwordOk = await verifyPassword(password, '', user.username);
+    const allowDemoAccounts = options.allowDemoAccounts !== false;
+    const storedHash = isStoredPasswordHash(user.password_hash) ? user.password_hash : '';
+
+    // Akun tanpa hash & bukan akun demo yang diizinkan → belum bisa login.
+    if (!storedHash && !(allowDemoAccounts && isDemoAccount(user.username))) {
+      return { ok: false, reason: 'NO_PASSWORD_SET' };
+    }
+
+    const passwordOk = await verifyPassword(password, storedHash, user.username, {
+      allowDemoAccounts,
+    });
     if (!passwordOk) return { ok: false, reason: 'BAD_PASSWORD' };
 
     return { ok: true, user };
+  },
+
+  /**
+   * Menyetel (atau mengganti) password pengguna.
+   *
+   * Dipakai admin saat menerbitkan akun baru — `addUser()` sengaja tidak
+   * menyimpan password, sehingga akun baru tidak bisa login sampai
+   * passwordnya disetel lewat jalur ini.
+   */
+  setUserPassword: async (id: number, password: string) => {
+    const user = stateStore.users.find(u => u.id === id);
+    if (!user) return undefined;
+
+    user.password_hash = await hashPassword(password, user.username);
+    return user;
   },
 
   addUser: async (user: Omit<User, 'id'>) => {
