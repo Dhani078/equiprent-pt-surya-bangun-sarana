@@ -182,6 +182,18 @@ export interface DashboardTopEquipmentRow {
   rental_count: number;
 }
 
+/** Satu titik data tren pendapatan bulanan. */
+export interface DashboardRevenueTrendItem {
+  /** Label bulan singkat, misal "Jan 26". */
+  label: string;
+  /** Tahun bulan ini (YYYY). */
+  year: number;
+  /** Bulan (1–12). */
+  month: number;
+  /** Total pembayaran PAID pada bulan ini (Rupiah). */
+  amount: number;
+}
+
 /**
  * Agregat dashboard eksekutif.
  *
@@ -223,6 +235,8 @@ export interface AdminDashboardStats {
   serviceQueue: DashboardServiceRow[];
   /** Top 5 unit paling sering disewa. */
   topEquipments: DashboardTopEquipmentRow[];
+  /** Tren pendapatan 12 bulan terakhir (urut lama→baru). */
+  revenueTrend: DashboardRevenueTrendItem[];
   /** Waktu agregat dihitung (ISO 8601). */
   generatedAt: string;
 }

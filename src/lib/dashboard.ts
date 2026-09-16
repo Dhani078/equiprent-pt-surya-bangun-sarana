@@ -18,6 +18,7 @@
 import type {
   AdminDashboardStats,
   DashboardRentalRow,
+  DashboardRevenueTrendItem,
   DashboardServiceRow,
   DashboardTopEquipmentRow,
   Equipment,
@@ -196,6 +197,40 @@ export function buildDashboardStats(
     });
 
   // ---------------------------------------------------------------------
+  // Tren pendapatan 12 bulan terakhir (PAID, urut lama→baru)
+  // ---------------------------------------------------------------------
+  const BULAN_SINGKAT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+                         'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+  // Kumpulkan jumlah per bulan dari payments PAID
+  const revenuePerBulan = new Map<string, number>();
+  for (const p of payments) {
+    if (p.status !== 'PAID') continue;
+    const nilai = Number(p.amount);
+    if (!Number.isFinite(nilai)) continue;
+    // payment_date bisa berupa string YYYY-MM-DD atau datetime
+    const tgl = new Date(p.payment_date);
+    if (Number.isNaN(tgl.getTime())) continue;
+    const key = `${tgl.getFullYear()}-${String(tgl.getMonth() + 1).padStart(2, '0')}`;
+    revenuePerBulan.set(key, (revenuePerBulan.get(key) ?? 0) + nilai);
+  }
+
+  // Bangun 12 slot bulan terakhir (now – 11 bulan s.d. now), isi 0 bila kosong
+  const revenueTrend: DashboardRevenueTrendItem[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const key = `${y}-${String(m).padStart(2, '0')}`;
+    revenueTrend.push({
+      label: `${BULAN_SINGKAT[m - 1]} ${String(y).slice(2)}`,
+      year: y,
+      month: m,
+      amount: revenuePerBulan.get(key) ?? 0,
+    });
+  }
+
+  // ---------------------------------------------------------------------
   // Tabel turunan
   // ---------------------------------------------------------------------
   const namaPelanggan = new Map<number, User>();
@@ -266,6 +301,7 @@ export function buildDashboardStats(
     recentRentals,
     serviceQueue,
     topEquipments,
+    revenueTrend,
     generatedAt: now.toISOString(),
   };
 }
@@ -292,6 +328,7 @@ export function emptyDashboardStats(now: Date = new Date()): AdminDashboardStats
     recentRentals: [],
     serviceQueue: [],
     topEquipments: [],
+    revenueTrend: [],
     generatedAt: now.toISOString(),
   };
 }
