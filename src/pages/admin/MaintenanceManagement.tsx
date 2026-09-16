@@ -92,6 +92,40 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
     };
   }, [serviceHistory]);
 
+  /** Ambang pemakaian suku cadang (dapat diubah Admin); persist localStorage. */
+  const [sparepartThreshold, setSparepartThreshold] = useState<number>(() => {
+    const v = localStorage.getItem('sbs-sparepart-threshold');
+    const n = v !== null ? Number(v) : 3;
+    return Number.isFinite(n) && n > 0 ? n : 3;
+  });
+
+  /** Frekuensi pemakaian tiap suku cadang dari seluruh log servis. */
+  const sparepartFreq = useMemo(() => {
+    const freq = new Map<string, number>();
+    for (const m of maintenance) {
+      if (!m.spareparts_replaced) continue;
+      for (const raw of m.spareparts_replaced.split(',')) {
+        const nama = raw.trim();
+        if (nama) freq.set(nama, (freq.get(nama) ?? 0) + 1);
+      }
+    }
+    return freq;
+  }, [maintenance]);
+
+  /** Suku cadang yang frekuensinya >= threshold, diurutkan terbanyak dulu. */
+  const sparepartAlerts = useMemo(() =>
+    [...sparepartFreq.entries()]
+      .filter(([, count]) => count >= sparepartThreshold)
+      .sort((a, b) => b[1] - a[1]),
+    [sparepartFreq, sparepartThreshold]
+  );
+
+  const handleThresholdChange = (val: number) => {
+    const safe = Math.max(1, Math.round(val));
+    setSparepartThreshold(safe);
+    localStorage.setItem('sbs-sparepart-threshold', String(safe));
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const eq = equipments.find(e => e.id === Number(formData.equipment_id));
@@ -255,6 +289,79 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
           )}
         </div>
       )}
+
+      {/* Panel Notifikasi Suku Cadang Sering Dipakai */}
+      <div className="card-premium" style={{ padding: '16px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          <Wrench size={18} color="#0F766E" />
+          <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+            Notifikasi Suku Cadang
+          </h3>
+          <span style={{ fontSize: '12px', color: 'var(--color-secondary)', marginLeft: 'auto' }}>
+            Ambang pemakaian:
+          </span>
+          <input
+            type="number"
+            min={1}
+            max={99}
+            value={sparepartThreshold}
+            onChange={(e) => handleThresholdChange(Number(e.target.value))}
+            className="input-premium"
+            aria-label="Ambang frekuensi suku cadang"
+            style={{ width: '64px', height: '34px', padding: '4px 8px', fontSize: '13px', textAlign: 'center' }}
+          />
+          <span style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>× pemakaian</span>
+        </div>
+
+        {sparepartAlerts.length === 0 ? (
+          <p style={{ fontSize: '12.5px', color: 'var(--color-secondary)', margin: 0 }}>
+            Tidak ada suku cadang yang mencapai ambang {sparepartThreshold}× pemakaian.
+            {sparepartFreq.size > 0 && ` (${sparepartFreq.size} jenis suku cadang tercatat)`}
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {sparepartAlerts.map(([nama, count]) => {
+              const persen = Math.min(100, Math.round((count / sparepartThreshold) * 50));
+              return (
+                <div
+                  key={nama}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    backgroundColor: '#FFFBEB',
+                    borderRadius: '8px',
+                    border: '1px solid #FDE68A',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <AlertTriangle size={15} color="#D97706" style={{ flexShrink: 0 }} />
+                  <div style={{ flex: '1 1 180px', fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>
+                    {nama}
+                  </div>
+                  <div style={{ flex: '1 1 120px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, height: '6px', borderRadius: '3px', backgroundColor: '#FEF3C7', overflow: 'hidden' }}>
+                      <div style={{ width: `${persen}%`, height: '100%', backgroundColor: '#F59E0B', borderRadius: '3px', transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    backgroundColor: '#FEF3C7',
+                    color: '#92400E',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {count}× dipakai
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Panel Riwayat Servis per Unit */}
       <div className="card-premium" style={{ padding: '16px 18px' }}>

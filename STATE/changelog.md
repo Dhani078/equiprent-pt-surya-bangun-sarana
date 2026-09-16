@@ -1,3 +1,20 @@
+## [CYCLE 32] 2026-09-16 - T-0033 — P2 — DONE
+**Judul:** Notifikasi Suku Cadang Sering Dipakai
+**Perubahan:**
+- `src/pages/admin/MaintenanceManagement.tsx`:
+  - State `sparepartThreshold` (default 3, persist `localStorage` key `sbs-sparepart-threshold`)
+  - `sparepartFreq` — parse `spareparts_replaced` CSV dari seluruh log servis → `Map<nama, count>`
+  - `sparepartAlerts` — filter count >= threshold, sort terbanyak dulu
+  - Panel "Notifikasi Suku Cadang" dengan input threshold yang dapat diubah Admin, progress bar, badge jumlah pemakaian, empty state
+  - Bug syntax dari patch sebelumnya (`handleFormSubmit` terpisah dari body) diperbaiki sebelum QG
+**Fitur:**
+- Data 100% dari `spareparts_replaced` di tabel maintenance (bukan mock)
+- Threshold disimpan localStorage — bertahan lintas session, dapat diubah langsung di UI
+- Empty state informatif (tampilkan jumlah jenis suku cadang yang tercatat)
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS
+
+---
+
 ## [CYCLE 31] 2026-09-16 - T-0032 — P2 — DONE
 **Judul:** Guard Anti-`any` di Test Suite
 **Perubahan:**
