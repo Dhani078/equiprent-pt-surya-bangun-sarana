@@ -5,7 +5,7 @@ import type { MaintenanceTypeValue } from '../../lib/validators';
 import { Plus, Search, Filter, Wrench, CheckCircle, Clock, Calendar, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
-import { getUnitsDueForService, formatRupiah, SERVICE_INTERVAL_HM } from '../../lib/businessRules';
+import { getUnitsDueForService, formatRupiah, SERVICE_INTERVAL_HM, predictNextServiceDate } from '../../lib/businessRules';
 
 interface MaintenanceManagementProps {
   maintenance: Maintenance[];
@@ -236,6 +236,21 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                 <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
                   Servis berikutnya: <strong>{status.nextServiceTargetHM.toFixed(2)} HM</strong>
                 </div>
+
+                {/* Prediksi tanggal berbasis regresi linear tren HM */}
+                {(() => {
+                  const selesai = maintenance.filter(
+                    (m) => m.equipment_id === equipment.id && m.status === 'COMPLETED'
+                  );
+                  const tgl = predictNextServiceDate(status.currentHM, status.nextServiceTargetHM, selesai);
+                  return tgl ? (
+                    <div style={{ fontSize: '11.5px', color: '#0F766E', fontWeight: 600 }}>
+                      ≈ {tgl.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>prediksi: —</div>
+                  );
+                })()}
 
                 <span
                   style={{
