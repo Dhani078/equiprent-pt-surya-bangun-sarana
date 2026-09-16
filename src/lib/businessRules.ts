@@ -117,9 +117,62 @@ export function getUnitsDueForService(
     .sort((a, b) => a.status.hmUntilNextService - b.status.hmUntilNextService);
 }
 
-// ---------------------------------------------------------------------------
-// Denda Keterlambatan & Perhitungan Sewa
-// ---------------------------------------------------------------------------
+/**
+ * Memprediksi tanggal servis berikutnya berdasarkan tren kenaikan HM.
+ *
+ * Algoritma: regresi linear sederhana (least-squares) antara timestamp (x)
+ * dan HM (y) dari riwayat servis SELESAI unit. Bila data < 2 titik, tidak
+ * bisa menentukan gradien → kembalikan null.
+ *
+ * @param currentHM      HM unit saat ini.
+ * @param targetHM       HM target servis berikutnya.
+ * @param completedMaint Riwayat servis SELESAI untuk unit ini (sudah difilter per unit).
+ * @returns Tanggal prediksi (Date) atau null bila data tidak cukup.
+ */
+export function predictNextServiceDate(
+  currentHM: number,
+  targetHM: number,
+  completedMaint: readonly Maintenance[]
+): Date | null {
+  // Butuh min 2 titik untuk regresi.
+  if (completedMaint.length < 2) return null;
+
+  // Kumpulkan pasangan (timestamp hari, HM) dari catatan servis.
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const titik: { t: number; hm: number }[] = [];
+
+  for (const m of completedMaint) {
+    const tanggal = m.completion_date ?? m.scheduled_date;
+    const ms = new Date(tanggal).getTime();
+    if (!Number.isFinite(ms)) continue;
+    const hm = Number(m.hour_meter_at_maintenance);
+    if (!Number.isFinite(hm)) continue;
+    titik.push({ t: ms / MS_PER_DAY, hm });
+  }
+
+  if (titik.length < 2) return null;
+
+  // Least-squares: cari gradient (hmPerDay) dan intercept.
+  const n = titik.length;
+  const sumT = titik.reduce((s, p) => s + p.t, 0);
+  const sumHM = titik.reduce((s, p) => s + p.hm, 0);
+  const sumTT = titik.reduce((s, p) => s + p.t * p.t, 0);
+  const sumTHM = titik.reduce((s, p) => s + p.t * p.hm, 0);
+  const denom = n * sumTT - sumT * sumT;
+
+  if (Math.abs(denom) < 1e-9) return null; // semua titik pada hari yang sama
+
+  const hmPerDay = (n * sumTHM - sumT * sumHM) / denom;
+  if (hmPerDay <= 0) return null; // HM tidak naik — tidak bisa prediksi
+
+  // Perkiraan hari dari sekarang sampai target tercapai.
+  const sisaHM = targetHM - currentHM;
+  if (sisaHM <= 0) return new Date(); // sudah lewat target
+
+  const hariLagi = sisaHM / hmPerDay;
+  return new Date(Date.now() + hariLagi * MS_PER_DAY);
+}
+
 
 export interface RentalCost {
   /** Jumlah hari sewa. */

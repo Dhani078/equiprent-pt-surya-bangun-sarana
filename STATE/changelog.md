@@ -1,3 +1,12 @@
+## [CYCLE 35] 2026-09-16 - T-0036 — P3 — DONE
+**Judul:** Prediksi Tanggal Servis Berikutnya (Regresi Linear Tren HM)
+**Perubahan:**
+- `src/lib/businessRules.ts`: fungsi `predictNextServiceDate(currentHM, targetHM, completedMaint)` — regresi linear least-squares antara timestamp servis (x) dan HM (y), null-safe bila < 2 titik data / gradien ≤ 0 / denominator ~0
+- `src/pages/admin/MaintenanceManagement.tsx`: import + tampilkan prediksi tanggal (hijau) di tiap baris panel peringatan servis; fallback "prediksi: —" bila data kurang
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS
+
+---
+
 ## [CYCLE 34] 2026-09-16 - T-0035 — P2 — DONE
 **Judul:** Pagination Client-Side (Equipment & Rental)
 **Perubahan:**
