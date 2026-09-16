@@ -1,161 +1,138 @@
-# EquipRent MS — Heavy Equipment Monitoring & Rental System
-### PT. SURYA BANGUN SARANA BANJARMASIN
+# EquipRent MS — Sistem Monitoring & Rental Alat Berat
+**PT. SURYA BANGUN SARANA BANJARMASIN**
 
-[![Deploy to Cloudflare Workers](https://img.shields.io/badge/Deploy-Cloudflare%20Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev)
-[![Database](https://img.shields.io/badge/Database-TiDB%20Cloud%20Serverless-007ACC?style=for-the-badge&logo=mysql&logoColor=white)](https://tidbcloud.com)
-[![Frontend](https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
-[![Bundler](https://img.shields.io/badge/Vite-5.4-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Styling](https://img.shields.io/badge/Styling-TailwindCSS%20%26%20Custom%20Tokens-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+> Proyek Skripsi S1 Teknik Informatika — Production-Ready Full-Stack Web Application  
+> Stack: React 18 + TypeScript + Hono.js + Cloudflare Workers + TiDB Cloud Serverless
 
----
-
-## 🌐 Live Production URL
-Aplikasi telah ter-deploy secara live di Cloudflare Edge Network:  
-👉 **[https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev](https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev)**
+**Live Demo:** https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev  
+**Repo:** https://github.com/Dhani078/equiprent-pt-surya-bangun-sarana
 
 ---
 
-## 📖 Ringkasan Proyek
-**EquipRent MS** adalah Sistem Informasi Monitoring dan Penyewaan Alat Berat terintegrasi yang dirancang untuk **PT. SURYA BANGUN SARANA BANJARMASIN**. Sistem ini memfasilitasi pengelolaan armada alat berat (Excavator, Bulldozer, Vibratory Roller, Wheel Loader, Crane), pelacakan telemetri GPS langsung di wilayah proyek Kalimantan Selatan, akumulasi jam operasional mesin (*Hour Meter / HM*), alur kontrak digital dengan tanda tangan elektronik (*E-Signature*), serta verifikasi pembayaran sewa multi-role.
+## Kredensial Demo (Sidang Skripsi)
 
-Sistem dibangun dengan arsitektur modern **Edge Computing** (Cloudflare Workers), antarmuka reaktif **React 18 + TypeScript**, dan basis data terdistribusi berskala global **TiDB Cloud Serverless** (MySQL 8.0 Compatible).
-
----
-
-## 👥 Aktor Pengguna & Kredensial Akses Sistem
-
-Sistem menyediakan 3 akun pengguna terkonfigurasi untuk masing-masing hak akses:
-
-| Peran (Role) | Username | Password | Deskripsi Hak Akses |
-| :--- | :--- | :--- | :--- |
-| **ADMIN** | `admin` | `admin` | Superuser pengelola data master unit, tarif sewa, pengguna, kontrol armada, dan eksekutif dashboard finansial. |
-| **STAFF** | `staff` | `staff` | Staf operasional yang memverifikasi bukti transfer pembayaran sewa, menerbitkan kontrak sewa, menyetujui booking, dan menjadwalkan servis. |
-| **CUSTOMER** | `user` | `user` | Pelanggan/korporasi yang mengajukan permohonan sewa unit, menandatangani kontrak legal (*E-Sign*), dan mengunggah bukti pembayaran. |
+| Role | Username | Password |
+|---|---|---|
+| Administrator | `admin` | `admin` |
+| Staff Operasional | `staff` | `staff` |
+| Customer / Penyewa | `user` | `user` |
 
 ---
 
-## 🚀 Fitur Unggulan Sistem
+## Fitur Utama
 
-### 1. Multi-Role Authentication & 2-Column Stitch Login
-- Layar Login 2-kolom otentik sesuai desain Stitch Prototype (Latar Navy Industrial `#001E40` dan kartu otentikasi).
-- Selektor tab peran dinamis (**ADMIN**, **STAFF**, **CUSTOMER**) dengan penggantian label dan placeholder kontekstual.
-- Modal **Register Fleet Access** mandiri dengan feedback alert toast instan.
-- Fitur Show/Hide Password dan Remember Device.
-
-### 2. Manajemen Inventaris Alat Berat (Fleet Inventory)
-- Pelacakan 50 unit alat berat riil operasional:
-  - Hydraulic Excavator Komatsu PC200-8
-  - Crawler Bulldozer Komatsu D85ESS / Cat D6
-  - Vibratory Roller Sakai SV520
-  - Wheel Loader Komatsu WA380
-  - Rough Terrain Crane Tadano GR-700
-- Mini Bento-Stats: Total Unit, Unit Tersedia, Unit Disewa, dan Unit Maintenance.
-- Log akumulasi Hour Meter (HM) untuk menentukan ambang batas servis berkala.
-- Pencarian dan filter kategori unit secara reaktif.
-
-### 3. Peta Telemetri GPS Interaktif (Leaflet.js GIS)
-- Integrasi peta geospasial interaktif Leaflet.js dengan penanda koordinat GPS armada di lokasi proyek riil Kalimantan Selatan (Pelabuhan Trisakti Banjarmasin, Banjarbaru, Tabalong, dll).
-- Informasi telemetri: Latitude, Longitude, Kecepatan unit (km/jam), status mesin (*Engine ON/OFF*), dan tingkat bahan bakar (*Fuel Level %*).
-
-### 4. Siklus Transaksi Sewa Lengkap (End-to-End Rental Workflow)
-1. **Pengajuan Sewa (Customer Portal)**: Pelanggan memilih unit di katalog, mengisi tanggal mulai/selesai, dan sistem menghitung durasi serta total biaya secara otomatis.
-2. **Persetujuan Staf (Staff Terminal)**: Staf meninjau ketersediaan unit dan menyetujui order sewa.
-3. **Penerbitan Kontrak & E-Sign**: Pelanggan menandatangani kontrak sewa secara digital dengan visual goresan tanda tangan dan stempel waktu ISO.
-4. **Pembayaran & Verifikasi**: Pelanggan mengonfirmasi nomor rekening Mandiri dan mengunggah struk bukti transfer; staf memverifikasi dengan 1 klik menjadi status **Lunas (PAID)**.
-5. **Mobilisasi & BAST**: Unit berpindah ke status **ON_GOING** (Mobilisasi) dan dokumen resmi Berita Acara Serah Terima (BAST) diterbitkan.
-
-### 5. Dokumen Resmi & Laporan BAST / Surat Jalan
-- Pratinjau cetak dokumen Berita Acara Serah Terima (BAST) dan Surat Jalan Mobilisasi Alat Berat lengkap dengan Kop Surat resmi PT. Surya Bangun Sarana Banjarmasin, nomor registrasi, dan kolom legalisasi tanda tangan.
+| Modul | Fitur |
+|---|---|
+| **Multi-Role Auth** | Login, session JWT, RBAC Admin/Staff/Customer |
+| **Manajemen Alat Berat** | CRUD 50 unit (Excavator, Dozer, Roller, Loader, Crane), filter status |
+| **Transaksi Rental** | Alur PENDING → APPROVED → ON_GOING → COMPLETED, cegah double-booking |
+| **Kontrak Digital** | Generate otomatis, e-signature canvas, preview dokumen |
+| **Pembayaran** | Upload bukti transfer, verifikasi Staff, riwayat |
+| **Hour Meter & Servis** | Jadwal preventif per 250 HM, prediksi tanggal regresi linear, notifikasi suku cadang |
+| **GPS Telemetri** | Peta Leaflet.js real-time, 55 titik di Banjarmasin/Trisakti/Banjarbaru |
+| **11 Laporan** | Filter rentang tanggal, export CSV, pencarian global |
+| **Dokumen Resmi** | BAST IN, BAST OUT, Surat Jalan (print A4) |
+| **Dark Mode** | Toggle Moon/Sun, persist localStorage |
+| **Notifikasi Sidebar** | Badge counter real-time tanpa request tambahan |
+| **Pagination** | 20 baris/halaman di tabel Equipment & Rental |
 
 ---
 
-## 🛠️ Arsitektur Teknologi
+## Setup Lokal (Development)
 
-```
-+-----------------------------------------------------------------------------+
-|                                KLIEN BROWSER                                |
-|  React 18 + TypeScript + Vite + TailwindCSS + Lucide Icons + Leaflet.js     |
-+-----------------------------------------------------------------------------+
-                                       │
-                         HTTPS Requests / REST API
-                                       │
-                                       ▼
-+-----------------------------------------------------------------------------+
-|                         CLOUDFLARE WORKERS EDGE                             |
-|  • Edge Routing: Hono.js Engine                                             |
-|  • Static Assets: HTML, JS, CSS served via Worker Assets Cache              |
-|  • Driver: @tidbcloud/serverless (Edge HTTP Connector, Zero TCP Socket Issue)|
-+-----------------------------------------------------------------------------+
-                                       │
-                           Secure HTTPS SQL Tunnel
-                                       │
-                                       ▼
-+-----------------------------------------------------------------------------+
-|                         TIDB CLOUD SERVERLESS                               |
-|  • Cluster: gateway01.ap-southeast-1.prod.aws.tidbcloud.com                |
-|  • Engine: Distributed MySQL 8.0 Compatible Database                       |
-|  • 9 Relational Tables: roles, users, equipments, rentals, contracts,        |
-|    payments, maintenance, gps_tracking, reports                             |
-+-----------------------------------------------------------------------------+
-```
+### Prasyarat
+- Node.js ≥ 18
+- npm ≥ 9
 
----
+### Langkah
 
-## 💻 Panduan Menjalankan Secara Lokal (Local Development)
-
-### 1. Kloning Repositori
 ```bash
+# 1. Clone repo
 git clone https://github.com/Dhani078/equiprent-pt-surya-bangun-sarana.git
 cd equiprent-pt-surya-bangun-sarana
-```
 
-### 2. Instalasi Dependensi
-```bash
+# 2. Install dependensi
 npm install
-```
 
-### 3. Konfigurasi Lingkungan (`.env`)
-Salin berkas `.env.example` menjadi `.env`:
-```bash
-cp .env.example .env
-```
-Isi konfigurasi TiDB Cloud Serverless Anda:
-```env
-TIDB_HOST=gateway01.ap-southeast-1.prod.aws.tidbcloud.com
-TIDB_PORT=4000
-TIDB_USER=3ajUHv8otax7qCG.root
-TIDB_PASSWORD=your_password_here
-TIDB_DATABASE=test
-```
-*(Catatan: Berkas `.env` telah didaftarkan dalam `.gitignore` sehingga aman dan tidak akan pernah terunggah ke repositori publik).*
-
-### 4. Menjalankan Server Development
-```bash
+# 3. Jalankan dev server (Vite + Wrangler)
 npm run dev
+# Buka http://localhost:5173
 ```
-Buka browser pada alamat `http://localhost:5173/`.
 
-### 5. Pengujian Build Produksi
+> **Catatan:** Tanpa `DATABASE_URL` TiDB Cloud, aplikasi otomatis menggunakan
+> data seed lokal (50 unit, 50 rental, 50 kontrak, dst.) via `src/lib/mockData.ts`.
+> Semua fitur tetap bisa didemonstrasikan.
+
+---
+
+## Deployment ke Cloudflare Workers
+
 ```bash
+# Build produksi
 npm run build
-npm run preview
+
+# Set secret database (sekali saja, dilakukan manusia)
+npx wrangler secret put DATABASE_URL
+# Masukkan connection string TiDB Cloud Serverless
+
+# Deploy
+npm run deploy:cloud
+# atau: npx wrangler deploy
 ```
 
 ---
 
-## 📚 Indeks Dokumentasi Teknis
+## Struktur Direktori
 
-Repositori ini dilengkapi dokumentasi lengkap untuk keperluan akademik dan pemeliharaan sistem:
-
-1. [PANDUAN_SIDANG_SKRIPSI.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/PANDUAN_SIDANG_SKRIPSI.md) &mdash; Panduan demonstrasi sidang, naskah presentasi, dan jawaban FAQ dosen penguji.
-2. [DATABASE_TIDB.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/DATABASE_TIDB.md) &mdash; Dokumentasi skema 9 tabel, relasi ERD, indeks, dan kueri analitik TiDB Cloud.
-3. [API_DOCUMENTATION.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/API_DOCUMENTATION.md) &mdash; Spesifikasi lengkap endpoint REST API Cloudflare Workers.
-4. [DEPLOYMENT_GUIDE.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/DEPLOYMENT_GUIDE.md) &mdash; Panduan setup CI/CD auto-deploy Cloudflare Workers dan GitHub integration.
-5. [SECURITY_AND_RBAC.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/SECURITY_AND_RBAC.md) &mdash; Analisis keamanan, isolasi peran RBAC, dan kepatuhan hukum tanda tangan elektronik.
-6. [DESIGN.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/DESIGN.md) &mdash; Dokumen spesifikasi desain antarmuka Stitch dan token visual.
+```
+src/
+  App.tsx                   ← routing & state utama
+  types/index.ts            ← semua interface terpusat
+  lib/
+    db.ts                   ← koneksi TiDB + state lokal fallback
+    dashboard.ts            ← mesin agregat dashboard (murni/testable)
+    businessRules.ts        ← aturan bisnis (HM, denda, prediksi)
+    reports.ts              ← 11 jenis laporan + CSV export
+  server/index.ts           ← Hono.js edge API (Cloudflare Workers)
+  pages/
+    admin/                  ← halaman Administrator
+    staff/                  ← halaman Staff Operasional
+    customer/               ← portal Customer
+  components/               ← komponen reusable (Navbar, Sidebar, Modal, …)
+tests/                      ← 21 test suite, 900+ test cases
+views/                      ← [LEGACY] PHP Native MVC (arsip skripsi, jangan diubah)
+STATE/                      ← state agen autonomous (changelog, task queue, dll.)
+```
 
 ---
 
-## 📄 Lisensi & Hak Cipta
-Hak Cipta &copy; 2026 **PT. SURYA BANGUN SARANA BANJARMASIN** & Tim Pengembang Skripsi.  
-Seluruh hak dilindungi undang-undang.
+## Quality Gate
+
+```bash
+npm run type-check   # tsc --noEmit — harus 0 error
+npm test             # 21 suite, 900+ test cases
+npm run build        # Vite build — harus sukses
+```
+
+---
+
+## Database (TiDB Cloud)
+
+9 tabel relasional: `roles`, `users`, `equipments`, `rentals`, `contracts`,
+`payments`, `maintenance`, `gps_tracking`, `reports`.
+
+Lihat `DATABASE_TIDB.md` untuk skema lengkap dan `tidb_schema_and_data.sql`
+untuk seed data 50 unit.
+
+---
+
+## Panduan Demo Sidang (Urutan Klik Rekomendasi)
+
+1. **Login sebagai `admin`** → tunjukkan Dashboard Eksekutif (angka real dari DB/seed)
+2. **Inventaris Alat Berat** → filter status, lihat pagination
+3. **Transaksi Rental** → setujui satu rental PENDING → lihat badge Sidebar hilang
+4. **Perawatan & Servis** → tunjukkan panel 250 HM + prediksi tanggal + notifikasi suku cadang
+5. **GPS Telemetri** → buka peta Leaflet, tunjukkan marker + popup telemetri
+6. **Laporan** → pilih jenis laporan, filter tanggal, export CSV
+7. **Logout → Login sebagai `staff`** → tunjukkan Verifikasi Pembayaran (badge merah)
+8. **Logout → Login sebagai `user`** → ajukan sewa baru, tanda tangan kontrak digital
