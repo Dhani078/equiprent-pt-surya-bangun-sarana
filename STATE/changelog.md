@@ -1,3 +1,12 @@
+## [CYCLE 36] 2026-09-16 - T-0037 — P2 — DONE
+**Judul:** README & API Documentation untuk Sidang Skripsi
+**Perubahan:**
+- `README.md`: kredensial demo, tabel fitur lengkap, setup lokal, deploy Cloudflare, struktur direktori, quality gate commands, 8-langkah panduan demo sidang berurutan
+- `API_DOCUMENTATION.md`: semua endpoint (auth, dashboard, equipment, rental, kontrak, pembayaran, maintenance, GPS, laporan, users), contoh request/response, tabel kode error standar
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS
+
+---
+
 ## [CYCLE 35] 2026-09-16 - T-0036 — P3 — DONE
 **Judul:** Prediksi Tanggal Servis Berikutnya (Regresi Linear Tren HM)
 **Perubahan:**
