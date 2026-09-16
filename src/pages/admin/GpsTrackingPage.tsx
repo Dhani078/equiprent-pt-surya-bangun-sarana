@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Gauge,
   RefreshCw,
+  Layers,
 } from 'lucide-react';
 import {
   DEFAULT_FLEET_FILTER,
@@ -153,6 +154,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
   // Unit yang dipilih mengikuti baris yang tersisa setelah penyaringan.
   const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null);
   const selectedUnit = rows.find(r => r.equipmentId === selectedUnitId) ?? rows[0];
+  const [showHeatmap, setShowHeatmap] = useState(false);
 
   const ubahFilter = useCallback(
     (perubahan: Partial<FleetTelemetryFilter>) => setFilter((lama) => ({ ...lama, ...perubahan })),
@@ -506,10 +508,25 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
         {/* Interactive Leaflet Map */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div className="card-premium" style={{ padding: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setShowHeatmap((v) => !v)}
+                className={showHeatmap ? 'btn-primary' : 'btn-secondary'}
+                style={{ padding: '6px 12px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                aria-pressed={showHeatmap}
+                aria-label="Toggle overlay heatmap kepadatan armada"
+              >
+                <Layers size={13} />
+                <span>{showHeatmap ? 'Sembunyikan Heatmap' : 'Tampilkan Heatmap'}</span>
+              </button>
+            </div>
             <LeafletMap
               trackingData={rows}
               selectedUnitId={selectedUnit?.equipmentId ?? null}
               onSelectUnit={(id) => setSelectedUnitId(id)}
+              heatmapData={trackingData}
+              showHeatmap={showHeatmap}
             />
           </div>
           <div style={{
