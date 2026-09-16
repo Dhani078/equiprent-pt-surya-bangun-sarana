@@ -13,6 +13,7 @@ import {
   Inbox,
   Hourglass,
   Gauge,
+  Trophy,
 } from 'lucide-react';
 import type { AdminDashboardStats } from '../../types';
 import { getEquipmentImage } from '../../lib/stitchAssets';
@@ -497,6 +498,117 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             </button>
           </div>
         </div>
+      </div>
+      {/* Top 5 Unit Tersewa */}
+      <div className="card-premium" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Trophy size={18} color="#F59E0B" />
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+              Top 5 Unit Paling Sering Disewa
+            </h3>
+          </div>
+          <button
+            onClick={() => onNavigate('equipment')}
+            style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Lihat Semua Unit &rarr;
+          </button>
+        </div>
+
+        {stats.topEquipments.length === 0 ? (
+          <EmptyState
+            pesan="Belum ada data penyewaan"
+            keterangan="Peringkat unit akan muncul setelah ada transaksi sewa yang tercatat."
+            ariaLabel="Belum ada data top unit tersewa"
+          />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {stats.topEquipments.map((item, idx) => {
+              const imgUrl = getEquipmentImage(item.equipment_code);
+              const medalColors = ['#F59E0B', '#94A3B8', '#CD7F32'];
+              const medalColor = medalColors[idx] ?? 'var(--color-secondary)';
+              const barPct = Math.round(
+                (item.rental_count / (stats.topEquipments[0]?.rental_count || 1)) * 100
+              );
+              return (
+                <div
+                  key={item.equipment_id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius-eight)',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: idx === 0 ? 'rgba(245, 158, 11, 0.05)' : '#F8FAFC',
+                  }}
+                >
+                  {/* Rank badge */}
+                  <div
+                    aria-label={`Peringkat ${idx + 1}`}
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      background: medalColor,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {idx + 1}
+                  </div>
+
+                  {/* Foto unit */}
+                  <img
+                    src={imgUrl}
+                    alt={item.equipment_name}
+                    style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }}
+                  />
+
+                  {/* Nama + bar */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '13px', color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.equipment_name}
+                      </span>
+                      <span style={{ fontWeight: 800, fontSize: '13px', color: 'var(--color-primary)', flexShrink: 0 }}>
+                        {item.rental_count}× sewa
+                      </span>
+                    </div>
+                    <span className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
+                      {item.equipment_code}
+                    </span>
+                    {/* Progress bar — CSS only, no library */}
+                    <div
+                      style={{ marginTop: '6px', height: '4px', borderRadius: '2px', background: 'var(--color-border)' }}
+                      role="progressbar"
+                      aria-valuenow={barPct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${barPct}% dari unit tersewa terbanyak`}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${barPct}%`,
+                          borderRadius: '2px',
+                          background: medalColor,
+                          transition: 'width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
