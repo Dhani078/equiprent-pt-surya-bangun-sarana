@@ -5,6 +5,9 @@ import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { Modal } from '../../components/Modal';
 import { ContractPanel } from '../../components/ContractPanel';
 import { formatRupiah, LATE_PENALTY_PER_DAY, formatTanggal } from '../../lib/businessRules';
+import { Paginator, usePagination } from '../../components/Paginator';
+
+const PAGE_SIZE_PAYMENTS = 20;
 import {
   getPaymentStatusLabel,
   summarizePaymentQueue,
@@ -51,6 +54,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   const [viewingPaymentProof, setViewingPaymentProof] = useState<Payment | null>(null);
   /** Pencarian pada tabel pembayaran: kode bayar, klien, atau kode kontrak. */
   const [paymentSearch, setPaymentSearch] = useState('');
+  const [paymentPage, setPaymentPage] = useState(1);
   /** ID pembayaran yang sedang diproses — mencegah klik ganda. */
   const [processingId, setProcessingId] = useState<number | null>(null);
 
@@ -387,7 +391,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 type="search"
                 className="input-premium"
                 value={paymentSearch}
-                onChange={(e) => setPaymentSearch(e.target.value)}
+                onChange={(e) => { setPaymentSearch(e.target.value); setPaymentPage(1); }}
                 placeholder="Cari kode bayar, klien, atau kontrak…"
                 aria-label="Cari pembayaran"
                 style={{ paddingLeft: '32px', fontSize: '12.5px' }}
@@ -443,7 +447,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  visiblePayments.map((p) => {
+                  usePagination(visiblePayments, PAGE_SIZE_PAYMENTS, paymentPage).map((p) => {
                     const adaBukti = typeof p.payment_proof_path === 'string' && p.payment_proof_path.trim() !== '';
                     const siapVerifikasi = p.status === 'PENDING_VERIFICATION' && adaBukti;
                     const sedangDiproses = processingId === p.id;
@@ -543,6 +547,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 )}
               </tbody>
             </table>
+            <Paginator
+              total={visiblePayments.length}
+              page={paymentPage}
+              limit={PAGE_SIZE_PAYMENTS}
+              onPageChange={setPaymentPage}
+            />
           </div>
         </div>
       )}

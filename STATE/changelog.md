@@ -1019,3 +1019,15 @@ memakai calculateRentalCost() yang sama.
 
 **Verifikasi:** typecheck PASS · build PASS (642.36 kB) · npm test 21/21 suite PASS
 **Catatan:** Nol any, nol mock, tanpa kredensial pada berkas.
+
+---
+
+## Cycle 39 - T-0040 - 2026-09-16T03:48:30Z
+
+Task: Pagination UserManagement dan Payment List
+
+File diubah:
+- src/pages/admin/UserManagement.tsx - Paginator+usePagination, PAGE_SIZE_USERS=20, reset page saat search/filterRole berubah
+- src/pages/staff/StaffDashboard.tsx - Paginator+usePagination, PAGE_SIZE_PAYMENTS=20, reset saat search berubah
+
+Verifikasi: typecheck PASS - build PASS (642.59 kB) - npm test 21/21 suite PASS
