@@ -98,5 +98,20 @@ for (const f of files) {
 t('tidak ada penanda TODO/FIXME tertinggal', adaTodo.length === 0);
 if (adaTodo.length) adaTodo.forEach(f => console.log(`    → ${f}`));
 
+// ---------------------------------------------------------------------------
+console.log('\n== Tidak Ada `any` Eksplisit di Source TypeScript ==');
+// Pola yang dilarang: `: any`, `<any>`, `as any`, `Array<any>`, `Promise<any>`
+// Pengecualian: baris komentar (//) dan deklarasi di file types/index.ts yang
+// sudah sengaja memakai Record<string, unknown> (tidak ada `any` di sana).
+const pola = /(?<![/\w]):\s*any\b|<any>|as\s+any\b|Array<any>|Promise<any>/;
+const adaAny = [];
+for (const f of files) {
+  const baris = readFileSync(f, 'utf8').split(/\r?\n/);
+  const ketemu = baris.some((b) => !b.trimStart().startsWith('//') && pola.test(b));
+  if (ketemu) adaAny.push(f.replace(SRC, 'src'));
+}
+t('tidak ada `any` eksplisit di kode produksi', adaAny.length === 0);
+if (adaAny.length) adaAny.forEach((f) => console.log(`    → ${f}`));
+
 console.log(`\n=== HASIL: ${pass} PASS, ${fail} FAIL ===`);
 process.exit(fail === 0 ? 0 : 1);

@@ -1,3 +1,13 @@
+## [CYCLE 31] 2026-09-16 - T-0032 — P2 — DONE
+**Judul:** Guard Anti-`any` di Test Suite
+**Perubahan:**
+- `tests/codeQuality.test.mjs`: tambah blok pemeriksaan regex yang scan semua `.ts/.tsx` di `src/` untuk pola `: any`, `<any>`, `as any`, `Array<any>`, `Promise<any>` — baris komentar dikecualikan
+- Source saat ini bersih (0 file bermasalah) — test PASS
+- Guard ini akan menangkap regresi `any` di cycle mendatang secara otomatis
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS
+
+---
+
 ## [CYCLE 30] 2026-09-16 - T-0031 — P3 — DONE
 **Judul:** Dark Mode Toggle
 **Perubahan:**
