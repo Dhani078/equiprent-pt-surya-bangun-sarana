@@ -50,6 +50,8 @@ import {
 } from '../lib/reports';
 import type { ReportDataSource } from '../lib/reports';
 import { buildDashboardStats } from '../lib/dashboard';
+import { auditLog, getAuditLog } from '../lib/auditLog';
+import type { AuditEntry } from '../lib/auditLog';
 import { buildFleetTelemetry, normalizeFleetFilter } from '../lib/fleetTelemetry';
 import {
   canTransition,
@@ -271,6 +273,16 @@ app.post('/api/auth/login', async (c) => {
 
   const user = check.user;
   const token = await createSessionToken(user);
+
+  auditLog({
+    user_id: user.id,
+    username: user.username,
+    role: user.role_name ?? 'UNKNOWN',
+    action: 'LOGIN',
+    entity: 'user',
+    entity_id: user.id,
+    detail: `Login berhasil dari IP ${clientIp}`,
+  });
 
   return c.json({
     success: true,
@@ -837,6 +849,17 @@ app.put('/api/rentals/:id/status', async (c) => {
 
   if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Rental tidak ditemukan.' } }, 404);
 
+  // Audit trail
+  auditLog({
+    user_id: c.get('userId') ?? null,
+    username: String(c.get('userId') ?? 'system'),
+    role: c.get('role') ?? 'UNKNOWN',
+    action: 'RENTAL_STATUS_CHANGE',
+    entity: 'rental',
+    entity_id: id,
+    detail: `Status rental #${id} diubah ke ${targetStatus}`,
+  });
+
   // Denda keterlambatan dihitung oleh modul yang sama dengan UI & dokumen
   // cetak, sehingga angka di API tidak bisa menyimpang dari layar.
   const denda = getLateReturnInfo(updated, { referenceAt: new Date() });
@@ -1191,6 +1214,16 @@ app.post('/api/payments/:id/verify', async (c) => {
   try {
     const updated = await db.verifyPayment(id, staffId, staffName);
     if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
+    const sesiV = c.get('userId');
+    auditLog({
+      user_id: sesiV ?? null,
+      username: String(sesiV ?? 'system'),
+      role: c.get('role') ?? 'UNKNOWN',
+      action: 'PAYMENT_VERIFIED',
+      entity: 'payment',
+      entity_id: id,
+      detail: `Pembayaran #${id} diverifikasi oleh ${staffName}`,
+    });
     return c.json({
       success: true,
       item: updated,
@@ -1237,6 +1270,16 @@ app.post('/api/payments/:id/reject', async (c) => {
   try {
     const updated = await db.rejectPayment(id, staffId, staffName);
     if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
+    const sesiR = c.get('userId');
+    auditLog({
+      user_id: sesiR ?? null,
+      username: String(sesiR ?? 'system'),
+      role: c.get('role') ?? 'UNKNOWN',
+      action: 'PAYMENT_REJECTED',
+      entity: 'payment',
+      entity_id: id,
+      detail: `Pembayaran #${id} ditolak oleh ${staffName}`,
+    });
     return c.json({
       success: true,
       item: updated,
@@ -1296,10 +1339,31 @@ app.post('/api/maintenance', async (c) => {
   if (!jenis.ok) return c.json(badValidation({ maintenance_type: jenis.message }), 400);
 
   const newItem = await db.scheduleMaintenance(body);
+  const sesiM = c.get('userId');
+  auditLog({
+    user_id: sesiM ?? null,
+    username: String(sesiM ?? 'system'),
+    role: c.get('role') ?? 'UNKNOWN',
+    action: 'MAINTENANCE_SCHEDULED',
+    entity: 'maintenance',
+    entity_id: newItem.id,
+    detail: `Jadwal servis unit #${body.equipment_id} dibuat (${body.maintenance_type ?? 'PREVENTIVE'})`,
+  });
   return c.json({ success: true, item: newItem }, 201);
 });
 
 // GPS Telemetry API
+
+// ---------------------------------------------------------------------------
+// Audit Trail API
+// ---------------------------------------------------------------------------
+app.get('/api/audit-log', async (c) => {
+  const limitRaw = c.req.query('limit');
+  const limit = limitRaw ? Math.min(1000, Math.max(1, Number(limitRaw) || 100)) : 100;
+  const entries = getAuditLog(limit);
+  return c.json({ success: true, data: entries, meta: { total: entries.length } });
+});
+
 /**
  * Telemetri armada: satu titik TERBARU per unit + ringkasan + penyaringan.
  *

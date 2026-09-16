@@ -1,0 +1,39 @@
+/**
+ * Audit Trail — pencatatan mutasi penting operasional.
+ *
+ * Store: in-memory ring buffer (maks 1000 entri).
+ * Tidak perlu DB untuk demo sidang — data ada selama Worker hidup.
+ * ponytail: simpan ke tabel `audit_log` saat DATABASE_URL tersedia.
+ */
+
+export interface AuditEntry {
+  id: number;
+  timestamp: string;     // ISO 8601
+  user_id: number | null;
+  username: string;
+  role: string;
+  action: string;        // e.g. LOGIN, RENTAL_STATUS_CHANGE
+  entity: string;        // e.g. rental, payment, maintenance
+  entity_id: number | null;
+  detail: string;        // ringkasan singkat yang bisa dibaca manusia
+}
+
+const MAX_ENTRIES = 1000;
+const log: AuditEntry[] = [];
+let seq = 0;
+
+export function auditLog(entry: Omit<AuditEntry, 'id' | 'timestamp'>): void {
+  if (log.length >= MAX_ENTRIES) log.shift(); // buang entri terlama
+  seq += 1;
+  log.push({
+    id: seq,
+    timestamp: new Date().toISOString(),
+    ...entry,
+  });
+}
+
+/** Kembalikan entri terbaru dulu, dibatasi `limit`. */
+export function getAuditLog(limit = 100): AuditEntry[] {
+  const hasil = log.slice().reverse();
+  return hasil.slice(0, Math.min(limit, MAX_ENTRIES));
+}

@@ -1,3 +1,13 @@
+## [CYCLE 37] 2026-09-16 - T-0038 — P1 — DONE
+**Judul:** Audit Trail Logging
+**Perubahan:**
+- `src/lib/auditLog.ts`: modul baru — ring buffer 1000 entri, `auditLog()`, `getAuditLog(limit)`
+- `src/server/index.ts`: instrument 5 titik mutasi kritis (LOGIN, RENTAL_STATUS_CHANGE, PAYMENT_VERIFIED, PAYMENT_REJECTED, MAINTENANCE_SCHEDULED) + endpoint `GET /api/audit-log?limit=100`
+**Detail:** user_id & role dibaca dari Hono Variables (`c.get('userId')`, `c.get('role')`); in-memory fallback tidak butuh DB
+**Verifikasi:** typecheck PASS · test PASS (21/21 suite) · build PASS
+
+---
+
 ## [CYCLE 36] 2026-09-16 - T-0037 — P2 — DONE
 **Judul:** README & API Documentation untuk Sidang Skripsi
 **Perubahan:**
