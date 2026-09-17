@@ -99,6 +99,9 @@ bundle('src/lib/tableControls.ts', '.tmp_tableControls.mjs');
 bundle('src/lib/tableExport.ts', '.tmp_tableExport.mjs');
 bundle('src/lib/notifications.ts', '.tmp_notifications.mjs');
 
+// Modul audit trail (T-0049) — diuji langsung + lewat endpoint API.
+bundle('src/lib/auditLog.ts', '.tmp_audit.mjs');
+
 const suites = [
   'businessRules.test.mjs',
   'validators.test.mjs',
@@ -125,6 +128,7 @@ const suites = [
   'tableControls.test.mjs',
   'tableExport.test.mjs',
   'notifications.test.mjs',
+  'auditLog.test.mjs',
 ];
 
 let failed = 0;
@@ -147,7 +151,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs', '.tmp_fleetTelemetry.mjs', '.tmp_gps.mjs', '.tmp_customerPortal.mjs', '.tmp_eqpage.mjs', '.tmp_rentpage.mjs', '.tmp_tableControls.mjs', '.tmp_tableExport.mjs', '.tmp_notifications.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs', '.tmp_fleetTelemetry.mjs', '.tmp_gps.mjs', '.tmp_customerPortal.mjs', '.tmp_eqpage.mjs', '.tmp_rentpage.mjs', '.tmp_tableControls.mjs', '.tmp_tableExport.mjs', '.tmp_notifications.mjs', '.tmp_audit.mjs', '.tmp_hmbar.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }

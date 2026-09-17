@@ -231,6 +231,15 @@ export const db = {
     return eq;
   },
   deleteEquipment: async (id: number) => {
+    // REFERENTIAL INTEGRITY: unit yang pernah dipakai dalam transaksi sewa
+    // tidak boleh dihapus secara fisik — rental, kontrak, pembayaran, dan
+    // laporan menunjuk ke equipment_id ini; menghapusnya membuat baris-baris
+    // itu kehilangan referensi (nama/kode unit hilang dari riwayat & cetakan).
+    // Lapisan API sudah memblokir unit dalam sewa AKTIF; ini menjaga
+    // RIWAYAT (COMPLETED/REJECTED) yang sah ada.
+    const punyaRiwayat = stateStore.rentals.some((r) => r.equipment_id === id);
+    if (punyaRiwayat) return false;
+
     const idx = stateStore.equipments.findIndex(e => e.id === id);
     if (idx !== -1) {
       stateStore.equipments.splice(idx, 1);

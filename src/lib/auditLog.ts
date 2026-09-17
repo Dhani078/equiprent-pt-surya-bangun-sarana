@@ -37,3 +37,27 @@ export function getAuditLog(limit = 100): AuditEntry[] {
   const hasil = log.slice().reverse();
   return hasil.slice(0, Math.min(limit, MAX_ENTRIES));
 }
+
+/**
+ * Identitas pelaku aksi — selalu diambil dari sesi server-side, tidak pernah
+ * dari body request, sehingga catatan tidak bisa dipalsukan.
+ *
+ * `username` di auditLog fallback ke userId karena lapisan API tidak selalu
+ * memuat nama pengguna; ini dipertahankan agar kolom tetap terisi.
+ */
+export interface AuditActor {
+  user_id: number | null;
+  username: string;
+  role: string;
+}
+
+export function auditActor(c: { get: (k: 'userId' | 'role') => unknown }): AuditActor {
+  const uid = c.get('userId');
+  const userId = typeof uid === 'number' ? uid : null;
+  const role = c.get('role');
+  return {
+    user_id: userId,
+    username: String(userId ?? 'system'),
+    role: typeof role === 'string' ? role : 'UNKNOWN',
+  };
+}

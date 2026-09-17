@@ -53,7 +53,7 @@ import {
 } from '../lib/reports';
 import type { ReportDataSource } from '../lib/reports';
 import { buildDashboardStats } from '../lib/dashboard';
-import { auditLog, getAuditLog } from '../lib/auditLog';
+import { auditLog, getAuditLog, auditActor } from '../lib/auditLog';
 import type { AuditEntry } from '../lib/auditLog';
 import { buildFleetTelemetry, normalizeFleetFilter } from '../lib/fleetTelemetry';
 import {
@@ -354,9 +354,7 @@ app.post('/api/auth/login', async (c) => {
   const token = await createSessionToken(user);
 
   auditLog({
-    user_id: user.id,
-    username: user.username,
-    role: user.role_name ?? 'UNKNOWN',
+    ...auditActor(c),
     action: 'LOGIN',
     entity: 'user',
     entity_id: user.id,
@@ -422,9 +420,7 @@ app.post('/api/auth/change-password', async (c) => {
   await db.setUserPassword(userId, newPassword);
 
   auditLog({
-    user_id: userId,
-    username: user.username,
-    role: c.get('role') ?? 'UNKNOWN',
+    ...auditActor(c),
     action: 'PASSWORD_CHANGED',
     entity: 'user',
     entity_id: userId,
@@ -549,6 +545,16 @@ app.post('/api/equipments', async (c) => {
     ...input,
     thumbnail_url: input.thumbnail_url || getEquipmentImage(input.equipment_code, input.type),
   });
+
+  // Audit trail: pencatatan unit baru oleh Administrator.
+  auditLog({
+    ...auditActor(c),
+    action: 'EQUIPMENT_CREATE',
+    entity: 'equipment',
+    entity_id: newItem.id,
+    detail: `Unit ${newItem.equipment_code} (${newItem.name}) didaftarkan`,
+  });
+
   return c.json({ success: true, item: newItem }, 201);
 });
 
@@ -599,6 +605,15 @@ app.put('/api/equipments/:id', async (c) => {
   });
   if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
 
+  // Audit trail: perubahan master unit hanya oleh Administrator.
+  auditLog({
+    ...auditActor(c),
+    action: 'EQUIPMENT_UPDATE',
+    entity: 'equipment',
+    entity_id: id,
+    detail: `Unit ${updated.equipment_code} diperbarui (tarif Rp ${updated.rental_price_per_day}/hari, HM ${updated.hour_meter})`,
+  });
+
   return c.json({ success: true, item: updated });
 });
 
@@ -628,9 +643,31 @@ app.delete('/api/equipments/:id', async (c) => {
   }
 
   const ok = await db.deleteEquipment(id);
-  if (!ok) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Unit tidak ditemukan.' } }, 404);
+  if (!ok) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'EQUIPMENT_HAS_HISTORY',
+          message:
+            `Unit ${unit.equipment_code} pernah dipakai dalam transaksi sewa. ` +
+            'Riwayat, kontrak, dan laporannya harus tetap menunjuk ke unit ini — hapus tidak diperkenankan.',
+        },
+      },
+      409
+    );
+  }
 
-  return c.json({ success: ok });
+  // Audit trail: penghapusan unit berbahaya — pelakunya wajib tercatat.
+  auditLog({
+    ...auditActor(c),
+    action: 'EQUIPMENT_DELETE',
+    entity: 'equipment',
+    entity_id: id,
+    detail: `Unit ${unit.equipment_code} dihapus dari inventaris`,
+  });
+
+  return c.json({ success: true });
 });
 
 // Rentals API
@@ -741,6 +778,16 @@ app.post('/api/rentals', async (c) => {
       : body;
 
   const newItem = await db.addRental(payload);
+
+  // Audit trail: pengajuan/transaksi sewa baru.
+  auditLog({
+    ...auditActor(c),
+    action: 'RENTAL_CREATE',
+    entity: 'rental',
+    entity_id: newItem.id,
+    detail: `Rental ${newItem.rental_code} dibuat — unit ${newItem.equipment_code} (${newItem.total_days} hari)`,
+  });
+
   return c.json({ success: true, item: newItem }, 201);
 });
 
@@ -1024,9 +1071,7 @@ app.put('/api/rentals/:id/status', async (c) => {
 
   // Audit trail
   auditLog({
-    user_id: c.get('userId') ?? null,
-    username: String(c.get('userId') ?? 'system'),
-    role: c.get('role') ?? 'UNKNOWN',
+    ...auditActor(c),
     action: 'RENTAL_STATUS_CHANGE',
     entity: 'rental',
     entity_id: id,
@@ -1166,6 +1211,16 @@ app.post('/api/contracts', async (c) => {
         404
       );
     }
+
+    // Audit trail: penerbitan dokumen kontrak oleh Admin/Staf.
+    auditLog({
+      ...auditActor(c),
+      action: 'CONTRACT_CREATE',
+      entity: 'contract',
+      entity_id: kontrak.id,
+      detail: `Kontrak ${kontrak.contract_code} diterbitkan untuk ${kontrak.rental_code}`,
+    });
+
     return c.json({ success: true, item: kontrak }, 201);
   } catch (err) {
     // Satu kontrak per transaksi — mencegah duplikasi nomor kontrak.
@@ -1224,6 +1279,15 @@ app.post('/api/contracts/:id/sign', async (c) => {
   try {
     const updated = await db.signContract(id, hasil.value.signerName, hasil.value.signature);
     if (!updated) return c.json(NOT_FOUND_CONTRACT, 404);
+
+    // Audit trail: tanda tangan elektronik — bukti persetujuan pelanggan.
+    auditLog({
+      ...auditActor(c),
+      action: 'CONTRACT_SIGN',
+      entity: 'contract',
+      entity_id: id,
+      detail: `Kontrak #${id} ditandatangani oleh ${hasil.value.signerName}`,
+    });
 
     return c.json({
       success: true,
@@ -1376,6 +1440,16 @@ app.post('/api/payments/:id/proof', async (c) => {
     if (!updated) {
       return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
     }
+
+    // Audit trail: pelanggan melampirkan bukti transfer.
+    auditLog({
+      ...auditActor(c),
+      action: 'PAYMENT_PROOF_UPLOAD',
+      entity: 'payment',
+      entity_id: id,
+      detail: `Bukti transfer pembayaran #${id} dilampirkan`,
+    });
+
     return c.json({
       success: true,
       item: updated,
@@ -1433,9 +1507,7 @@ app.post('/api/payments/:id/verify', async (c) => {
     const updated = await db.verifyPayment(id, staffId, staffName);
     if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
     auditLog({
-      user_id: staffId,
-      username: pengesah?.username ?? String(staffId),
-      role: c.get('role') ?? 'UNKNOWN',
+      ...auditActor(c),
       action: 'PAYMENT_VERIFIED',
       entity: 'payment',
       entity_id: id,
@@ -1497,9 +1569,7 @@ app.post('/api/payments/:id/reject', async (c) => {
     const updated = await db.rejectPayment(id, staffId, staffName);
     if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
     auditLog({
-      user_id: staffId,
-      username: peninjau?.username ?? String(staffId),
-      role: c.get('role') ?? 'UNKNOWN',
+      ...auditActor(c),
       action: 'PAYMENT_REJECTED',
       entity: 'payment',
       entity_id: id,
@@ -1564,11 +1634,8 @@ app.post('/api/maintenance', async (c) => {
   if (!jenis.ok) return c.json(badValidation({ maintenance_type: jenis.message }), 400);
 
   const newItem = await db.scheduleMaintenance(body);
-  const sesiM = c.get('userId');
   auditLog({
-    user_id: sesiM ?? null,
-    username: String(sesiM ?? 'system'),
-    role: c.get('role') ?? 'UNKNOWN',
+    ...auditActor(c),
     action: 'MAINTENANCE_SCHEDULED',
     entity: 'maintenance',
     entity_id: newItem.id,
@@ -1583,12 +1650,62 @@ app.post('/api/maintenance', async (c) => {
 // Audit Trail API
 // Hanya ADMIN (lihat RBAC_MATRIX di src/lib/auth.ts): catatan ini memuat
 // jejak seluruh pengguna, termasuk IP dan aktivitas akun lain.
+//
+// Filter (opsional):
+//   action   - kode aksi persis, mis. PAYMENT_VERIFIED (boley beberapa, koma)
+//   entity   - nama entitas, mis. rental|payment|equipment|user|contract|maintenance
+//   user_id  - hanya entri pelaku ini
+//
+// ponytail: filter rentang waktu (from/to) ditambah saat tabel audit_log
+// permanen dipakai; filter kode aksi sudah cukup untuk demo sidang.
 // ---------------------------------------------------------------------------
 app.get('/api/audit-log', async (c) => {
+  // Pemeriksaan eksplisit di sini menjaga aturan tetap berlaku seandainya
+  // matriks RBAC kelak diperluas (misal STAFF diizinkan GET saja).
+  if (c.get('role') !== 'ADMIN') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Hanya Administrator yang dapat melihat catatan audit trail.',
+        },
+      },
+      403
+    );
+  }
+
   const limitRaw = c.req.query('limit');
   const limit = limitRaw ? Math.min(1000, Math.max(1, Number(limitRaw) || 100)) : 100;
-  const entries = getAuditLog(limit);
-  return c.json({ success: true, data: entries, meta: { total: entries.length } });
+
+  // Penyaringan opsional. Dipisah koma, dirapikan, lalu cocok persis (bukan
+  // substring) supaya `entity=rental` tidak ikut menarik `rental_history`.
+  const actions = (c.req.query('action') ?? '')
+    .split(',')
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => s.length > 0);
+  const entities = (c.req.query('entity') ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length > 0);
+  const userIdRaw = c.req.query('user_id');
+  const userId = userIdRaw && Number.isFinite(Number(userIdRaw)) ? Number(userIdRaw) : null;
+
+  const entries = getAuditLog(1000).filter((e) => {
+    if (actions.length > 0 && !actions.includes(e.action)) return false;
+    if (entities.length > 0 && !entities.includes(e.entity.toLowerCase())) return false;
+    if (userId !== null && e.user_id !== userId) return false;
+    return true;
+  });
+
+  return c.json({
+    success: true,
+    data: entries.slice(0, limit),
+    meta: {
+      total: entries.length,
+      filters: { actions, entities, user_id: userId },
+    },
+  });
 });
 
 /**
@@ -1773,6 +1890,15 @@ app.post('/api/users', async (c) => {
     password_hash: null,
   });
 
+  // Audit trail: pendaftaran akun baru hanya oleh Administrator.
+  auditLog({
+    ...auditActor(c),
+    action: 'USER_CREATE',
+    entity: 'user',
+    entity_id: newUser.id,
+    detail: `Akun ${newUser.username} (${newUser.role_name}) didaftarkan oleh Administrator`,
+  });
+
   return c.json({ success: true, item: ringkasUser(newUser) }, 201);
 });
 
@@ -1803,9 +1929,7 @@ app.post('/api/users/:id/password', async (c) => {
   }
 
   auditLog({
-    user_id: c.get('userId') ?? null,
-    username: String(c.get('userId') ?? 'system'),
-    role: c.get('role') ?? 'UNKNOWN',
+    ...auditActor(c),
     action: 'PASSWORD_RESET',
     entity: 'user',
     entity_id: id,
@@ -1830,6 +1954,16 @@ app.post('/api/users/:id/toggle', async (c) => {
 
   const updated = await db.toggleUserStatus(id);
   if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pengguna tidak ditemukan.' } }, 404);
+
+  // Audit trail: mengaktifkan/menonaktifkan akun adalah aksi sensitif
+  // (bisa melarikan pengguna keluar sistem), pelakunya wajib tercatat.
+  auditLog({
+    ...auditActor(c),
+    action: 'USER_STATUS_TOGGLE',
+    entity: 'user',
+    entity_id: id,
+    detail: `Status akun ${updated.username} diubah menjadi ${updated.status}`,
+  });
 
   return c.json({ success: true, item: ringkasUser(updated) });
 });

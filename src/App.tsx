@@ -13,6 +13,7 @@ import { MaintenanceManagement } from './pages/admin/MaintenanceManagement';
 import { GpsTrackingPage } from './pages/admin/GpsTrackingPage';
 import { ReportsPage } from './pages/admin/ReportsPage';
 import { UserManagement } from './pages/admin/UserManagement';
+import { AuditLogPanel } from './components/AuditLogPanel';
 import { StaffDashboard } from './pages/staff/StaffDashboard';
 import { CustomerPortal } from './pages/customer/CustomerPortal';
 import { AccountSettings } from './pages/AccountSettings';
@@ -365,6 +366,9 @@ export const App: React.FC = () => {
                   onToggleStatus={handleToggleUserStatus}
                   onNotify={notify}
                 />
+              )}
+              {activeTab === 'audit' && (
+                <AuditLogPanel />
               )}
               {activeTab === 'settings' && (
                 <AccountSettings
