@@ -1098,6 +1098,36 @@ Verifikasi: typecheck PASS - build PASS (651.67 kB) - npm test 21/21 suite PASS
 
 ---
 
+## Cycle 46 - T-0052 - 2026-09-17T11:20:00Z
+
+### T-0052 — F4.7 Fix ISSUE-I001: Deploy Cloudflare (DONE)
+
+ISSUE-I001 (MEDIUM, OPEN) DIPINDAHKAN DARI `known_issues.md` KE SINI SEBAGAI DONE.
+
+**Akar masalah (bukan hipotesis, terverifikasi):** `npm run deploy` memanggil
+`wrangler deploy` TANPA prefix `npx`. Pada CI Cloudflare & environment tanpa
+`node_modules/.bin` di PATH, pemanggilan itu gagal dengan
+`wrangler: command not found` — sebelum `dist/` sempat diunggah. Pesan error
+pengguna (`Could not detect a directory containing static files`) muncul karena
+`dist/` di-ignore git dan belum dibangun saat deploy pertama kali.
+
+**File diubah:**
+- `package.json` - `deploy` kini `npm run build && npx wrangler deploy`
+  (resolusi biner lokal terjamin). Skrip baru `deploy:dry` =
+  `npm run build && npx wrangler deploy --dry-run` untuk verifikasi tanpa
+  publish. `deploy:cloud` ikut diperbaiki.
+- `wrangler.jsonc` - blok `assets` diverifikasi: `directory: "./dist"`,
+  `binding: "ASSETS"`, `not_found_handling: "single-page-application"`
+  (sudah benar sebelumnya; konfirmasi tertulis agar tidak diubah kembali).
+- `STATE/known_issues.md` - ISSUE-I001 dihapus (kosong).
+
+**Verifikasi (bukti, bukan klaim):**
+- `rm -rf dist && npm run deploy:dry` → 7 file dibaca dari `./dist`,
+  Total Upload 273.64 KiB / gzip 69.03 KiB, binding `env.ASSETS` terpasang.
+- Rantai deploy kini: `npm run deploy` → `tsc && vite build` → `wrangler deploy`.
+
+---
+
 ## Cycle 45 - T-0046, T-0047, T-0048 - 2026-09-17T10:45:00Z
 
 ### T-0046 — Skeleton Loading di Halaman Equipment & Rental (VERIFIKASI & FINALISASI)

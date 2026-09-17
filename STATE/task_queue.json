@@ -381,6 +381,89 @@
       "created_by": "agent-ideation",
       "created_at": "2026-09-16T06:23:00Z",
       "completed_at": "2026-09-17T10:45:00.000Z"
+    },
+    {
+      "id": "T-0049",
+      "title": "F4.1 Audit Trail Logging",
+      "category": "SECURITY",
+      "priority": "P1",
+      "status": "PENDING",
+      "estimate_minutes": 60,
+      "depends_on": [],
+      "files": [
+        "src/lib/auditLog.ts",
+        "src/server/index.ts"
+      ],
+      "acceptance_criteria": [
+        "Setiap aksi tulis (create/update/delete) dicatat: user_id, role, aksi, entitas, entity_id, timestamp",
+        "Hanya Admin lihat log audit lengkap",
+        "Test suite baru auditLog.test.mjs"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-17T03:17:28.877918+00:00"
+    },
+    {
+      "id": "T-0050",
+      "title": "F4.6 Seed Data Realistis untuk Demo Sidang",
+      "category": "DATA",
+      "priority": "P1",
+      "status": "PENDING",
+      "estimate_minutes": 75,
+      "depends_on": [],
+      "files": [
+        "src/lib/mockData.ts"
+      ],
+      "acceptance_criteria": [
+        "Minimal 50 unit alat berat dengan tipe & brand bervariasi",
+        "Minimal 50 rental dengan status tersebar (pending/active/done/cancelled)",
+        "Minimal 55 titik GPS realistis sekitar Banjarmasin",
+        "Data konsisten lintas tabel (total HM, payment, maintenance)"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-17T03:17:28.877918+00:00"
+    },
+    {
+      "id": "T-0051",
+      "title": "F4.5 Dokumentasi Lengkap untuk Sidang",
+      "category": "DOCS",
+      "priority": "P2",
+      "status": "PENDING",
+      "estimate_minutes": 60,
+      "depends_on": [
+        "T-0049",
+        "T-0050"
+      ],
+      "files": [
+        "README.md",
+        "PANDUAN_SIDANG_SKRIPSI.md"
+      ],
+      "acceptance_criteria": [
+        "README update: fitur final, screenshot placeholder, cara jalan, deploy",
+        "PANDUAN_SIDANG_SKRIPSI.md: ERD 9 tabel, flowchart alur rental, uji yang dilakukan",
+        "Daftar 25 suite test + cakupan"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-17T03:17:28.877918+00:00"
+    },
+    {
+      "id": "T-0052",
+      "title": "F4.7 Fix ISSUE-I001: Deploy Cloudflare",
+      "category": "DEPLOY",
+      "priority": "P1",
+      "status": "DONE",
+      "estimate_minutes": 40,
+      "depends_on": [],
+      "files": [
+        "wrangler.jsonc",
+        "package.json"
+      ],
+      "acceptance_criteria": [
+        "wrangler.jsonc punya blok assets directory ./dist",
+        "npm run deploy = build + wrangler deploy",
+        " ISSUE-I001 dipindah dari known_issues ke changelog"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-17T03:17:28.877918+00:00"
     }
   ]
 }

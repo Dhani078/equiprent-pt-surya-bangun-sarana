@@ -9,8 +9,9 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "test": "node tests/run-tests.mjs",
-    "deploy": "npm run build && wrangler deploy",
-    "deploy:cloud": "npm install && npm run build && wrangler deploy"
+    "deploy": "npm run build && npx wrangler deploy",
+    "deploy:dry": "npm run build && npx wrangler deploy --dry-run",
+    "deploy:cloud": "npm install && npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "@tidbcloud/serverless": "^0.3.0",
