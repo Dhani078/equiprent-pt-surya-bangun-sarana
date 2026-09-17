@@ -413,11 +413,14 @@
       "title": "F4.6 Seed Data Realistis untuk Demo Sidang",
       "category": "DATA",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 75,
       "depends_on": [],
       "files": [
-        "src/lib/mockData.ts"
+        "src/lib/seedGenerator.ts",
+        "src/lib/mockData.ts",
+        "tests/seedData.test.mjs",
+        "tests/run-tests.mjs"
       ],
       "acceptance_criteria": [
         "Minimal 50 unit alat berat dengan tipe & brand bervariasi",
