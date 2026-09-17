@@ -234,7 +234,7 @@ flowchart LR
 
 Pengujian memakai **test runner sendiri tanpa framework eksternal**
 (`tests/run-tests.mjs`): modul TypeScript di-bundle dengan esbuild lalu
-dieksekusi node. Total **27 test suite, 1.467 asersi, 0 gagal**.
+dieksekusi node. Total **27 test suite, 1.531 asersi, 0 gagal**.
 
 ### 5.1 Daftar 27 Test Suite
 
@@ -259,7 +259,7 @@ dieksekusi node. Total **27 test suite, 1.467 asersi, 0 gagal**.
 | 17 | `paymentWorkflow.test.mjs` | 122 | Gerbang pembayaran & verifikasi |
 | 18 | `fleetTelemetry.test.mjs` | 117 | Telemetri GPS armada |
 | 19 | `gpsPage.test.mjs` | 37 | Halaman peta Leaflet |
-| 20 | `customerPortal.test.mjs` | 24 | Portal pelanggan |
+| 20 | `customerPortal.test.mjs` | 55 | Portal pelanggan |
 | 21 | `codeQuality.test.mjs` | 6 | Aturan kualitas kode (zero `any`, dll.) |
 | 22 | `skeletonLoading.test.mjs` | 29 | Skeleton loading halaman equipment & rental |
 | 23 | `tableControls.test.mjs` | 25 | Sorting, filtering, pagination tabel |
