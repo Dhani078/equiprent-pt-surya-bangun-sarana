@@ -3,6 +3,7 @@ import { ReportCellValue, ReportResult, ReportId, DateRangeFilter, ReportColumnF
 import { REPORT_CATALOG, EMPTY_RANGE, formatCell, buildCsv, buildCsvFilename } from '../lib/reports';
 import { downloadCsv, fetchReport } from '../lib/reportsClient';
 import { Download, CalendarRange, FileSpreadsheet, Inbox, AlertTriangle, RefreshCw, BarChart3, Search } from 'lucide-react';
+import { SkeletonRows } from './Skeleton';
 
 interface ReportAnalyticsPanelProps {
   /** Laporan yang sedang dimuat dari API atau perhitungan lokal. */
@@ -270,20 +271,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
 
       {/* Loading */}
       {loading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} aria-busy="true" aria-label="Memuat laporan">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              style={{
-                height: '18px',
-                borderRadius: '6px',
-                background: 'linear-gradient(90deg, #EEF2F7 25%, #E2E8F0 37%, #EEF2F7 63%)',
-                backgroundSize: '400% 100%',
-                animation: 'sbs-shimmer 1.4s ease-in-out infinite',
-              }}
-            />
-          ))}
-        </div>
+        <SkeletonRows count={5} height="18px" gap={10} ariaLabel="Memuat laporan" />
       )}
 
       {/* Error */}

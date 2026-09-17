@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User, RoleName, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from './types';
 import { db, stateStore } from './lib/db';
+import { fetchCollectionOrLocal } from './lib/fetchCollection';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import type { SidebarBadges } from './components/Sidebar';
@@ -12,8 +13,13 @@ import { MaintenanceManagement } from './pages/admin/MaintenanceManagement';
 import { GpsTrackingPage } from './pages/admin/GpsTrackingPage';
 import { ReportsPage } from './pages/admin/ReportsPage';
 import { UserManagement } from './pages/admin/UserManagement';
+import { AuditLogPanel } from './components/AuditLogPanel';
 import { StaffDashboard } from './pages/staff/StaffDashboard';
 import { CustomerPortal } from './pages/customer/CustomerPortal';
+import { AccountSettings } from './pages/AccountSettings';
+import type { ProfilePatch } from './pages/AccountSettings';
+import { buildNotifications } from './lib/notifications';
+import { CommandPalette } from './components/CommandPalette';
 
 export const App: React.FC = () => {
   // Default to null so the user always enters via the authentic Login Screen
@@ -39,6 +45,68 @@ export const App: React.FC = () => {
 
   /** Notifikasi sederhana di pojok kanan atas (sukses / galat). */
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+
+  /** Memuat data dari edge API; state lokal jadi fallback bila API tidak ada. */
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const handleReloadData = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  /** Palet perintah Ctrl/⌘ + K. */
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  /**
+   * Pemuatan awal: ambil koleksi dari edge API (sumber kebenaran produksi).
+   *
+   * Serverless: db.ts tidak punya method "muat semua" — data sudah di-cache
+   * secara reaktif. Fungsinya tetap Async karena resolver HTTP memang async,
+   * sehingga skeleton benar-benar terlihat saat demo di sidang.
+   */
+  useEffect(() => {
+    const controller = new AbortController();
+    let aktif = true;
+
+    const muat = async () => {
+      setDataLoading(true);
+      setDataError(null);
+      try {
+        const [eq, rn] = await Promise.all([
+          fetchCollectionOrLocal('equipments', controller.signal),
+          fetchCollectionOrLocal('rentals', controller.signal),
+        ]);
+        if (!aktif) return;
+        // Hanya menimpa bila edge API memberikan data — sebaliknya
+        // state lokal (seed) tetas dipakai.
+        if (eq.length > 0) stateStore.equipments = eq as Equipment[];
+        if (rn.length > 0) stateStore.rentals = rn as Rental[];
+        refreshData();
+      } catch (err) {
+        if (!aktif) return;
+        setDataError(err instanceof Error ? err.message : 'Gagal memuat data dari server.');
+      } finally {
+        if (aktif) setDataLoading(false);
+      }
+    };
+
+    muat();
+
+    return () => {
+      aktif = false;
+      controller.abort();
+    };
+  }, [reloadKey]);
 
   /** Badge counter Sidebar — dihitung dari state reaktif yang sudah ada. */
   const sidebarBadges: SidebarBadges = {
@@ -158,9 +226,37 @@ export const App: React.FC = () => {
     refreshData();
   };
 
+  /**
+   * Menyimpan perubahan profil pengguna yang sedang masuk.
+   * Hanya field non-sensitif yang diteruskan (lihat `db.updateUser`).
+   */
+  const handleSaveProfile = async (patch: ProfilePatch) => {
+    if (!currentUser) return;
+    const diperbarui = await db.updateUser(currentUser.id, patch);
+    if (!diperbarui) throw new Error('Pengguna tidak ditemukan.');
+    setCurrentUser({ ...currentUser, ...patch });
+    sessionStorage.setItem('sbs_active_user', JSON.stringify({ ...currentUser, ...patch }));
+    refreshData();
+  };
+
+  /** Mengganti password akun sendiri. */
+  const handleChangeOwnPassword = async (passwordBaru: string) => {
+    if (!currentUser) return;
+    const hasil = await db.setUserPassword(currentUser.id, passwordBaru);
+    if (!hasil) throw new Error('Pengguna tidak ditemukan.');
+  };
+
   if (!currentUser) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
+
+  // Notifikasi disusun ulang setiap data berubah — modul murni, aman dipanggil
+  // saat render.
+  const notifications = buildNotifications(
+    { rentals, payments, maintenance, contracts },
+    currentUser.role_name || 'ADMIN',
+    currentUser.id
+  );
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -168,6 +264,8 @@ export const App: React.FC = () => {
         currentUser={currentUser}
         onLogout={handleLogout}
         onSwitchRole={handleSwitchRole}
+        notifications={notifications}
+        onSelectTab={setActiveTab}
       />
 
       <div style={{ display: 'flex', flex: 1 }}>
@@ -179,6 +277,34 @@ export const App: React.FC = () => {
         />
 
         <main style={{ flex: 1, padding: '24px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+          {/* Notifikasi galat pemuatan data awal — bisa dicoba ulang. */}
+          {dataError && !dataLoading && (
+            <div
+              role="alert"
+              className="card-premium animate-fade-in"
+              style={{
+                marginBottom: '20px',
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flexWrap: 'wrap',
+                borderLeft: '4px solid var(--color-error)',
+              }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#991B1B', flex: '1 1 240px' }}>
+                {dataError}
+              </span>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleReloadData}
+                style={{ padding: '7px 14px', fontSize: '12.5px' }}
+              >
+                Coba Ulang
+              </button>
+            </div>
+          )}
           {/* ADMIN SCREENS */}
           {currentUser.role_name === 'ADMIN' && (
             <>
@@ -188,10 +314,13 @@ export const App: React.FC = () => {
               {activeTab === 'equipment' && (
                 <EquipmentManagement
                   equipments={equipments}
+                  maintenance={maintenance}
                   onAddEquipment={handleAddEquipment}
                   onUpdateEquipment={handleUpdateEquipment}
                   onDeleteEquipment={handleDeleteEquipment}
+                  onScheduleMaintenance={handleScheduleMaintenance}
                   onNotify={notify}
+                  isLoading={dataLoading}
                 />
               )}
               {activeTab === 'rentals' && (
@@ -204,6 +333,8 @@ export const App: React.FC = () => {
                   onUpdateRentalStatus={handleUpdateRentalStatus}
                   onCreateContract={handleCreateContract}
                   onSignContract={handleSignContract}
+                  onNotify={notify}
+                  isLoading={dataLoading}
                 />
               )}
               {activeTab === 'maintenance' && (
@@ -212,6 +343,7 @@ export const App: React.FC = () => {
                   equipments={equipments}
                   users={users}
                   onScheduleMaintenance={handleScheduleMaintenance}
+                  onNotify={notify}
                 />
               )}
               {activeTab === 'tracking' && (
@@ -224,6 +356,7 @@ export const App: React.FC = () => {
                   reports={reports}
                   rentals={rentals}
                   equipments={equipments}
+                  onNotify={notify}
                 />
               )}
               {activeTab === 'users' && (
@@ -234,21 +367,16 @@ export const App: React.FC = () => {
                   onNotify={notify}
                 />
               )}
+              {activeTab === 'audit' && (
+                <AuditLogPanel />
+              )}
               {activeTab === 'settings' && (
-                <div className="card-premium animate-fade-in" style={{ padding: '24px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 12px 0' }}>
-                    Konfigurasi Sistem & Basis Data TiDB Cloud
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'var(--color-secondary)', lineHeight: 1.6 }}>
-                    Sistem ini berjalan di <strong>Cloudflare Workers Edge Network</strong> dan terhubung ke <strong>TiDB Cloud Serverless</strong>.
-                  </p>
-                  <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12.5px', fontFamily: 'monospace' }}>
-                    <div><strong>Runtime:</strong> Cloudflare Workers (V8 JavaScript/TypeScript Edge)</div>
-                    <div><strong>Database Engine:</strong> TiDB Cloud Serverless (MySQL 8.0 Compatible)</div>
-                    <div><strong>Driver:</strong> @tidbcloud/serverless (Edge HTTPS Driver)</div>
-                    <div><strong>Organisasi:</strong> PT. Surya Bangun Sarana Banjarmasin</div>
-                  </div>
-                </div>
+                <AccountSettings
+                  currentUser={currentUser}
+                  onSaveProfile={handleSaveProfile}
+                  onChangePassword={handleChangeOwnPassword}
+                  onNotify={notify}
+                />
               )}
             </>
           )}
@@ -279,6 +407,7 @@ export const App: React.FC = () => {
                   equipments={equipments}
                   users={users}
                   onScheduleMaintenance={handleScheduleMaintenance}
+                  onNotify={notify}
                 />
               )}
               {activeTab === 'tracking' && (
@@ -291,17 +420,16 @@ export const App: React.FC = () => {
                   reports={reports}
                   rentals={rentals}
                   equipments={equipments}
+                  onNotify={notify}
                 />
               )}
               {activeTab === 'settings' && (
-                <div className="card-premium animate-fade-in" style={{ padding: '24px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                    Profil Staf Operasional
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'var(--color-secondary)' }}>
-                    {currentUser.full_name} &bull; Staf Logistik & Administrasi Lapangan
-                  </p>
-                </div>
+                <AccountSettings
+                  currentUser={currentUser}
+                  onSaveProfile={handleSaveProfile}
+                  onChangePassword={handleChangeOwnPassword}
+                  onNotify={notify}
+                />
               )}
             </>
           )}
@@ -326,6 +454,13 @@ export const App: React.FC = () => {
       </div>
 
       {/* Notifikasi global: muncul setelah aksi berhasil / gagal. */}
+      <CommandPalette
+        role={currentUser.role_name || 'ADMIN'}
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onSelect={setActiveTab}
+      />
+
       {toast && (
         <div
           role="status"

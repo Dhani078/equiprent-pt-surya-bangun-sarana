@@ -1094,3 +1094,184 @@ File diubah:
 - src/pages/admin/ReportsPage.tsx - print header: nama perusahaan, judul laporan, tanggal cetak (class print-only)
 
 Verifikasi: typecheck PASS - build PASS (651.67 kB) - npm test 21/21 suite PASS
+
+
+## Cycle 46c - T-0050 - 2026-09-17T12:15:00Z
+
+### T-0050 — F4.6 Seed Data Realistis untuk Demo Sidang (DONE)
+
+**Temuan (diverifikasi):** generator `src/lib/seedGenerator.ts` SUDAH
+memenuhi 4 acceptance criteria (50 unit / 50 rental / 55 GPS / konsisten
+lintas tabel) — namun tanggal referensi DIPAKU ke `2026-09-04`. Saat demo
+sidang di tanggal lain, rental ON_GOING terlihat sudah selesai dan titik
+GPS terlihat basi. Selain itu tidak ada test suite yang memverifikasi
+kriteria seed, sehingga mudah diam-diam regres.
+
+**File diubah:**
+
+- `src/lib/seedGenerator.ts` — konstanta `HARI_INI = new Date()` menggantikan
+  3x `new Date('2026-09-04')` (generateRentals x2, generateGps). Seed kini
+  selalu segar: ON_GOING melintasi hari ini, PENDING/APPROVED di masa depan,
+  GPS terekam 0–3 hari terakhir. Determinisme HM/tarif/nama tetap (PRNG
+  berseed); hanya tanggal yang mengikuti kalender sebenarnya.
+- `tests/seedData.test.mjs` (baru, 46 asersi) — memverifikasi langsung ke-4
+  acceptance criteria + integritas relasional + kesegaran tanggal:
+  volume (50/50/50/50/55/20), variasi 7 tipe & 9 brand, penyebaran 5 status
+  rental, koordinat GPS dalam rentang Kalsel, subtotal = durasi x tarif,
+  nominal pembayaran = subtotal rental, ON_GOING wajib PAID, kontrak PENDING
+  belum ditandatangani, PENDING_VERIFICATION wajib ada bukti transfer,
+  tanpa double-booking, status unit selaras rental aktif.
+- `tests/run-tests.mjs` — bundle `.tmp_seed.mjs`, daftar suite, cleanup.
+
+**Data demo final (diverifikasi via probe):**
+
+- 50 pengguna (2 ADMIN, 6 STAFF, 42 CUSTOMER; username unik), 50 unit
+  (7 tipe, 9 brand, kode unik), 50 rental
+  (PENDING 7 / APPROVED 8 / ON_GOING 10 / COMPLETED 21 / REJECTED 4),
+  50 kontrak, 50 pembayaran (PAID 31, PENDING_VERIFICATION 9, UNPAID 6,
+  FAILED 4), 25 log maintenance, 55 titik GPS (semua unik, di Kalsel),
+  20 dokumen laporan.
+- 0 referential violation: rental->customer/unit, kontrak->rental,
+  pembayaran->kontrak, maintenance->unit, GPS->unit.
+- 0 double-booking; 0 subtotal mismatch; 0 HM servis > HM unit.
+
+**Verifikasi (bukti):**
+
+- `npm run type-check` -> 0 error.
+- `node tests/seedData.test.mjs` -> 46/46 asersi lulus.
+- `npm test` -> 27/27 suite lulus.
+- `npm run build` -> PASS (705.79 kB, 1646 modul).
+
+## Cycle 46b - T-0049 - 2026-09-17T11:45:00Z
+
+### T-0049 — F4.1 Audit Trail Logging (DONE)
+
+**Akar masalah (diverifikasi, bukan klaim):** audit trail hanya mencatat 7 aksi
+sempit (LOGIN, PASSWORD_CHANGED, RENTAL_STATUS_CHANGE, PAYMENT_VERIFIED,
+PAYMENT_REJECTED, MAINTENANCE_SCHEDULED, PASSWORD_RESET). Aksi tulis inti
+bisnis — equipment create/update/delete, rental create, contract create/sign,
+payment proof upload, user create/toggle — sama sekali tidak tercatat. Selain
+itu actor (user_id/username/role) ditulis manual per call site, rapuh dan mudah
+tidak konsisten.
+
+**File diubah:**
+
+- `src/lib/auditLog.ts` — helper baru `auditActor(c)`: satu sumber kebenaran
+  actor dari Hono context (`userId`/`username`/`role`), digunakan oleh semua
+  call site. Tetap ring buffer 1000 entri + `getAuditLog(limit)` lama.
+- `src/server/index.ts` —
+  - 7 call audit lama direfaktor ke `...auditActor(c)` (konsistensi tunggal).
+  - **9 audit write baru** dipasang tepat setelah mutasi DB:
+    `EQUIPMENT_CREATE`, `EQUIPMENT_UPDATE`, `EQUIPMENT_DELETE`,
+    `RENTAL_CREATE`, `CONTRACT_CREATE`, `CONTRACT_SIGN`,
+    `PAYMENT_PROOF_UPLOAD`, `USER_CREATE`, `USER_TOGGLE`.
+  - Endpoint `GET /api/audit-log` dikuatkan: RBAC eksplisit ADMIN-only lewat
+    `RBAC_MATRIX` (`src/lib/auth.ts`), filter `action`/`entity`/`user`,
+    pagination (default 50, maks 200 per halaman).
+  - `DELETE /api/equipments/:id` kini membedakan dua kondisi penolakan:
+    `EQUIPMENT_IN_USE` (sewa aktif) vs `EQUIPMENT_HAS_HISTORY` (pernah
+    dipakai transaksi — referential integrity).
+- `src/lib/db.ts` — `deleteEquipment` tidak lagi menghapus fisik unit yang
+  ber-riwayat (relasi rental/kontrak/pembayaran/maintenance tetap menunjuk
+  unit). Menghapus kaskade dari stateStore akan memutus laporan & audit.
+- `src/components/AuditLogPanel.tsx` (baru, 355 baris) — panel admin:
+  search + filter action/entity, pagination, unduh CSV, badge role, note
+  ring buffer 1000 entri, mengikuti design system §7.
+- `src/components/Sidebar.tsx` — nav item `{ id: 'audit', label: 'Audit
+  Trail', icon: ShieldCheck }` (hanya muncul untuk ADMIN).
+- `src/App.tsx` — import + render `activeTab === 'audit'`.
+- `tests/auditLog.test.mjs` (baru, 275 baris) + `tests/run-tests.mjs`
+  (bundle `.tmp_audit.mjs`, daftar suite, cleanup).
+
+**Verifikasi (bukti):**
+- `npm run type-check` → 0 error.
+- `node tests/auditLog.test.mjs` → 56/56 asersi lulus.
+- `npm test` → 26/26 suite lulus.
+- Rangkaian status test mengikuti `ALLOWED_TRANSITIONS` di
+  `rentalWorkflow.ts` (PENDING→APPROVED→ON_GOING→COMPLETED) dan gerbang
+  pembayaran `checkPaymentGate` (override ADMIN dihormati saat
+  `TAGIHAN_BELUM_LUNAS`), terbukti dari log debug endpoint.
+
+
+---
+
+## Cycle 46 - T-0052 - 2026-09-17T11:20:00Z
+
+### T-0052 — F4.7 Fix ISSUE-I001: Deploy Cloudflare (DONE)
+
+ISSUE-I001 (MEDIUM, OPEN) DIPINDAHKAN DARI `known_issues.md` KE SINI SEBAGAI DONE.
+
+**Akar masalah (bukan hipotesis, terverifikasi):** `npm run deploy` memanggil
+`wrangler deploy` TANPA prefix `npx`. Pada CI Cloudflare & environment tanpa
+`node_modules/.bin` di PATH, pemanggilan itu gagal dengan
+`wrangler: command not found` — sebelum `dist/` sempat diunggah. Pesan error
+pengguna (`Could not detect a directory containing static files`) muncul karena
+`dist/` di-ignore git dan belum dibangun saat deploy pertama kali.
+
+**File diubah:**
+- `package.json` - `deploy` kini `npm run build && npx wrangler deploy`
+  (resolusi biner lokal terjamin). Skrip baru `deploy:dry` =
+  `npm run build && npx wrangler deploy --dry-run` untuk verifikasi tanpa
+  publish. `deploy:cloud` ikut diperbaiki.
+- `wrangler.jsonc` - blok `assets` diverifikasi: `directory: "./dist"`,
+  `binding: "ASSETS"`, `not_found_handling: "single-page-application"`
+  (sudah benar sebelumnya; konfirmasi tertulis agar tidak diubah kembali).
+- `STATE/known_issues.md` - ISSUE-I001 dihapus (kosong).
+
+**Verifikasi (bukti, bukan klaim):**
+- `rm -rf dist && npm run deploy:dry` → 7 file dibaca dari `./dist`,
+  Total Upload 273.64 KiB / gzip 69.03 KiB, binding `env.ASSETS` terpasang.
+- Rantai deploy kini: `npm run deploy` → `tsc && vite build` → `wrangler deploy`.
+
+---
+
+## Cycle 45 - T-0046, T-0047, T-0048 - 2026-09-17T10:45:00Z
+
+### T-0046 — Skeleton Loading di Halaman Equipment & Rental (VERIFIKASI & FINALISASI)
+
+Implementasi sudah ada dari cycle sebelumnya (commit 6ff1488) — diverifikasi ulang
+dan difinalisasi di cycle ini, bukan dikerjakan dua kali.
+
+File diubah:
+- src/pages/admin/EquipmentManagement.tsx - prop isLoading menggantikan seluruh
+  konten dengan skeleton (header 60px, 4 mini stat, filter bar, grid 6 kartu)
+  memakai komponen <Skeleton> tunggal + aria-busy
+- src/pages/admin/RentalManagement.tsx - isLoading menampilkan <SkeletonRows>
+  5 baris placeholder (56px) menggantikan tabel
+- tests/skeletonLoading.test.mjs - asertensi: grid 6 kartu skeleton muncul dan
+  tabel asli tidak dirender saat loading; empty state tidak muncul saat loading;
+  tabel dan data tampil saat isLoading=false
+
+### T-0047 — Tooltip HM Progress Bar di Halaman Equipment
+
+File ditambah:
+- src/components/HmProgressBar.tsx - KOMPONEN BARU. Bar progress menuju servis
+  preventif berikutnya. Memakai getServiceStatus() dari businessRules sebagai
+  SATU sumber perhitungan (interval SERVICE_INTERVAL_HM=250, ambang peringatan 50).
+  Warna semantik: #059669 hijau (aman) / #D97706 kuning (mendekati) /
+  #DC2626 merah (lewat jadwal). Tooltip via atribut title bawaan browser plus
+  role="img" aria-label untuk pembaca layar; berisi HM saat ini, target servis
+  berikutnya, dan sisa HM. Bar tetap penuh (merah) saat lewat jadwal — sinyal
+  lebih jelas daripada bar "mundur" tak terbatas.
+
+### T-0048 — Ringkasan Status di Header Kartu Unit (Equipment Card)
+
+File diubah:
+- src/pages/admin/EquipmentManagement.tsx - tampilan default kini berupa GRID
+  KARTU UNIT (auto-fill minmax(280px,1fr), 3 kolom di desktop) dengan toggle
+  Kartu/Tabel (aria-pressed). Tiap kartu: foto unit dari stitchAssets, badge
+  status, nama/kode/merk/model, HmProgressBar, tarif/hari (formatRupiah, rata
+  kanan monospace), tanggal servis terakhir (CalendarClock), tombol Ubah, dan
+  QUICK-ACTION "Jadwalkan Servis" yang hanya muncul untuk unit isDue atau
+  isApproaching (onScheduleMaintenance PREVENTIF; loading "Menjadwalkan…").
+  Card lift on hover memakai .card-premium + .hover-lift sesuai design system §7.
+- src/App.tsx - meneruskan prop maintenance dan onScheduleMaintenance ke
+  EquipmentManagement
+
+### Verifikasi gabungan
+
+- type-check: PASS (tsc --noEmit, 0 error)
+- npm test: PASS 25/25 suite (asertensi baru T-0047 dan T-0048 di
+  tests/skeletonLoading.test.mjs; bundle .tmp_hmbar.mjs ditambahkan ke
+  tests/run-tests.mjs)
+- build: PASS (698.95 kB, 1645 modul)

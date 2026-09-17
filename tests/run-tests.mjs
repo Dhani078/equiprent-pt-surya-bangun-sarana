@@ -70,6 +70,22 @@ execSync(
   { cwd: root, stdio: 'ignore' }
 );
 
+// Halaman Equipment & Rental (JSX) — uji skeleton loading (T-0046).
+execSync(
+  `npx esbuild "${join(root, 'src/pages/admin/EquipmentManagement.tsx')}" --bundle --format=esm --outfile="${join(root, '.tmp_eqpage.mjs')}" --platform=neutral --external:react --external:react-dom --external:@tidbcloud/serverless --loader:.tsx=tsx --jsx=automatic`,
+  { cwd: root, stdio: 'ignore' }
+);
+execSync(
+  `npx esbuild "${join(root, 'src/pages/admin/RentalManagement.tsx')}" --bundle --format=esm --outfile="${join(root, '.tmp_rentpage.mjs')}" --platform=neutral --external:react --external:react-dom --external:@tidbcloud/serverless --loader:.tsx=tsx --jsx=automatic`,
+  { cwd: root, stdio: 'ignore' }
+);
+
+// Komponen bar progress HM (JSX) — diuji untuk T-0047.
+execSync(
+  `npx esbuild "${join(root, 'src/components/HmProgressBar.tsx')}" --bundle --format=esm --outfile="${join(root, '.tmp_hmbar.mjs')}" --platform=neutral --external:react --external:react-dom --external:@tidbcloud/serverless --loader:.tsx=tsx --jsx=automatic`,
+  { cwd: root, stdio: 'ignore' }
+);
+
 // Halaman pelacakan GPS (JSX). Leaflet menyentuh `window` saat modul dimuat,
 // sehingga diganti dengan stub ringan; useEffect tidak berjalan pada render
 // statis, jadi peta tidak benar-benar dibuat saat pengujian.
@@ -77,6 +93,17 @@ execSync(
   `npx esbuild "${join(root, 'src/pages/admin/GpsTrackingPage.tsx')}" --bundle --format=esm --outfile="${join(root, '.tmp_gps.mjs')}" --platform=neutral --external:react --external:react-dom --external:@tidbcloud/serverless --alias:leaflet=./tests/stubs/leaflet.mjs --loader:.tsx=tsx --jsx=automatic`,
   { cwd: root, stdio: 'ignore' }
 );
+
+// Utilitas tabel, ekspor, dan notifikasi (modul murni).
+bundle('src/lib/tableControls.ts', '.tmp_tableControls.mjs');
+bundle('src/lib/tableExport.ts', '.tmp_tableExport.mjs');
+bundle('src/lib/notifications.ts', '.tmp_notifications.mjs');
+
+// Modul audit trail (T-0049) — diuji langsung + lewat endpoint API.
+bundle('src/lib/auditLog.ts', '.tmp_audit.mjs');
+
+// Generator data demo (T-0050) — diverifikasi terhadap acceptance criteria.
+bundle('src/lib/seedGenerator.ts', '.tmp_seed.mjs');
 
 const suites = [
   'businessRules.test.mjs',
@@ -100,6 +127,12 @@ const suites = [
   'gpsPage.test.mjs',
   'customerPortal.test.mjs',
   'codeQuality.test.mjs',
+  'skeletonLoading.test.mjs',
+  'tableControls.test.mjs',
+  'tableExport.test.mjs',
+  'notifications.test.mjs',
+  'auditLog.test.mjs',
+  'seedData.test.mjs',
 ];
 
 let failed = 0;
@@ -122,7 +155,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs', '.tmp_fleetTelemetry.mjs', '.tmp_gps.mjs', '.tmp_customerPortal.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs', '.tmp_fleetTelemetry.mjs', '.tmp_gps.mjs', '.tmp_customerPortal.mjs', '.tmp_eqpage.mjs', '.tmp_rentpage.mjs', '.tmp_tableControls.mjs', '.tmp_tableExport.mjs', '.tmp_notifications.mjs', '.tmp_audit.mjs', '.tmp_seed.mjs', '.tmp_hmbar.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }

@@ -11,7 +11,8 @@ import {
   Settings, 
   FileCheck, 
   CreditCard, 
-  UserCircle 
+  UserCircle,
+  ShieldCheck
 } from 'lucide-react';
 
 export interface SidebarBadges {
@@ -70,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
           { id: 'tracking', label: 'Pelacakan GPS Telemetri', icon: MapPin },
           { id: 'reports', label: 'Laporan & Dokumen', icon: FileText },
           { id: 'users', label: 'Manajemen Pengguna', icon: Users },
+          { id: 'audit', label: 'Audit Trail', icon: ShieldCheck },
           { id: 'settings', label: 'Pengaturan Sistem', icon: Settings },
         ];
       case 'STAFF':

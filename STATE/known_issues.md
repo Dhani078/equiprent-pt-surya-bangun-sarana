@@ -5,12 +5,6 @@
 
 ---
 
-## ISSUE-I001 — MEDIUM — OPEN
-**Gejala:** Build Cloudflare gagal dengan `Could not detect a directory containing static files`
-**Lokasi:** Deploy pipeline / `dist/` kosong
-**Reproduksi:** `npx wrangler deploy` tanpa `npm run build` terlebih dahulu
-**Hipotesis:** Folder `dist/` kosong atau tidak ter-generate
-**Solusi:** Selalu jalankan `npm run build` sebelum `wrangler deploy`. Pastikan `wrangler.jsonc` punya blok `assets` dengan `directory: "./dist"`.
-**Dampak task:** semua (deployment)
+_(Kosong — ISSUE-I001 sudah diperbaiki di cycle 46, lihat changelog.md)_
 
 ---

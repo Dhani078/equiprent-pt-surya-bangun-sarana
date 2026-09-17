@@ -5,15 +5,19 @@ Dokumen ini disusun khusus sebagai **buku panduan lapangan bagi mahasiswa** dala
 
 ---
 
-## 📋 DAFTAR ISI
+## DAFTAR ISI
 1. [Struktur Naskah Pembuka Sidang (Opening Script)](#1-struktur-naskah-pembuka-sidang-opening-script)
 2. [Skenario Live Demo Aplikasi Berbasis 3 Aktor](#2-skenario-live-demo-aplikasi-berbasis-3-aktor)
    - [Skenario 1: Pelanggan (Customer Portal)](#skenario-1-pelanggan-customer-portal)
    - [Skenario 2: Staf Operasional (Staff Terminal)](#skenario-2-staf-operasional-staff-terminal)
    - [Skenario 3: Administrator (Admin Dashboard)](#skenario-3-administrator-admin-dashboard)
-3. [Bank Soal Sidang Skripsi (FAQ Dosen Penguji & Jawaban Ilmiah)](#3-bank-soal-sidang-skripsi-faq-dosen-penguji--jawaban-ilmiah)
-4. [Tabel Komparasi Ilmiah: Sistem Konvensional vs EquipRent MS](#4-tabel-komparasi-ilmiah-sistem-konvensional-vs-equiprent-ms)
-5. [Tips & Trik Menghadapi Sidang](#5-tips--trik-menghadapi-sidang)
+3. [Diagram Entitas Relasional (ERD) 9 Tabel](#3-diagram-entitas-relasional-erd-9-tabel)
+4. [Flowchart Alur Rental & Status Transisi](#4-flowchart-alur-rental--status-transisi)
+5. [Daftar Pengujian (Testing) & Cakupan](#5-daftar-pengujian-testing--cakupan)
+6. [Audit Trail: Keamanan & Jejak Audit](#6-audit-trail-keamanan--jejak-audit)
+7. [Bank Soal Sidang Skripsi (FAQ Dosen Penguji & Jawaban Ilmiah)](#7-bank-soal-sidang-skripsi-faq-dosen-penguji--jawaban-ilmiah)
+8. [Tabel Komparasi Ilmiah: Sistem Konvensional vs EquipRent MS](#8-tabel-komparasi-ilmiah-sistem-konvensional-vs-equiprent-ms)
+9. [Tips & Trik Menghadapi Sidang](#9-tips--trik-menghadapi-sidang)
 
 ---
 
@@ -119,7 +123,216 @@ Alur demonstrasi dirancang runut menggambarkan **siklus hidup penyewaan alat ber
 
 ---
 
-## 3. BANK SOAL SIDANG SKRIPSI (FAQ DOSEN PENGUJI & JAWABAN ILMIAH)
+## 3. DIAGRAM ENTITAS RELASIONAL (ERD) 9 TABEL
+
+Basis data memakai 9 tabel relasional pada TiDB Cloud Serverless (dialek
+MySQL 8.0). Skema lengkap DDL tersedia di `DATABASE_TIDB.md` §3.
+
+```mermaid
+erDiagram
+    ROLES ||--o{ USERS : "memiliki"
+    USERS ||--o{ RENTALS : "membuat_pesanan"
+    USERS ||--o{ CONTRACTS : "menandatangani_sebagai_pelanggan"
+    USERS ||--o{ PAYMENTS : "membayar"
+    USERS ||--o{ MAINTENANCE : "menugaskan_teknisi"
+
+    EQUIPMENTS ||--o{ RENTALS : "disewakan_dalam"
+    EQUIPMENTS ||--o{ MAINTENANCE : "menjalani_servis"
+    EQUIPMENTS ||--o{ GPS_TRACKING : "memancarkan_koordinat"
+
+    RENTALS ||--|| CONTRACTS : "menerbitkan"
+    CONTRACTS ||--o{ PAYMENTS : "ditagihkan_dalam"
+    RENTALS ||--o{ REPORTS : "dicatat_dalam"
+```
+
+### Ringkasan Tabel & Relasi
+
+| # | Tabel | PK | FK / Relasi | Jumlah Data Demo |
+|---|---|---|---|---|
+| 1 | `roles` | `id` | — (induk) | 3 (ADMIN, STAFF, CUSTOMER) |
+| 2 | `users` | `id` | `role_id` → `roles.id` | 50 (2/6/42) |
+| 3 | `equipments` | `id` | — (master inventaris) | 50 (7 tipe, 9 brand) |
+| 4 | `rentals` | `id` | `customer_id` → `users.id`, `equipment_id` → `equipments.id` | 50 |
+| 5 | `contracts` | `id` | `rental_id` → `rentals.id` (1:1), `customer_id` → `users.id` | 50 |
+| 6 | `payments` | `id` | `contract_id` → `contracts.id`, `verified_by` → `users.id` | 50 |
+| 7 | `maintenance` | `id` | `equipment_id` → `equipments.id`, `technician_id` → `users.id` | 25 |
+| 8 | `gps_tracking` | `id` | `equipment_id` → `equipments.id` | 55 |
+| 9 | `reports` | `id` | `rental_id` → `rentals.id`, `generated_by` → `users.id` | 20 |
+
+**Kardinalitas penting yang sering ditanyakan dosen:**
+
+- `rentals` ↔ `contracts` adalah **1:1** — setiap transaksi sewa menerbitkan
+  tepat satu kontrak legal (`rentals.id` unik di `contracts.rental_id`).
+- `contracts` ↔ `payments` **1:1** — satu kontrak menagih satu kali pembayaran
+  penuh (tidak ada cicilan).
+- `users` ↔ `rentals` **1:N** — satu pelanggan boleh punya banyak sewa;
+  satu unit `equipments` hanya boleh punya **satu rental aktif**
+  (APPROVED/ON_GOING) pada rentang tanggal sama — aturan ini ditegakkan oleh
+  mesin pengecekan ketersediaan (`src/lib/availability.ts`) untuk mencegah
+  *double-booking*.
+
+---
+
+## 4. FLOWCHART ALUR RENTAL & STATUS TRANSISI
+
+### 4.1 Siklus Hidup Penyewaan (Business Process)
+
+```mermaid
+flowchart TD
+    A([Pelanggan Login]) --> B[Pilih Unit AVAILABLE]
+    B --> C[Ajukan Tanggal Sewa]
+    C --> D{Cek Ketersediaan<br/>availability.ts}
+    D -- Bentrok --> Z1([Ditolak:<br/>DOUBLE_BOOKING])
+    D -- Tersedia --> E[Status: PENDING]
+    E --> F[Tanda Tangan Kontrak<br/>E-Sign]
+    E --> G[Unggah Bukti Transfer]
+    G --> H[Status Pembayaran:<br/>PENDING_VERIFICATION]
+    H --> I{Staf Verifikasi?}
+    I -- Valid --> J[Status: APPROVED]
+    I -- Tidak Valid --> Z2([Status: REJECTED<br/>Pembayaran FAILED])
+    J --> K{Gerbang Pembayaran<br/>checkPaymentGate}
+    K -- Lunas / Override ADMIN --> L[Status: ON_GOING<br/>Unit: RENTED]
+    K -- Belum Lunas --> Z3([409:<br/>TAGIHAN_BELUM_LUNAS])
+    L --> M[Operasi di Lapangan<br/>GPS Tracking aktif]
+    M --> N[Status: COMPLETED<br/>Unit kembali AVAILABLE]
+    N --> O([Terbit BAST &<br/>Surat Jalan])
+```
+
+### 4.2 Mesin Transisi Status (`ALLOWED_TRANSITIONS`)
+
+Transisi status **tidak boleh melompat**. Matriks ini ditegakkan terpusat di
+`src/lib/rentalWorkflow.ts` agar tidak bisa diakali dari sisi klien:
+
+| Dari | Ke yang Diizinkan | Efek pada Unit |
+|---|---|---|
+| `PENDING` | `APPROVED`, `REJECTED` | tidak dikunci |
+| `APPROVED` | `ON_GOING`, `REJECTED` | dikunci `RENTED` |
+| `ON_GOING` | `COMPLETED` | dikunci `RENTED` |
+| `COMPLETED` | *(terminal)* | bebas kembali |
+| `REJECTED` | *(terminal)* | bebas kembali |
+
+> **Catatan ilmiah:** `COMPLETED` dan `REJECTED` adalah **status terminal** —
+> tidak ada jalan kembali, supaya audit trail dan laporan keuangan tidak bisa
+> diubah-ubah setelah ditutup (prinsip *immutability* pelaporan).
+
+### 4.3 Flowchart Verifikasi Pembayaran
+
+```mermaid
+flowchart LR
+    P1([Bukti Transfer<br/>Diunggah]) --> P2[payments.status =<br/>PENDING_VERIFICATION]
+    P2 --> P3{Staf: Lihat Bukti}
+    P3 -- Valid --> P4[status = PAID<br/>+ verified_by<br/>+ verified_at]
+    P3 -- Ditolak --> P5[status = FAILED<br/>+ rental REJECTED]
+    P4 --> P6{Mau ON_GOING?}
+    P6 -- Ya, PAID --> P7[Diizinkan]
+    P6 -- Ya, belum PAID --> P8([409 TAGIHAN_BELUM_LUNAS<br/>kecuali override ADMIN])
+```
+
+---
+
+## 5. DAFTAR PENGUJIAN (TESTING) & CAKUPAN
+
+Pengujian memakai **test runner sendiri tanpa framework eksternal**
+(`tests/run-tests.mjs`): modul TypeScript di-bundle dengan esbuild lalu
+dieksekusi node. Total **27 test suite, 1.531 asersi, 0 gagal**.
+
+### 5.1 Daftar 27 Test Suite
+
+| # | Suite | Asersi | Yang Diuji |
+|---|---|---|---|
+| 1 | `businessRules.test.mjs` | 37 | Aturan bisnis: ambang 250/500/1000 HM, denda, format rupiah |
+| 2 | `validators.test.mjs` | 96 | Validasi seluruh input endpoint (zero-trust boundary) |
+| 3 | `availability.test.mjs` | 62 | Mesin cek ketersediaan & cegah double-booking |
+| 4 | `dataIntegrity.test.mjs` | 41 | Integritas relasional data demo |
+| 5 | `servicePanel.test.mjs` | 5 | Panel peringatan servis |
+| 6 | `lateFee.test.mjs` | 11 | Perhitungan denda keterlambatan |
+| 7 | `consistency.test.mjs` | 26 | Konsistensi status unit ↔ rental |
+| 8 | `dueNotifications.test.mjs` | 14 | Notifikasi jatuh tempo |
+| 9 | `reports.test.mjs` | 89 | 11 jenis laporan + ringkasan agregat |
+| 10 | `documents.test.mjs` | 121 | Penerbitan BAST/Surat Jalan, kop, nomor surat |
+| 11 | `smokeRender.test.mjs` | 26 | Render komponen utama tanpa crash |
+| 12 | `api.test.mjs` | 237 | Seluruh endpoint API + RBAC per role |
+| 13 | `dashboard.test.mjs` | 59 | Mesin agregat dashboard eksekutif |
+| 14 | `rentalWorkflow.test.mjs` | 67 | Matriks transisi status rental |
+| 15 | `contracts.test.mjs` | 82 | Pembuatan & penomoran kontrak |
+| 16 | `contractPanel.test.mjs` | 23 | Panel e-signature |
+| 17 | `paymentWorkflow.test.mjs` | 122 | Gerbang pembayaran & verifikasi |
+| 18 | `fleetTelemetry.test.mjs` | 117 | Telemetri GPS armada |
+| 19 | `gpsPage.test.mjs` | 37 | Halaman peta Leaflet |
+| 20 | `customerPortal.test.mjs` | 55 | Portal pelanggan |
+| 21 | `codeQuality.test.mjs` | 6 | Aturan kualitas kode (zero `any`, dll.) |
+| 22 | `skeletonLoading.test.mjs` | 29 | Skeleton loading halaman equipment & rental |
+| 23 | `tableControls.test.mjs` | 25 | Sorting, filtering, pagination tabel |
+| 24 | `tableExport.test.mjs` | 15 | Export CSV |
+| 25 | `notifications.test.mjs` | 18 | Badge notifikasi sidebar |
+| 26 | `auditLog.test.mjs` | 56 | Audit trail: 16 aksi tercatat, RBAC, ring buffer |
+| 27 | `seedData.test.mjs` | 46 | Data demo: 50/50/55 + integritas lintas tabel |
+
+### 5.2 Cakupan Pengujian per Lapisan
+
+```mermaid
+graph LR
+    subgraph Lapisan yang Diuji
+        A[Aturan Bisnis<br/>businessRules] --> B[Logika Terpusat<br/>workflow/availability]
+        B --> C[API Edge Hono<br>RBAC + validasi]
+        C --> D[Komponen UI React<br>render + interaksi]
+    end
+```
+
+| Lapisan | Strategi | Lokasi |
+|---|---|---|
+| **Unit** | fungsi murni langsung diuji dengan `assert` node | `businessRules`, `validators`, `rentalWorkflow` |
+| **Integrasi** | endpoint Hono dipanggil via `app.fetch` (tanpa server HTTP) | `api`, `contracts`, `paymentWorkflow` |
+| **Komponen** | render statis komponen React (esbuild + JSX) | `smokeRender`, `gpsPage`, `skeletonLoading` |
+| **Data Demo** | integritas 9 entitas + kesegaran tanggal | `seedData`, `dataIntegrity` |
+| **Keamanan** | RBAC per role, session, audit trail | `api`, `auditLog`, `codeQuality` |
+
+### 5.3 Quality Gate (wajib lulus sebelum deploy)
+
+```bash
+npm run type-check   # tsc --noEmit — 0 error
+npm test             # 27 suite, 1.467 asersi — 0 gagal
+npm run build        # Vite build produksi
+npm run deploy:dry   # Wrangler dry-run tanpa publish
+```
+
+Jalankan perintah ini saat dosen bertanya *"Bagaimana Anda memastikan aplikasi
+Anda bebas bug?"* — keempatnya wajib hijau sebelum kode naik ke Cloudflare.
+
+---
+
+## 6. AUDIT TRAIL: KEAMANAN & JEJAK AUDIT
+
+Sistem mencatat **jejak audit (audit trail)** pada setiap aksi tulis penting.
+Ini adalah fitur keamanan yang membedakan sistem ini dari pencatatan manual.
+
+**Aksi yang tercatat (16 jenis):**
+
+| Kategori | Aksi |
+|---|---|
+| Autentikasi | `LOGIN`, `PASSWORD_CHANGED`, `PASSWORD_RESET` |
+| Unit | `EQUIPMENT_CREATE`, `EQUIPMENT_UPDATE`, `EQUIPMENT_DELETE` |
+| Transaksi | `RENTAL_CREATE`, `RENTAL_STATUS_CHANGE` |
+| Kontrak | `CONTRACT_CREATE`, `CONTRACT_SIGN` |
+| Pembayaran | `PAYMENT_PROOF_UPLOAD`, `PAYMENT_VERIFIED`, `PAYMENT_REJECTED` |
+| Servis | `MAINTENANCE_SCHEDULED` |
+| Pengguna | `USER_CREATE`, `USER_TOGGLE` |
+
+Setiap entri mencatat: `user_id`, `username`, `role`, `action`, `entity`,
+`entity_id`, `timestamp`, dan `detail` (mis. alamat IP login).
+
+**Akses:** hanya ADMIN (ditegakkan oleh `RBAC_MATRIX` di `src/lib/auth.ts`).
+Lihat di menu **Audit Trail** (ikon perisai) — mendukung pencarian, filter
+aksi/entitas, pagination, dan unduh CSV.
+
+**Jawaban singkat saat ditanya:** *"Setiap perubahan data dicatat dengan
+pelaku, peran, dan stempel waktu. Penghapusan unit yang pernah dipakai
+transaksi dicegah untuk menjaga integritas referensial laporan, dan hanya
+Administrator yang bisa melihat jejak audit."*
+
+---
+
+## 7. BANK SOAL SIDANG SKRIPSI (FAQ DOSEN PENGUJI & JAWABAN ILMIAH)
 
 ### Q1: *"Mengapa memilih arsitektur Edge Computing (Cloudflare Workers) dan bukan shared hosting PHP biasa?"*
 > **Jawaban:**  
@@ -153,7 +366,7 @@ Alur demonstrasi dirancang runut menggambarkan **siklus hidup penyewaan alat ber
 
 ---
 
-## 4. TABEL KOMPARASI ILMIAH: SISTEM KONVENSIONAL VS EQUIPRENT MS
+## 8. TABEL KOMPARASI ILMIAH: SISTEM KONVENSIONAL VS EQUIPRENT MS
 
 Tabel ini sangat baik ditampilkan pada slide presentasi Anda:
 
@@ -168,7 +381,7 @@ Tabel ini sangat baik ditampilkan pada slide presentasi Anda:
 
 ---
 
-## 5. TIPS & TRIK MENGHADAPI SIDANG
+## 9. TIPS & TRIK MENGHADAPI SIDANG
 
 1. **Gunakan Tombol Demo 1-Click**: Jangan buang waktu mengetik username dan password secara manual saat demo di hadapan penguji. Manfaatkan tombol chip cepat yang telah disediakan di layar Login.
 2. **Kuasai Alur Relasi Data**: Pahami bahwa permohonan sewa (`rentals`) melahirkan kontrak digital (`contracts`), yang kemudian menghasilkan tagihan pembayaran (`payments`), dan setelah lunas unit dimobilisasi dengan Berita Acara (`reports`).

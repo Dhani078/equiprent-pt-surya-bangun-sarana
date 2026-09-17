@@ -357,12 +357,18 @@ if (tanpaBukti) {
 }
 
 // Pembayaran PENDING_VERIFICATION + ada bukti → berhasil.
+//
+// Nama pengesah diambil dari session (perbaikan IDOR: identitas tidak boleh
+// dipalsukan dari body), jadi yang tercatat adalah `full_name` admin, BUKAN
+// `staffName` di body — itulah yang diuji di sini.
+const NAMA_ADMIN = 'Muhammad Rizki Ramadhani, S.Kom (Admin)';
 const siapVerif = semuaPayment.find(x => x.status === 'PENDING_VERIFICATION' && x.payment_proof_path);
 if (siapVerif) {
   r = await req('POST', `/api/payments/${siapVerif.id}/verify`, { token: T_ADMIN, body: { staffName: 'Staf Uji' } });
   t('verifikasi sah → 200', r.status === 200);
   t('status berubah jadi PAID', r.body?.item?.status === 'PAID');
-  t('nama verifikator tercatat', r.body?.item?.verified_by_name === 'Staf Uji');
+  t('nama verifikator dari session, bukan body', r.body?.item?.verified_by_name === NAMA_ADMIN);
+  t('nama palsu dari body ditolak', r.body?.item?.verified_by_name !== 'Staf Uji');
   t('waktu verifikasi tercatat', Boolean(r.body?.item?.verified_at));
   t('meta.allowedNext kosong (PAID final)', r.body?.meta?.allowedNext?.length === 0);
 }
@@ -469,7 +475,8 @@ if (siapTolak) {
   });
   t('tolak bukti sah → 200', r.status === 200);
   t('status jadi FAILED', r.body?.item?.status === 'FAILED');
-  t('peninjau penolakan tercatat', r.body?.item?.verified_by_name === 'Staf Uji Tolak');
+  t('peninjau penolakan dari session, bukan body', r.body?.item?.verified_by_name === NAMA_ADMIN);
+  t('nama palsu dari body ditolak', r.body?.item?.verified_by_name !== 'Staf Uji Tolak');
   t('FAILED masih bisa dilampiri ulang', r.body?.meta?.allowedNext?.includes('PENDING_VERIFICATION'));
 
   // Setelah ditolak, tagihan tidak lagi menunggu verifikasi → verifikasi gagal.

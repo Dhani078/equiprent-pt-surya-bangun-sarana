@@ -21,6 +21,8 @@ import { getEquipmentImage } from '../../lib/stitchAssets';
 import { formatRupiah, formatTanggal } from '../../lib/businessRules';
 import { fetchDashboardStats } from '../../lib/dashboardClient';
 import type { DashboardSource } from '../../lib/dashboardClient';
+import { Skeleton } from '../../components/Skeleton';
+import { TrendChart } from '../../components/TrendChart';
 
 interface AdminDashboardProps {
   onNavigate: (tab: string) => void;
@@ -611,6 +613,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           </div>
         )}
       </div>
+      {/* Grafik tren interaktif (SVG, tanpa pustaka pihak ketiga) */}
+      {stats.revenueTrend.length > 0 && (
+        <div className="card-premium" style={{ padding: '20px' }}>
+          <TrendChart
+            title="Kurva Pendapatan 12 Bulan"
+            subtitle="Arahkan kursor ke titik untuk melihat nilai per bulan"
+            data={stats.revenueTrend.map((d) => ({ label: d.label, value: d.amount }))}
+            formatValue={formatRupiah}
+          />
+        </div>
+      )}
+
       {/* Revenue Trend — bar chart CSS-only 12 bulan */}
       <div className="card-premium" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -711,23 +725,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 // ---------------------------------------------------------------------------
 // Komponen kecil pendukung
 // ---------------------------------------------------------------------------
-
-interface SkeletonProps {
-  height: string | number;
-}
-
-/** Balok berdenyut untuk keadaan memuat. */
-const Skeleton: React.FC<SkeletonProps> = ({ height }) => (
-  <div
-    style={{
-      height,
-      borderRadius: 'var(--radius-eight)',
-      background: 'linear-gradient(90deg, #EEF2F7 25%, #E2E8F0 37%, #EEF2F7 63%)',
-      backgroundSize: '400% 100%',
-      animation: 'sbs-shimmer 1.4s ease-in-out infinite',
-    }}
-  />
-);
 
 interface EmptyStateProps {
   pesan: string;

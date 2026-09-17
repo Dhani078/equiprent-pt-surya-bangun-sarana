@@ -21,6 +21,10 @@
   --color-background: #f1f5f9;       /* Slate Grey */
   --color-surface: #FFFFFF;          /* Pure White */
   --color-border: #E2E8F0;           /* Clean Border */
+
+  /* Skeleton placeholder (pakai di .skeleton-base) */
+  --color-skeleton-from: #EEF2F7;
+  --color-skeleton-via: #E2E8F0;
   
   /* Typography */
   --font-primary: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif;
@@ -93,6 +97,19 @@ body {
   100% {
     background-position: 0 50%;
   }
+}
+
+/* Skeleton loading — kelas tunggal dipakai <Skeleton> di semua halaman.
+   Warna dari CSS variabel agar adaptif terhadap dark mode. */
+.skeleton-base {
+  background: linear-gradient(
+    90deg,
+    var(--color-skeleton-from) 25%,
+    var(--color-skeleton-via) 37%,
+    var(--color-skeleton-from) 63%
+  );
+  background-size: 400% 100%;
+  animation: sbs-shimmer 1.4s ease-in-out infinite;
 }
 
 /* Micro-interactions */
@@ -377,6 +394,8 @@ table.data-table tbody tr:hover {
   --color-background:        #0F172A;
   --color-surface:           #1E293B;
   --color-border:            #2D3F55;
+  --color-skeleton-from:     #243450;
+  --color-skeleton-via:      #334155;
   --shadow-sm:   0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
   --shadow-md:   0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -1px rgba(0,0,0,0.3);
   --shadow-lg:   0 10px 15px -3px rgba(0,0,0,0.6), 0 4px 6px -2px rgba(0,0,0,0.3);
