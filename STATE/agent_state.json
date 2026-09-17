@@ -1,12 +1,13 @@
 {
   "cycle": 46,
   "last_run": "2026-09-17T12:15:00.000Z",
-  "current_task_id": "T-0051",
+  "current_task_id": null,
   "current_phase": "FASE 4: Polish & Academic Readiness",
   "completed_this_cycle": [
-    "T-0052",
     "T-0049",
-    "T-0050"
+    "T-0050",
+    "T-0051",
+    "T-0052"
   ],
   "session_summary": "T-0050 DONE: Seed data realistis untuk demo sidang. Temuan terverifikasi: seedGenerator.ts SUDAH memenuhi 4 acceptance criteria (50 unit/50 rental/55 GPS/konsisten lintas tabel) TETAPI tanggal referensi dipaku ke 2026-09-04 sehingga rental ON_GOING terlihat selesai & GPS basi saat demo di tanggal lain. Diperbaiki: HARI_INI = new Date() menggantikan 3x tanggal konstan. Ditambah tests/seedData.test.mjs (46 asersi) memverifikasi volume, variasi tipe/brand, penyebaran 5 status rental, koordinat GPS Kalsel, integritas relasional, subtotal=days*rate, ON_GOING wajib PAID, tanpa double-booking, kesegaran tanggal. Data final: 50 user (2 ADMIN/6 STAFF/42 CUSTOMER), 50 unit (7 tipe/9 brand), 50 rental (7 PENDING/8 APPROVED/10 ON_GOING/21 COMPLETED/4 REJECTED), 50 kontrak, 50 pembayaran (31 PAID/9 PENDING_VERIFICATION/6 UNPAID/4 FAILED), 25 maintenance, 55 GPS, 20 laporan. 0 referential violation.",
   "quality_gate": {
