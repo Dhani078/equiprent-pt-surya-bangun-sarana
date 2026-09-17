@@ -1096,6 +1096,57 @@ File diubah:
 Verifikasi: typecheck PASS - build PASS (651.67 kB) - npm test 21/21 suite PASS
 
 
+## Cycle 46b - T-0049 - 2026-09-17T11:45:00Z
+
+### T-0049 — F4.1 Audit Trail Logging (DONE)
+
+**Akar masalah (diverifikasi, bukan klaim):** audit trail hanya mencatat 7 aksi
+sempit (LOGIN, PASSWORD_CHANGED, RENTAL_STATUS_CHANGE, PAYMENT_VERIFIED,
+PAYMENT_REJECTED, MAINTENANCE_SCHEDULED, PASSWORD_RESET). Aksi tulis inti
+bisnis — equipment create/update/delete, rental create, contract create/sign,
+payment proof upload, user create/toggle — sama sekali tidak tercatat. Selain
+itu actor (user_id/username/role) ditulis manual per call site, rapuh dan mudah
+tidak konsisten.
+
+**File diubah:**
+
+- `src/lib/auditLog.ts` — helper baru `auditActor(c)`: satu sumber kebenaran
+  actor dari Hono context (`userId`/`username`/`role`), digunakan oleh semua
+  call site. Tetap ring buffer 1000 entri + `getAuditLog(limit)` lama.
+- `src/server/index.ts` —
+  - 7 call audit lama direfaktor ke `...auditActor(c)` (konsistensi tunggal).
+  - **9 audit write baru** dipasang tepat setelah mutasi DB:
+    `EQUIPMENT_CREATE`, `EQUIPMENT_UPDATE`, `EQUIPMENT_DELETE`,
+    `RENTAL_CREATE`, `CONTRACT_CREATE`, `CONTRACT_SIGN`,
+    `PAYMENT_PROOF_UPLOAD`, `USER_CREATE`, `USER_TOGGLE`.
+  - Endpoint `GET /api/audit-log` dikuatkan: RBAC eksplisit ADMIN-only lewat
+    `RBAC_MATRIX` (`src/lib/auth.ts`), filter `action`/`entity`/`user`,
+    pagination (default 50, maks 200 per halaman).
+  - `DELETE /api/equipments/:id` kini membedakan dua kondisi penolakan:
+    `EQUIPMENT_IN_USE` (sewa aktif) vs `EQUIPMENT_HAS_HISTORY` (pernah
+    dipakai transaksi — referential integrity).
+- `src/lib/db.ts` — `deleteEquipment` tidak lagi menghapus fisik unit yang
+  ber-riwayat (relasi rental/kontrak/pembayaran/maintenance tetap menunjuk
+  unit). Menghapus kaskade dari stateStore akan memutus laporan & audit.
+- `src/components/AuditLogPanel.tsx` (baru, 355 baris) — panel admin:
+  search + filter action/entity, pagination, unduh CSV, badge role, note
+  ring buffer 1000 entri, mengikuti design system §7.
+- `src/components/Sidebar.tsx` — nav item `{ id: 'audit', label: 'Audit
+  Trail', icon: ShieldCheck }` (hanya muncul untuk ADMIN).
+- `src/App.tsx` — import + render `activeTab === 'audit'`.
+- `tests/auditLog.test.mjs` (baru, 275 baris) + `tests/run-tests.mjs`
+  (bundle `.tmp_audit.mjs`, daftar suite, cleanup).
+
+**Verifikasi (bukti):**
+- `npm run type-check` → 0 error.
+- `node tests/auditLog.test.mjs` → 56/56 asersi lulus.
+- `npm test` → 26/26 suite lulus.
+- Rangkaian status test mengikuti `ALLOWED_TRANSITIONS` di
+  `rentalWorkflow.ts` (PENDING→APPROVED→ON_GOING→COMPLETED) dan gerbang
+  pembayaran `checkPaymentGate` (override ADMIN dihormati saat
+  `TAGIHAN_BELUM_LUNAS`), terbukti dari log debug endpoint.
+
+
 ---
 
 ## Cycle 46 - T-0052 - 2026-09-17T11:20:00Z

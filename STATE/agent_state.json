@@ -1,23 +1,24 @@
 {
   "cycle": 46,
-  "last_run": "2026-09-17T11:20:00.000Z",
-  "current_task_id": "T-0049",
+  "last_run": "2026-09-17T11:45:00.000Z",
+  "current_task_id": "T-0050",
   "current_phase": "FASE 4: Polish & Academic Readiness",
   "completed_this_cycle": [
-    "T-0052"
+    "T-0052",
+    "T-0049"
   ],
-  "session_summary": "T-0052 DONE: fix ISSUE-I001 deploy Cloudflare. Akar masalah ditemukan di package.json — script deploy memanggil `wrangler deploy` tanpa `npx`, sehingga gagal di environment tanpa node_modules/.bin di PATH dan dist/ (yang di-ignore git) belum terbangun. Diperbaiki jadi `npm run build && npx wrangler deploy`, ditambah script `deploy:dry` untuk verifikasi tanpa publish. Blok assets wrangler.jsonc diverifikasi benar (./dist + ASSETS + SPA not_found_handling). Verifikasi nyata: rm -rf dist && npm run deploy:dry sukses (7 file, 273.64 KiB, binding env.ASSETS). ISSUE-I001 dipindah dari known_issues.md (kini kosong) ke changelog cycle 46.",
+  "session_summary": "T-0049 DONE: Audit Trail Logging. Akar masalah terverifikasi — audit hanya mencatat 7 aksi sempit; 9 aksi tulis inti bisnis (equipment create/update/delete, rental create, contract create/sign, payment proof upload, user create/toggle) tidak tercatat sama sekali. Ditambahkan 9 audit write baru setelah mutasi DB + helper auditActor(c) sebagai sumber actor tunggal dari Hono context. Endpoint GET /api/audit-log dikuatkan (RBAC ADMIN-only via RBAC_MATRIX, filter action/entity/user, pagination maks 200). Panel frontend baru AuditLogPanel.tsx + nav item Sidebar. Bug integritas riil ditemukan dan diperbaiki: deleteEquipment menghapus fisik unit ber-riwayat sehingga merusak relasi rental/kontrak/pembayaran — kini dibedakan EQUIPMENT_IN_USE vs EQUIPMENT_HAS_HISTORY. Test suite baru auditLog.test.mjs 56 asersi, rangkaian mengikuti ALLOWED_TRANSITIONS + checkPaymentGate (override ADMIN saat TAGIHAN_BELUM_LUNAS).",
   "quality_gate": {
     "type_check": "PASS",
-    "test": "PASS (25/25 suite)",
-    "build": "PASS (698.95 kB)",
-    "verified_at": "2026-09-17T11:20:00.000Z"
+    "test": "PASS (26/26 suite)",
+    "build": "PASS",
+    "verified_at": "2026-09-17T11:45:00.000Z"
   },
-  "test_suites": 25,
-  "commits": 39,
+  "test_suites": 26,
+  "commits": 40,
   "deploy": {
     "status": "READY",
     "note": "npm run deploy = npm run build && npx wrangler deploy; deploy:dry untuk uji tanpa publish"
   },
-  "next_focus": "T-0049 (Audit Trail) → T-0050 (Seed data) → T-0051 (Dokumentasi sidang)"
+  "next_focus": "T-0050 (Seed data 50 unit / 50 rental / 55 titik GPS) → T-0051 (Dokumentasi sidang)"
 }

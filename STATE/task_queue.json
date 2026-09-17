@@ -387,12 +387,18 @@
       "title": "F4.1 Audit Trail Logging",
       "category": "SECURITY",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 60,
       "depends_on": [],
       "files": [
         "src/lib/auditLog.ts",
-        "src/server/index.ts"
+        "src/server/index.ts",
+        "src/components/AuditLogPanel.tsx",
+        "src/components/Sidebar.tsx",
+        "src/App.tsx",
+        "src/lib/db.ts",
+        "tests/auditLog.test.mjs",
+        "tests/run-tests.mjs"
       ],
       "acceptance_criteria": [
         "Setiap aksi tulis (create/update/delete) dicatat: user_id, role, aksi, entitas, entity_id, timestamp",
