@@ -123,7 +123,7 @@ STATE/                      ← state agen autonomous (changelog, task queue, dl
 
 ```bash
 npm run type-check   # tsc --noEmit — harus 0 error
-npm test             # 27 suite, 1.467 asersi — harus semua lulus
+npm test             # 27 suite, 1.531 asersi — harus semua lulus
 npm run build        # Vite build — harus sukses
 npm run deploy:dry   # Wrangler dry-run — verifikasi tanpa publish
 ```
