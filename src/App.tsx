@@ -15,6 +15,10 @@ import { ReportsPage } from './pages/admin/ReportsPage';
 import { UserManagement } from './pages/admin/UserManagement';
 import { StaffDashboard } from './pages/staff/StaffDashboard';
 import { CustomerPortal } from './pages/customer/CustomerPortal';
+import { AccountSettings } from './pages/AccountSettings';
+import type { ProfilePatch } from './pages/AccountSettings';
+import { buildNotifications } from './lib/notifications';
+import { CommandPalette } from './components/CommandPalette';
 
 export const App: React.FC = () => {
   // Default to null so the user always enters via the authentic Login Screen
@@ -47,6 +51,20 @@ export const App: React.FC = () => {
   const [reloadKey, setReloadKey] = useState(0);
 
   const handleReloadData = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  /** Palet perintah Ctrl/⌘ + K. */
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   /**
    * Pemuatan awal: ambil koleksi dari edge API (sumber kebenaran produksi).
@@ -207,9 +225,37 @@ export const App: React.FC = () => {
     refreshData();
   };
 
+  /**
+   * Menyimpan perubahan profil pengguna yang sedang masuk.
+   * Hanya field non-sensitif yang diteruskan (lihat `db.updateUser`).
+   */
+  const handleSaveProfile = async (patch: ProfilePatch) => {
+    if (!currentUser) return;
+    const diperbarui = await db.updateUser(currentUser.id, patch);
+    if (!diperbarui) throw new Error('Pengguna tidak ditemukan.');
+    setCurrentUser({ ...currentUser, ...patch });
+    sessionStorage.setItem('sbs_active_user', JSON.stringify({ ...currentUser, ...patch }));
+    refreshData();
+  };
+
+  /** Mengganti password akun sendiri. */
+  const handleChangeOwnPassword = async (passwordBaru: string) => {
+    if (!currentUser) return;
+    const hasil = await db.setUserPassword(currentUser.id, passwordBaru);
+    if (!hasil) throw new Error('Pengguna tidak ditemukan.');
+  };
+
   if (!currentUser) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
+
+  // Notifikasi disusun ulang setiap data berubah — modul murni, aman dipanggil
+  // saat render.
+  const notifications = buildNotifications(
+    { rentals, payments, maintenance, contracts },
+    currentUser.role_name || 'ADMIN',
+    currentUser.id
+  );
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -217,6 +263,8 @@ export const App: React.FC = () => {
         currentUser={currentUser}
         onLogout={handleLogout}
         onSwitchRole={handleSwitchRole}
+        notifications={notifications}
+        onSelectTab={setActiveTab}
       />
 
       <div style={{ display: 'flex', flex: 1 }}>
@@ -265,9 +313,11 @@ export const App: React.FC = () => {
               {activeTab === 'equipment' && (
                 <EquipmentManagement
                   equipments={equipments}
+                  maintenance={maintenance}
                   onAddEquipment={handleAddEquipment}
                   onUpdateEquipment={handleUpdateEquipment}
                   onDeleteEquipment={handleDeleteEquipment}
+                  onScheduleMaintenance={handleScheduleMaintenance}
                   onNotify={notify}
                   isLoading={dataLoading}
                 />
@@ -282,6 +332,7 @@ export const App: React.FC = () => {
                   onUpdateRentalStatus={handleUpdateRentalStatus}
                   onCreateContract={handleCreateContract}
                   onSignContract={handleSignContract}
+                  onNotify={notify}
                   isLoading={dataLoading}
                 />
               )}
@@ -291,6 +342,7 @@ export const App: React.FC = () => {
                   equipments={equipments}
                   users={users}
                   onScheduleMaintenance={handleScheduleMaintenance}
+                  onNotify={notify}
                 />
               )}
               {activeTab === 'tracking' && (
@@ -303,6 +355,7 @@ export const App: React.FC = () => {
                   reports={reports}
                   rentals={rentals}
                   equipments={equipments}
+                  onNotify={notify}
                 />
               )}
               {activeTab === 'users' && (
@@ -314,20 +367,12 @@ export const App: React.FC = () => {
                 />
               )}
               {activeTab === 'settings' && (
-                <div className="card-premium animate-fade-in" style={{ padding: '24px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 12px 0' }}>
-                    Konfigurasi Sistem & Basis Data TiDB Cloud
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'var(--color-secondary)', lineHeight: 1.6 }}>
-                    Sistem ini berjalan di <strong>Cloudflare Workers Edge Network</strong> dan terhubung ke <strong>TiDB Cloud Serverless</strong>.
-                  </p>
-                  <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12.5px', fontFamily: 'monospace' }}>
-                    <div><strong>Runtime:</strong> Cloudflare Workers (V8 JavaScript/TypeScript Edge)</div>
-                    <div><strong>Database Engine:</strong> TiDB Cloud Serverless (MySQL 8.0 Compatible)</div>
-                    <div><strong>Driver:</strong> @tidbcloud/serverless (Edge HTTPS Driver)</div>
-                    <div><strong>Organisasi:</strong> PT. Surya Bangun Sarana Banjarmasin</div>
-                  </div>
-                </div>
+                <AccountSettings
+                  currentUser={currentUser}
+                  onSaveProfile={handleSaveProfile}
+                  onChangePassword={handleChangeOwnPassword}
+                  onNotify={notify}
+                />
               )}
             </>
           )}
@@ -358,6 +403,7 @@ export const App: React.FC = () => {
                   equipments={equipments}
                   users={users}
                   onScheduleMaintenance={handleScheduleMaintenance}
+                  onNotify={notify}
                 />
               )}
               {activeTab === 'tracking' && (
@@ -370,17 +416,16 @@ export const App: React.FC = () => {
                   reports={reports}
                   rentals={rentals}
                   equipments={equipments}
+                  onNotify={notify}
                 />
               )}
               {activeTab === 'settings' && (
-                <div className="card-premium animate-fade-in" style={{ padding: '24px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                    Profil Staf Operasional
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'var(--color-secondary)' }}>
-                    {currentUser.full_name} &bull; Staf Logistik & Administrasi Lapangan
-                  </p>
-                </div>
+                <AccountSettings
+                  currentUser={currentUser}
+                  onSaveProfile={handleSaveProfile}
+                  onChangePassword={handleChangeOwnPassword}
+                  onNotify={notify}
+                />
               )}
             </>
           )}
@@ -405,6 +450,13 @@ export const App: React.FC = () => {
       </div>
 
       {/* Notifikasi global: muncul setelah aksi berhasil / gagal. */}
+      <CommandPalette
+        role={currentUser.role_name || 'ADMIN'}
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onSelect={setActiveTab}
+      />
+
       {toast && (
         <div
           role="status"

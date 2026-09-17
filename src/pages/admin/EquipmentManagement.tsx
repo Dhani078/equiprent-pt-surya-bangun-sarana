@@ -1,22 +1,31 @@
 import React, { useState } from 'react';
-import { Equipment } from '../../types';
-import { Plus, Search, Filter, Edit, Trash2, Gauge, AlertCircle, MapPin, Eye } from 'lucide-react';
+import { Equipment, Maintenance } from '../../types';
+import { Plus, Search, Filter, Edit, Trash2, Gauge, AlertCircle, MapPin, Eye, LayoutGrid, Rows3, Wrench, CalendarClock } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { HmProgressBar } from '../../components/HmProgressBar';
 import { getEquipmentImage } from '../../lib/stitchAssets';
-import { formatRupiah } from '../../lib/businessRules';
+import { formatRupiah, formatTanggal, getServiceStatus, SERVICE_INTERVAL_HM } from '../../lib/businessRules';
 import { validateEquipmentInput, EQUIPMENT_TYPES } from '../../lib/validators';
 import type { ValidatedEquipmentInput } from '../../lib/validators';
 import { Paginator, usePagination } from '../../components/Paginator';
 import { Skeleton } from '../../components/Skeleton';
+import { exportTable } from '../../lib/tableExport';
+import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
+import { FileSpreadsheet, FileText, Download } from 'lucide-react';
 
 const PAGE_SIZE_EQUIPMENT = 20;
 
+type EquipmentView = 'cards' | 'table';
+
 interface EquipmentManagementProps {
   equipments: Equipment[];
+  maintenance: Maintenance[];
   onAddEquipment: (item: Omit<Equipment, 'id'>) => Promise<void>;
   onUpdateEquipment: (id: number, data: Partial<Equipment>) => Promise<void>;
   onDeleteEquipment: (id: number) => Promise<void>;
+  /** Menjadwalkan servis preventif langsung dari kartu unit (T-0048). */
+  onScheduleMaintenance: (item: Omit<Maintenance, 'id' | 'maintenance_code'>) => Promise<void>;
   /** Menampilkan pesan sukses/gagal di tingkat aplikasi. */
   onNotify?: (message: string, tone: 'success' | 'error') => void;
   onNavigateTracking?: () => void;
@@ -26,9 +35,11 @@ interface EquipmentManagementProps {
 
 export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   equipments,
+  maintenance,
   onAddEquipment,
   onUpdateEquipment,
   onDeleteEquipment,
+  onScheduleMaintenance,
   onNotify,
   onNavigateTracking,
   isLoading = false,
@@ -45,6 +56,10 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   /** Galat tingkat form: misal kode unit sudah dipakai (dari server). */
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  /** Tata letak kartu unit (default) atau tabel ringkas (T-0048). */
+  const [view, setView] = useState<EquipmentView>('cards');
+  /** Sedang menjadwalkan servis untuk unit ini (quick-action kartu). */
+  const [schedulingId, setSchedulingId] = useState<number | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -172,8 +187,65 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
    * Unit yang tidak boleh dihapus: sedang disewa atau sedang dirawat.
    * Menghapusnya akan memutus referensi riwayat rental & laporan.
    */
+  /** Kolom yang ikut diekspor ke CSV/Excel/PDF. */
+  const kolomEkspor: ExportColumn<Equipment>[] = [
+    { header: 'Kode Unit', value: (e) => e.equipment_code },
+    { header: 'Nama Alat', value: (e) => e.name },
+    { header: 'Tipe', value: (e) => e.type },
+    { header: 'Merk', value: (e) => e.brand },
+    { header: 'Model', value: (e) => e.model },
+    { header: 'Hour Meter', value: (e) => e.hour_meter, numeric: true },
+    { header: 'Tarif / Hari', value: (e) => e.rental_price_per_day, numeric: true },
+    { header: 'Status', value: (e) => e.status },
+    { header: 'Servis Terakhir', value: (e) => e.last_maintenance_date ?? '-' },
+  ];
+
+  /** Mengekspor daftar unit yang sedang tampil (mengikuti filter aktif). */
+  const handleExport = (format: ExportFormat) => {
+    const hasil = exportTable(format, filteredEquipments, kolomEkspor, {
+      title: 'Daftar Inventaris Alat Berat',
+      subtitle: `Ditampilkan ${filteredEquipments.length} dari ${equipments.length} unit`,
+      filename: 'inventaris-alat-berat',
+    });
+    onNotify?.(hasil.message, hasil.ok ? 'success' : 'error');
+  };
+
   const isProtected = (status: Equipment['status']): boolean =>
     status === 'RENTED' || status === 'MAINTENANCE';
+
+  /**
+   * Quick-action dari kartu unit: jadwalkan servis preventif untuk unit yang
+   * mendekati atau sudah lewat ambang 250 HM. Unit yang sedang diservis
+   * tidak ditawari aksi ini (sudah ditangani di halaman Maintenance).
+   */
+  const handleQuickSchedule = async (eq: Equipment) => {
+    if (schedulingId !== null) return;
+    setSchedulingId(eq.id);
+    try {
+      const svc = getServiceStatus(eq, maintenance);
+      await onScheduleMaintenance({
+        equipment_id: eq.id,
+        equipment_name: eq.name,
+        equipment_code: eq.equipment_code,
+        scheduled_date: new Date().toISOString().slice(0, 10),
+        completion_date: null,
+        maintenance_type: 'PREVENTIVE',
+        hour_meter_at_maintenance: svc.currentHM,
+        description: `Servis preventif kelipatan ${SERVICE_INTERVAL_HM} HM — dijadwalkan dari kartu unit (sisa ${svc.hmUntilNextService.toFixed(2)} HM).`,
+        spareparts_replaced: '',
+        cost: 0,
+        technician_id: null,
+        technician_name: '',
+        status: 'SCHEDULED',
+      });
+      onNotify?.(`Servis preventif ${eq.equipment_code} berhasil dijadwalkan.`, 'success');
+    } catch (err) {
+      const pesan = err instanceof Error && err.message ? err.message : 'Gagal menjadwalkan servis.';
+      onNotify?.(pesan, 'error');
+    } finally {
+      setSchedulingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -215,10 +287,56 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             Kelola dan pantau status seluruh unit alat berat PT. Surya Bangun Sarana Banjarmasin.
           </p>
         </div>
-        <button onClick={handleOpenAdd} className="btn-primary" style={{ padding: '9px 16px', fontSize: '13.5px' }}>
-          <Plus size={16} />
-          <span>Tambah Alat Baru</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Beralih antara tampilan kartu unit (T-0048) dan tabel ringkas. */}
+          <div
+            role="group"
+            aria-label="Tampilan daftar unit"
+            className="card-premium"
+            style={{ display: 'flex', padding: '3px', gap: '2px', borderRadius: '10px' }}
+          >
+            <button
+              type="button"
+              onClick={() => setView('cards')}
+              className="btn-secondary"
+              aria-pressed={view === 'cards'}
+              aria-label="Tampilan kartu unit"
+              title="Tampilan kartu unit"
+              style={{
+                padding: '7px 11px',
+                fontSize: '12px',
+                gap: '6px',
+                opacity: view === 'cards' ? 1 : 0.55,
+                boxShadow: view === 'cards' ? 'inset 0 0 0 1px var(--color-primary)' : 'none',
+              }}
+            >
+              <LayoutGrid size={14} />
+              <span>Kartu</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('table')}
+              className="btn-secondary"
+              aria-pressed={view === 'table'}
+              aria-label="Tampilan tabel"
+              title="Tampilan tabel"
+              style={{
+                padding: '7px 11px',
+                fontSize: '12px',
+                gap: '6px',
+                opacity: view === 'table' ? 1 : 0.55,
+                boxShadow: view === 'table' ? 'inset 0 0 0 1px var(--color-primary)' : 'none',
+              }}
+            >
+              <Rows3 size={14} />
+              <span>Tabel</span>
+            </button>
+          </div>
+          <button onClick={handleOpenAdd} className="btn-primary" style={{ padding: '9px 16px', fontSize: '13.5px' }}>
+            <Plus size={16} />
+            <span>Tambah Alat Baru</span>
+          </button>
+        </div>
       </div>
 
       {/* Bento Mini Stats Bar */}
@@ -305,10 +423,166 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
             <option value="MAINTENANCE">MAINTENANCE (Servis)</option>
             <option value="UNAVAILABLE">UNAVAILABLE (Nonaktif)</option>
           </select>
+
+          {/* Ekspor data sesuai filter aktif */}
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('csv')}
+            title="Unduh CSV"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <Download size={15} /> CSV
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('excel')}
+            title="Unduh Excel"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <FileSpreadsheet size={15} /> Excel
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('pdf')}
+            title="Cetak / simpan PDF"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <FileText size={15} /> PDF
+          </button>
         </div>
       </div>
 
-      {/* Equipments Table with Stitch Image Thumbnails */}
+      {/* Daftar unit: kartu (T-0048) atau tabel ringkas */}
+      {view === 'cards' ? (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '16px',
+          }}
+        >
+          {pagedEquipments.map((eq) => {
+            const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
+            const svc = getServiceStatus(eq, maintenance);
+            const needsService = svc.isDue || svc.isApproaching;
+            const busy = schedulingId === eq.id;
+            return (
+              <div
+                key={eq.id}
+                className="card-premium hover-lift"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  padding: '14px',
+                  cursor: 'default',
+                  borderColor: svc.isDue ? '#FECACA' : undefined,
+                }}
+              >
+                {/* Header kartu: badge status + ringkasan identitas (T-0048) */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+                  <img
+                    src={imgUrl}
+                    alt={eq.name}
+                    loading="lazy"
+                    style={{
+                      width: '72px',
+                      height: '72px',
+                      borderRadius: '10px',
+                      objectFit: 'cover',
+                      backgroundColor: '#E2E8F0',
+                      border: '1px solid var(--color-border)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span className={`badge badge-${eq.status.toLowerCase()}`}>
+                    {eq.status === 'AVAILABLE' ? 'Tersedia' : eq.status === 'RENTED' ? 'Disewa' : eq.status === 'MAINTENANCE' ? 'Servis' : 'Nonaktif'}
+                  </span>
+                </div>
+
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-primary)', lineHeight: 1.3 }}>
+                    {eq.name}
+                  </div>
+                  <div className="serial-code" style={{ fontSize: '11.5px', color: 'var(--color-secondary)', marginTop: '2px' }}>
+                    {eq.equipment_code}
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)', marginTop: '2px' }}>
+                    {eq.brand} &bull; {eq.model} &bull; {eq.type}
+                  </div>
+                </div>
+
+                {/* Bar progress HM + tooltip (T-0047) */}
+                <HmProgressBar equipment={eq} maintenanceHistory={maintenance} />
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    borderTop: '1px dashed var(--color-border)',
+                    paddingTop: '10px',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Tarif / Hari
+                    </div>
+                    <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', fontFamily: 'monospace' }}>
+                      {formatRupiah(Number(eq.rental_price_per_day))}
+                    </div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CalendarClock size={11} />
+                      <span>Servis terakhir: {eq.last_maintenance_date ? formatTanggal(eq.last_maintenance_date) : 'belum ada'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick action: hanya untuk unit yang butuh servis (T-0048) */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(eq)}
+                    className="btn-secondary"
+                    style={{ flex: 1, padding: '8px 10px', fontSize: '12px', gap: '6px' }}
+                    title="Ubah Rincian Unit"
+                  >
+                    <Edit size={13} />
+                    <span>Ubah</span>
+                  </button>
+                  {needsService && eq.status !== 'MAINTENANCE' && (
+                    <button
+                      type="button"
+                      onClick={() => handleQuickSchedule(eq)}
+                      disabled={busy}
+                      className="btn-secondary"
+                      aria-label={`Jadwalkan servis ${eq.equipment_code}`}
+                      title={svc.isDue ? 'Sudah lewat jadwal servis — jadwalkan sekarang' : 'Mendekati ambang servis — jadwalkan'}
+                      style={{
+                        flex: 1,
+                        padding: '8px 10px',
+                        fontSize: '12px',
+                        gap: '6px',
+                        color: svc.isDue ? '#DC2626' : '#B45309',
+                        borderColor: svc.isDue ? '#FECACA' : '#FDE68A',
+                        opacity: busy ? 0.6 : 1,
+                        cursor: busy ? 'wait' : 'pointer',
+                      }}
+                    >
+                      <Wrench size={13} />
+                      <span>{busy ? 'Menjadwalkan…' : 'Jadwalkan Servis'}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
       <div className="table-container">
         <table className="data-table">
           <thead>
@@ -414,6 +688,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
           onPageChange={setEquipPage}
         />
       </div>
+      )}
 
       {/* Modal Add / Edit */}
       <Modal
