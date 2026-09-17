@@ -1,3 +1,19 @@
+## [CYCLE 45] 2026-09-17 - T-0046 — P2 — DONE
+**Judul:** Skeleton Loading di Halaman Equipment & Rental
+**Perubahan:**
+- `src/lib/fetchCollection.ts` (baru): ambil koleksi `equipments`/`rentals` dari `GET /api/<nama>` — type guard per elemen (`isEquipment`/`isRental`), `fetchCollectionOrLocal` tidak pernah melempar & jatuh ke `stateStore` lokal saat Worker belum aktif
+- `src/App.tsx`: state `dataLoading`/`dataError` + `useEffect` pemuatan async (AbortController, `reloadKey` untuk coba ulang) → `refreshData()`; pass `isLoading` ke `<EquipmentManagement>` & `<RentalManagement>`; banner galat `role="alert"` + tombol "Coba Ulang" di `<main>`
+- `src/pages/admin/EquipmentManagement.tsx`: skeleton jadi early return (tidak ada lagi render paralel) — header 60px + 4 bento 82px + filter bar 72px + grid `repeat(auto-fit, minmax(280px,1fr))` × 6 kartu 220px; `aria-busy` + `aria-label`
+- `src/pages/admin/RentalManagement.tsx`: prop `isLoading?`; tabel + paginator + empty state dibungkus ternary `isLoading ? <SkeletonRows count={5} height={56}>` — empty state hanya muncul setelah loading selesai (tidak ada flash of empty content)
+- `src/components/Skeleton.tsx`: warna gradient pindah dari inline style ke kelas `.skeleton-base` + CSS variabel `--color-skeleton-from/via` — adaptif dark mode
+- `src/index.css`: token skeleton baru di `:root` (light) & `[data-theme="dark"]`, kelas `.skeleton-base`
+**Bug ditemukan & diperbaiki (regresi test):**
+- `tests/api.test.mjs`: 2 asersi keliru mengecam `verified_by_name === 'Staf Uji'` dari `body.staffName` — sejak fix IDOR (commit 54961c9) identitas pengesah diambil dari session (`c.get('userId')` → `full_name`), jadi nama di body memang harus ditolak. Test diperbarui menguji: nama dari session benar + nama palsu dari body ditolak (verifikasi & penolakan)
+**Verifikasi:** typecheck PASS · test PASS (22/22 suite — suite baru `tests/skeletonLoading.test.mjs` 16 asersi: aria-busy, jumlah skeleton, tabel tidak ikut dirender, empty state tidak tertelan skeleton) · build PASS (655.29 kB)
+**Catatan:** HEAD terkunci di commit `7cc0f50` (cycle 43); kerjaan cycle 44 (Skeleton.tsx refactor + ConfirmDialog + print media query) masih uncommitted di working tree — ikut ter-commit di siklus ini.
+
+---
+
 ## [CYCLE 37] 2026-09-16 - T-0038 — P1 — DONE
 **Judul:** Audit Trail Logging
 **Perubahan:**

@@ -19,6 +19,7 @@ import {
 } from '../../lib/rentalWorkflow';
 import type { RentalStatus } from '../../lib/rentalWorkflow';
 import { Paginator, usePagination } from '../../components/Paginator';
+import { SkeletonRows } from '../../components/Skeleton';
 
 const PAGE_SIZE_RENTAL = 20;
 
@@ -34,6 +35,8 @@ interface RentalManagementProps {
   onCreateContract: (rentalId: number) => Promise<void>;
   /** Membubuhkan tanda tangan elektronik (Admin/Staf bertindak atas nama perusahaan). */
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
+  /** Tampilkan skeleton saat data sedang dimuat. */
+  isLoading?: boolean;
 }
 
 /** Tab di dalam halaman: daftar transaksi atau panel kontrak digital. */
@@ -77,7 +80,8 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
   onAddRental,
   onUpdateRentalStatus,
   onCreateContract,
-  onSignContract
+  onSignContract,
+  isLoading = false,
 }) => {
   const [subTab, setSubTab] = useState<SubTab>('transaksi');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -391,6 +395,15 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
 
       {/* Table with Thumbnails */}
       <div className="table-container">
+        {isLoading ? (
+          <SkeletonRows
+            ariaLabel="Memuat daftar transaksi penyewaan"
+            count={5}
+            height={56}
+            gap={12}
+          />
+        ) : (
+        <>
         <table className="data-table">
           <thead>
             <tr>
@@ -501,6 +514,8 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
               Ubah kata kunci pencarian atau pilih status lain pada penyaring di atas.
             </p>
           </div>
+        )}
+        </>
         )}
       </div>
 

@@ -141,10 +141,21 @@
       "title": "Skeleton Loading di Halaman Equipment & Rental",
       "category": "UX",
       "priority": "P2",
-      "status": "PENDING",
+      "status": "DONE",
+      "completed_at": "2026-09-17T00:00:00.000Z",
       "estimate_minutes": 45,
       "depends_on": [],
-      "files": ["src/pages/admin/EquipmentManagement.tsx", "src/pages/admin/RentalManagement.tsx"],
+      "files": [
+        "src/App.tsx",
+        "src/lib/fetchCollection.ts",
+        "src/components/Skeleton.tsx",
+        "src/index.css",
+        "src/pages/admin/EquipmentManagement.tsx",
+        "src/pages/admin/RentalManagement.tsx",
+        "tests/skeletonLoading.test.mjs",
+        "tests/run-tests.mjs",
+        "tests/api.test.mjs"
+      ],
       "acceptance_criteria": [
         "Skeleton shimmer saat data sedang dimuat (konsisten dengan AdminDashboard)",
         "Grid skeleton untuk kartu unit (3 kolom, 6 kartu)",

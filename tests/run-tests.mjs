@@ -70,6 +70,16 @@ execSync(
   { cwd: root, stdio: 'ignore' }
 );
 
+// Halaman Equipment & Rental (JSX) — uji skeleton loading (T-0046).
+execSync(
+  `npx esbuild "${join(root, 'src/pages/admin/EquipmentManagement.tsx')}" --bundle --format=esm --outfile="${join(root, '.tmp_eqpage.mjs')}" --platform=neutral --external:react --external:react-dom --external:@tidbcloud/serverless --loader:.tsx=tsx --jsx=automatic`,
+  { cwd: root, stdio: 'ignore' }
+);
+execSync(
+  `npx esbuild "${join(root, 'src/pages/admin/RentalManagement.tsx')}" --bundle --format=esm --outfile="${join(root, '.tmp_rentpage.mjs')}" --platform=neutral --external:react --external:react-dom --external:@tidbcloud/serverless --loader:.tsx=tsx --jsx=automatic`,
+  { cwd: root, stdio: 'ignore' }
+);
+
 // Halaman pelacakan GPS (JSX). Leaflet menyentuh `window` saat modul dimuat,
 // sehingga diganti dengan stub ringan; useEffect tidak berjalan pada render
 // statis, jadi peta tidak benar-benar dibuat saat pengujian.
@@ -100,6 +110,7 @@ const suites = [
   'gpsPage.test.mjs',
   'customerPortal.test.mjs',
   'codeQuality.test.mjs',
+  'skeletonLoading.test.mjs',
 ];
 
 let failed = 0;
@@ -122,7 +133,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs', '.tmp_fleetTelemetry.mjs', '.tmp_gps.mjs', '.tmp_customerPortal.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs', '.tmp_fleetTelemetry.mjs', '.tmp_gps.mjs', '.tmp_customerPortal.mjs', '.tmp_eqpage.mjs', '.tmp_rentpage.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }
