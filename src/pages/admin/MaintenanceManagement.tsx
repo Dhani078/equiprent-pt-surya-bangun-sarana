@@ -6,19 +6,25 @@ import { Plus, Search, Filter, Wrench, CheckCircle, Clock, Calendar, AlertTriang
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
 import { getUnitsDueForService, formatRupiah, SERVICE_INTERVAL_HM, predictNextServiceDate } from '../../lib/businessRules';
+import { exportTable } from '../../lib/tableExport';
+import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
+import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 
 interface MaintenanceManagementProps {
   maintenance: Maintenance[];
   equipments: Equipment[];
   users: User[];
   onScheduleMaintenance: (item: Omit<Maintenance, 'id' | 'maintenance_code'>) => Promise<void>;
+  /** Menampilkan pesan sukses/gagal di tingkat aplikasi. */
+  onNotify?: (message: string, tone: 'success' | 'error') => void;
 }
 
 export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
   maintenance,
   equipments,
   users,
-  onScheduleMaintenance
+  onScheduleMaintenance,
+  onNotify
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -157,6 +163,31 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
     const matchesStatus = filterStatus === 'ALL' || m.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  /** Kolom ekspor riwayat & jadwal perawatan. */
+  const kolomEkspor: ExportColumn<Maintenance>[] = [
+    { header: 'Kode Servis', value: (m) => m.maintenance_code },
+    { header: 'Unit', value: (m) => m.equipment_name ?? '-' },
+    { header: 'Jenis', value: (m) => m.maintenance_type },
+    { header: 'Tanggal Jadwal', value: (m) => m.scheduled_date },
+    { header: 'Tanggal Selesai', value: (m) => m.completion_date ?? '-' },
+    { header: 'HM Saat Servis', value: (m) => m.hour_meter_at_maintenance, numeric: true },
+    { header: 'Deskripsi', value: (m) => m.description },
+    { header: 'Sparepart', value: (m) => m.spareparts_replaced ?? '-' },
+    { header: 'Biaya', value: (m) => m.cost, numeric: true },
+    { header: 'Teknisi', value: (m) => m.technician_name ?? '-' },
+    { header: 'Status', value: (m) => m.status },
+  ];
+
+  /** Mengekspor data perawatan sesuai filter aktif. */
+  const handleExport = (format: ExportFormat) => {
+    const hasil = exportTable(format, filteredMaintenance, kolomEkspor, {
+      title: 'Jadwal & Riwayat Perawatan Unit',
+      subtitle: `Ditampilkan ${filteredMaintenance.length} dari ${maintenance.length} data servis`,
+      filename: 'perawatan-unit',
+    });
+    onNotify?.(hasil.message, hasil.ok ? 'success' : 'error');
+  };
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -537,6 +568,37 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
           <option value="IN_PROGRESS">IN_PROGRESS (Sedang Dikerjakan)</option>
           <option value="COMPLETED">COMPLETED (Selesai)</option>
         </select>
+
+        {/* Ekspor data sesuai filter aktif */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('csv')}
+            title="Unduh CSV"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <Download size={15} /> CSV
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('excel')}
+            title="Unduh Excel"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <FileSpreadsheet size={15} /> Excel
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('pdf')}
+            title="Cetak / simpan PDF"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <FileText size={15} /> PDF
+          </button>
+        </div>
       </div>
 
       {/* Table with Thumbnails */}

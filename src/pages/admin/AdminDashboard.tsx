@@ -22,6 +22,7 @@ import { formatRupiah, formatTanggal } from '../../lib/businessRules';
 import { fetchDashboardStats } from '../../lib/dashboardClient';
 import type { DashboardSource } from '../../lib/dashboardClient';
 import { Skeleton } from '../../components/Skeleton';
+import { TrendChart } from '../../components/TrendChart';
 
 interface AdminDashboardProps {
   onNavigate: (tab: string) => void;
@@ -612,6 +613,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           </div>
         )}
       </div>
+      {/* Grafik tren interaktif (SVG, tanpa pustaka pihak ketiga) */}
+      {stats.revenueTrend.length > 0 && (
+        <div className="card-premium" style={{ padding: '20px' }}>
+          <TrendChart
+            title="Kurva Pendapatan 12 Bulan"
+            subtitle="Arahkan kursor ke titik untuk melihat nilai per bulan"
+            data={stats.revenueTrend.map((d) => ({ label: d.label, value: d.amount }))}
+            formatValue={formatRupiah}
+          />
+        </div>
+      )}
+
       {/* Revenue Trend — bar chart CSS-only 12 bulan */}
       <div className="card-premium" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>

@@ -2,11 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { User, RoleName } from '../types';
 import { LogOut, Shield, RefreshCw, Moon, Sun, ChevronDown } from 'lucide-react';
 import { getUserAvatar } from '../lib/stitchAssets';
+import { NotificationCenter } from './NotificationCenter';
+import type { NotificationItem } from '../lib/notifications';
 
 interface NavbarProps {
   currentUser: User;
   onLogout: () => void;
   onSwitchRole: (role: RoleName) => void;
+  /** Notifikasi siap tampil (hasil `buildNotifications`). */
+  notifications?: readonly NotificationItem[];
+  /** Dipanggil saat notifikasi diklik, dengan id tab tujuan. */
+  onSelectTab?: (tab: string) => void;
 }
 
 const STORAGE_KEY = 'sbs-theme';
@@ -18,7 +24,13 @@ function initTheme(): boolean {
   return dark;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout, onSwitchRole }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  currentUser,
+  onLogout,
+  onSwitchRole,
+  notifications = [],
+  onSelectTab,
+}) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dark, setDark] = useState(() => initTheme());
   const avatarUrl = getUserAvatar(currentUser.role_name);
@@ -71,6 +83,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout, onSwitchR
 
       {/* Role Switcher & User Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+
+        {/* Pusat Notifikasi */}
+        {onSelectTab && <NotificationCenter items={notifications} onNavigate={onSelectTab} />}
 
         {/* Dark Mode Toggle */}
         <button

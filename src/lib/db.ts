@@ -183,6 +183,30 @@ export const db = {
     stateStore.users.push(newUser);
     return newUser;
   },
+  /**
+   * Memperbarui data profil pengguna.
+   *
+   * Field sensitif (`id`, `username`, `role_id`, `role_name`, `status`,
+   * `password_hash`) sengaja diabaikan agar halaman "Pengaturan Akun" tidak
+   * bisa dipakai untuk menaikkan hak akses sendiri.
+   */
+  updateUser: async (id: number, data: Partial<User>) => {
+    const user = stateStore.users.find(u => u.id === id);
+    if (!user) return undefined;
+
+    const aman: Partial<User> = {};
+    if (typeof data.full_name === 'string') aman.full_name = data.full_name;
+    if (typeof data.email === 'string') aman.email = data.email;
+    if (typeof data.phone === 'string') aman.phone = data.phone;
+    if (typeof data.address === 'string') aman.address = data.address;
+    if (data.company_name === null || typeof data.company_name === 'string') {
+      aman.company_name = data.company_name;
+    }
+
+    Object.assign(user, aman);
+    return user;
+  },
+
   toggleUserStatus: async (id: number) => {
     const u = stateStore.users.find(x => x.id === id);
     if (u) {

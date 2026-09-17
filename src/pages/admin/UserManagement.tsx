@@ -7,6 +7,9 @@ import { getUserAvatar } from '../../lib/stitchAssets';
 import { validateUserInput } from '../../lib/validators';
 import type { ValidatedUserInput } from '../../lib/validators';
 import { Paginator, usePagination } from '../../components/Paginator';
+import { exportTable } from '../../lib/tableExport';
+import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
+import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 
 const PAGE_SIZE_USERS = 20;
 
@@ -108,6 +111,27 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     return matchesSearch && matchesRole;
   });
 
+  /** Kolom ekspor daftar pengguna (tanpa data sensitif seperti hash password). */
+  const kolomEkspor: ExportColumn<User>[] = [
+    { header: 'Nama Lengkap', value: (u) => u.full_name },
+    { header: 'Username', value: (u) => u.username },
+    { header: 'Hak Akses', value: (u) => u.role_name ?? '-' },
+    { header: 'Email', value: (u) => u.email },
+    { header: 'Telepon', value: (u) => u.phone },
+    { header: 'Perusahaan', value: (u) => u.company_name ?? '-' },
+    { header: 'Status', value: (u) => u.status },
+  ];
+
+  /** Mengekspor pengguna sesuai filter yang sedang aktif. */
+  const handleExport = (format: ExportFormat) => {
+    const hasil = exportTable(format, filteredUsers, kolomEkspor, {
+      title: 'Daftar Pengguna Sistem',
+      subtitle: `Ditampilkan ${filteredUsers.length} dari ${users.length} pengguna`,
+      filename: 'daftar-pengguna',
+    });
+    onNotify?.(hasil.message, hasil.ok ? 'success' : 'error');
+  };
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
@@ -151,6 +175,37 @@ export const UserManagement: React.FC<UserManagementProps> = ({
           <option value="STAFF">STAFF (Staf Operasional)</option>
           <option value="CUSTOMER">CUSTOMER (Pelanggan Sewa)</option>
         </select>
+
+        {/* Ekspor data sesuai filter aktif */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('csv')}
+            title="Unduh CSV"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <Download size={15} /> CSV
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('excel')}
+            title="Unduh Excel"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <FileSpreadsheet size={15} /> Excel
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('pdf')}
+            title="Cetak / simpan PDF"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <FileText size={15} /> PDF
+          </button>
+        </div>
       </div>
 
       {/* Users Table with Avatars */}

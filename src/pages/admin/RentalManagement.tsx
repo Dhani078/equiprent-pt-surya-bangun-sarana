@@ -20,6 +20,9 @@ import {
 import type { RentalStatus } from '../../lib/rentalWorkflow';
 import { Paginator, usePagination } from '../../components/Paginator';
 import { SkeletonRows } from '../../components/Skeleton';
+import { exportTable } from '../../lib/tableExport';
+import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
+import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 
 const PAGE_SIZE_RENTAL = 20;
 
@@ -35,6 +38,8 @@ interface RentalManagementProps {
   onCreateContract: (rentalId: number) => Promise<void>;
   /** Membubuhkan tanda tangan elektronik (Admin/Staf bertindak atas nama perusahaan). */
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
+  /** Menampilkan pesan sukses/gagal di tingkat aplikasi. */
+  onNotify?: (message: string, tone: 'success' | 'error') => void;
   /** Tampilkan skeleton saat data sedang dimuat. */
   isLoading?: boolean;
 }
@@ -81,6 +86,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
   onUpdateRentalStatus,
   onCreateContract,
   onSignContract,
+  onNotify,
   isLoading = false,
 }) => {
   const [subTab, setSubTab] = useState<SubTab>('transaksi');
@@ -202,6 +208,30 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
     const matchesStatus = filterStatus === 'ALL' || r.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  /** Kolom ekspor transaksi sewa. */
+  const kolomEkspor: ExportColumn<Rental>[] = [
+    { header: 'Kode Sewa', value: (r) => r.rental_code },
+    { header: 'Pelanggan', value: (r) => r.customer_name ?? '-' },
+    { header: 'Perusahaan', value: (r) => r.company_name ?? '-' },
+    { header: 'Unit', value: (r) => r.equipment_name ?? '-' },
+    { header: 'Kode Unit', value: (r) => r.equipment_code ?? '-' },
+    { header: 'Mulai', value: (r) => r.start_date },
+    { header: 'Selesai', value: (r) => r.end_date },
+    { header: 'Total Hari', value: (r) => r.total_days, numeric: true },
+    { header: 'Subtotal', value: (r) => r.subtotal, numeric: true },
+    { header: 'Status', value: (r) => r.status },
+  ];
+
+  /** Mengekspor transaksi sesuai filter aktif. */
+  const handleExport = (format: ExportFormat) => {
+    const hasil = exportTable(format, filteredRentals, kolomEkspor, {
+      title: 'Daftar Transaksi Penyewaan',
+      subtitle: `Ditampilkan ${filteredRentals.length} dari ${rentals.length} transaksi`,
+      filename: 'transaksi-penyewaan',
+    });
+    onNotify?.(hasil.message, hasil.ok ? 'success' : 'error');
+  };
 
   const [rentalPage, setRentalPage] = useState(1);
   React.useEffect(() => setRentalPage(1), [searchTerm, filterStatus]);
@@ -391,6 +421,37 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           <option value="COMPLETED">COMPLETED (Selesai)</option>
           <option value="REJECTED">REJECTED (Ditolak)</option>
         </select>
+
+        {/* Ekspor data sesuai filter aktif */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('csv')}
+            title="Unduh CSV"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <Download size={15} /> CSV
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('excel')}
+            title="Unduh Excel"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <FileSpreadsheet size={15} /> Excel
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleExport('pdf')}
+            title="Cetak / simpan PDF"
+            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+          >
+            <FileText size={15} /> PDF
+          </button>
+        </div>
       </div>
 
       {/* Table with Thumbnails */}
