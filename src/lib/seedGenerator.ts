@@ -58,6 +58,17 @@ function isoDateTime(d: Date): string {
   return d.toISOString().replace('T', ' ').slice(0, 19);
 }
 
+/**
+ * Tanggal referensi demo.
+ *
+ * Pakai tanggal HARI INI (bukan konstanta) agar data selalu segar saat demo
+ * sidang: rental ON_GOING sedang berjalan, PENDING/APPROVED di masa depan,
+ * GPS tercatat beberapa hari terakhir. `new Date()` dipakai langsung karena
+ * generator hanya berjalan sekali saat modul dimuat (seed deterministik untuk
+ * HM/tarif/nama, sementara tanggal mengikuti kalender sebenarnya).
+ */
+const HARI_INI = new Date();
+
 // ---------------------------------------------------------------------------
 // Data Master Referensi
 // ---------------------------------------------------------------------------
@@ -287,7 +298,7 @@ const CATATAN: readonly string[] = [
 
 function generateRentals(equipments: readonly Equipment[], customerIds: readonly number[]): Rental[] {
   const rentals: Rental[] = [];
-  const today = new Date('2026-09-04');
+  const today = HARI_INI;
 
   /**
    * Alokasi status ditentukan di awal agar setiap halaman punya data saat demo:
@@ -347,7 +358,7 @@ function generateRentals(equipments: readonly Equipment[], customerIds: readonly
     const durasi = intBetween(3, 30);
 
     // Tanggal disesuaikan agar konsisten dengan status.
-    const today = new Date('2026-09-04');
+    const today = HARI_INI;
     let start: Date;
     let end: Date;
 
@@ -502,7 +513,7 @@ function generateGps(equipments: readonly Equipment[]): GpsTracking[] {
   for (let i = 1; i <= 55; i += 1) {
     const eq = equipments[(i - 1) % equipments.length];
     const site = GPS_SITES[i % GPS_SITES.length];
-    const recorded = addDays(new Date('2026-09-04'), -intBetween(0, 3));
+    const recorded = addDays(HARI_INI, -intBetween(0, 3));
     recorded.setHours(intBetween(6, 20), intBetween(0, 59), 0, 0);
 
     // Unit yang disewa/dalam servis cenderung mesin menyala.

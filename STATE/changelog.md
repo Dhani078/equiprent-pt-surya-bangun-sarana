@@ -1096,6 +1096,52 @@ File diubah:
 Verifikasi: typecheck PASS - build PASS (651.67 kB) - npm test 21/21 suite PASS
 
 
+## Cycle 46c - T-0050 - 2026-09-17T12:15:00Z
+
+### T-0050 — F4.6 Seed Data Realistis untuk Demo Sidang (DONE)
+
+**Temuan (diverifikasi):** generator `src/lib/seedGenerator.ts` SUDAH
+memenuhi 4 acceptance criteria (50 unit / 50 rental / 55 GPS / konsisten
+lintas tabel) — namun tanggal referensi DIPAKU ke `2026-09-04`. Saat demo
+sidang di tanggal lain, rental ON_GOING terlihat sudah selesai dan titik
+GPS terlihat basi. Selain itu tidak ada test suite yang memverifikasi
+kriteria seed, sehingga mudah diam-diam regres.
+
+**File diubah:**
+
+- `src/lib/seedGenerator.ts` — konstanta `HARI_INI = new Date()` menggantikan
+  3x `new Date('2026-09-04')` (generateRentals x2, generateGps). Seed kini
+  selalu segar: ON_GOING melintasi hari ini, PENDING/APPROVED di masa depan,
+  GPS terekam 0–3 hari terakhir. Determinisme HM/tarif/nama tetap (PRNG
+  berseed); hanya tanggal yang mengikuti kalender sebenarnya.
+- `tests/seedData.test.mjs` (baru, 46 asersi) — memverifikasi langsung ke-4
+  acceptance criteria + integritas relasional + kesegaran tanggal:
+  volume (50/50/50/50/55/20), variasi 7 tipe & 9 brand, penyebaran 5 status
+  rental, koordinat GPS dalam rentang Kalsel, subtotal = durasi x tarif,
+  nominal pembayaran = subtotal rental, ON_GOING wajib PAID, kontrak PENDING
+  belum ditandatangani, PENDING_VERIFICATION wajib ada bukti transfer,
+  tanpa double-booking, status unit selaras rental aktif.
+- `tests/run-tests.mjs` — bundle `.tmp_seed.mjs`, daftar suite, cleanup.
+
+**Data demo final (diverifikasi via probe):**
+
+- 50 pengguna (2 ADMIN, 6 STAFF, 42 CUSTOMER; username unik), 50 unit
+  (7 tipe, 9 brand, kode unik), 50 rental
+  (PENDING 7 / APPROVED 8 / ON_GOING 10 / COMPLETED 21 / REJECTED 4),
+  50 kontrak, 50 pembayaran (PAID 31, PENDING_VERIFICATION 9, UNPAID 6,
+  FAILED 4), 25 log maintenance, 55 titik GPS (semua unik, di Kalsel),
+  20 dokumen laporan.
+- 0 referential violation: rental->customer/unit, kontrak->rental,
+  pembayaran->kontrak, maintenance->unit, GPS->unit.
+- 0 double-booking; 0 subtotal mismatch; 0 HM servis > HM unit.
+
+**Verifikasi (bukti):**
+
+- `npm run type-check` -> 0 error.
+- `node tests/seedData.test.mjs` -> 46/46 asersi lulus.
+- `npm test` -> 27/27 suite lulus.
+- `npm run build` -> PASS (705.79 kB, 1646 modul).
+
 ## Cycle 46b - T-0049 - 2026-09-17T11:45:00Z
 
 ### T-0049 — F4.1 Audit Trail Logging (DONE)
