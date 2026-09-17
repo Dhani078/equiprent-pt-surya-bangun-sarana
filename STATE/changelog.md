@@ -1,19 +1,3 @@
-## [CYCLE 45] 2026-09-17 - T-0046 — P2 — DONE
-**Judul:** Skeleton Loading di Halaman Equipment & Rental
-**Perubahan:**
-- `src/lib/fetchCollection.ts` (baru): ambil koleksi `equipments`/`rentals` dari `GET /api/<nama>` — type guard per elemen (`isEquipment`/`isRental`), `fetchCollectionOrLocal` tidak pernah melempar & jatuh ke `stateStore` lokal saat Worker belum aktif
-- `src/App.tsx`: state `dataLoading`/`dataError` + `useEffect` pemuatan async (AbortController, `reloadKey` untuk coba ulang) → `refreshData()`; pass `isLoading` ke `<EquipmentManagement>` & `<RentalManagement>`; banner galat `role="alert"` + tombol "Coba Ulang" di `<main>`
-- `src/pages/admin/EquipmentManagement.tsx`: skeleton jadi early return (tidak ada lagi render paralel) — header 60px + 4 bento 82px + filter bar 72px + grid `repeat(auto-fit, minmax(280px,1fr))` × 6 kartu 220px; `aria-busy` + `aria-label`
-- `src/pages/admin/RentalManagement.tsx`: prop `isLoading?`; tabel + paginator + empty state dibungkus ternary `isLoading ? <SkeletonRows count={5} height={56}>` — empty state hanya muncul setelah loading selesai (tidak ada flash of empty content)
-- `src/components/Skeleton.tsx`: warna gradient pindah dari inline style ke kelas `.skeleton-base` + CSS variabel `--color-skeleton-from/via` — adaptif dark mode
-- `src/index.css`: token skeleton baru di `:root` (light) & `[data-theme="dark"]`, kelas `.skeleton-base`
-**Bug ditemukan & diperbaiki (regresi test):**
-- `tests/api.test.mjs`: 2 asersi keliru mengecam `verified_by_name === 'Staf Uji'` dari `body.staffName` — sejak fix IDOR (commit 54961c9) identitas pengesah diambil dari session (`c.get('userId')` → `full_name`), jadi nama di body memang harus ditolak. Test diperbarui menguji: nama dari session benar + nama palsu dari body ditolak (verifikasi & penolakan)
-**Verifikasi:** typecheck PASS · test PASS (22/22 suite — suite baru `tests/skeletonLoading.test.mjs` 16 asersi: aria-busy, jumlah skeleton, tabel tidak ikut dirender, empty state tidak tertelan skeleton) · build PASS (655.29 kB)
-**Catatan:** HEAD terkunci di commit `7cc0f50` (cycle 43); kerjaan cycle 44 (Skeleton.tsx refactor + ConfirmDialog + print media query) masih uncommitted di working tree — ikut ter-commit di siklus ini.
-
----
-
 ## [CYCLE 37] 2026-09-16 - T-0038 — P1 — DONE
 **Judul:** Audit Trail Logging
 **Perubahan:**
@@ -1110,3 +1094,57 @@ File diubah:
 - src/pages/admin/ReportsPage.tsx - print header: nama perusahaan, judul laporan, tanggal cetak (class print-only)
 
 Verifikasi: typecheck PASS - build PASS (651.67 kB) - npm test 21/21 suite PASS
+
+
+---
+
+## Cycle 45 - T-0046, T-0047, T-0048 - 2026-09-17T10:45:00Z
+
+### T-0046 — Skeleton Loading di Halaman Equipment & Rental (VERIFIKASI & FINALISASI)
+
+Implementasi sudah ada dari cycle sebelumnya (commit 6ff1488) — diverifikasi ulang
+dan difinalisasi di cycle ini, bukan dikerjakan dua kali.
+
+File diubah:
+- src/pages/admin/EquipmentManagement.tsx - prop isLoading menggantikan seluruh
+  konten dengan skeleton (header 60px, 4 mini stat, filter bar, grid 6 kartu)
+  memakai komponen <Skeleton> tunggal + aria-busy
+- src/pages/admin/RentalManagement.tsx - isLoading menampilkan <SkeletonRows>
+  5 baris placeholder (56px) menggantikan tabel
+- tests/skeletonLoading.test.mjs - asertensi: grid 6 kartu skeleton muncul dan
+  tabel asli tidak dirender saat loading; empty state tidak muncul saat loading;
+  tabel dan data tampil saat isLoading=false
+
+### T-0047 — Tooltip HM Progress Bar di Halaman Equipment
+
+File ditambah:
+- src/components/HmProgressBar.tsx - KOMPONEN BARU. Bar progress menuju servis
+  preventif berikutnya. Memakai getServiceStatus() dari businessRules sebagai
+  SATU sumber perhitungan (interval SERVICE_INTERVAL_HM=250, ambang peringatan 50).
+  Warna semantik: #059669 hijau (aman) / #D97706 kuning (mendekati) /
+  #DC2626 merah (lewat jadwal). Tooltip via atribut title bawaan browser plus
+  role="img" aria-label untuk pembaca layar; berisi HM saat ini, target servis
+  berikutnya, dan sisa HM. Bar tetap penuh (merah) saat lewat jadwal — sinyal
+  lebih jelas daripada bar "mundur" tak terbatas.
+
+### T-0048 — Ringkasan Status di Header Kartu Unit (Equipment Card)
+
+File diubah:
+- src/pages/admin/EquipmentManagement.tsx - tampilan default kini berupa GRID
+  KARTU UNIT (auto-fill minmax(280px,1fr), 3 kolom di desktop) dengan toggle
+  Kartu/Tabel (aria-pressed). Tiap kartu: foto unit dari stitchAssets, badge
+  status, nama/kode/merk/model, HmProgressBar, tarif/hari (formatRupiah, rata
+  kanan monospace), tanggal servis terakhir (CalendarClock), tombol Ubah, dan
+  QUICK-ACTION "Jadwalkan Servis" yang hanya muncul untuk unit isDue atau
+  isApproaching (onScheduleMaintenance PREVENTIF; loading "Menjadwalkan…").
+  Card lift on hover memakai .card-premium + .hover-lift sesuai design system §7.
+- src/App.tsx - meneruskan prop maintenance dan onScheduleMaintenance ke
+  EquipmentManagement
+
+### Verifikasi gabungan
+
+- type-check: PASS (tsc --noEmit, 0 error)
+- npm test: PASS 25/25 suite (asertensi baru T-0047 dan T-0048 di
+  tests/skeletonLoading.test.mjs; bundle .tmp_hmbar.mjs ditambahkan ke
+  tests/run-tests.mjs)
+- build: PASS (698.95 kB, 1645 modul)
