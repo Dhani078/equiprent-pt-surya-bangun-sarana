@@ -436,7 +436,7 @@
       "title": "F4.5 Dokumentasi Lengkap untuk Sidang",
       "category": "DOCS",
       "priority": "P2",
-      "status": "PENDING",
+      "status": "DONE",
       "estimate_minutes": 60,
       "depends_on": [
         "T-0049",
@@ -452,7 +452,8 @@
         "Daftar 25 suite test + cakupan"
       ],
       "created_by": "agent-ideation",
-      "created_at": "2026-09-17T03:17:28.877918+00:00"
+      "created_at": "2026-09-17T03:17:28.877918+00:00",
+      "completed_at": "2026-09-17T08:00:00Z"
     },
     {
       "id": "T-0052",
