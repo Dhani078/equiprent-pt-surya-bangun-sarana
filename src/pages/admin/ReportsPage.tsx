@@ -10,18 +10,41 @@ import { fetchReport } from '../../lib/reportsClient';
 import { documentKindFromReportType, buildDocument, type DocumentKind, type OfficialDocument } from '../../lib/documents';
 import { printDocument } from '../../lib/documentPrinter';
 import { DocumentPreview } from '../../components/DocumentPreview';
+import { exportTable } from '../../lib/tableExport';
+import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
 
 interface ReportsPageProps {
   reports: ReportItem[];
   rentals: Rental[];
   /** Daftar unit — dipakai untuk melengkapi rincian dokumen yang dicetak. */
   equipments: Equipment[];
+  /** Menampilkan pesan sukses/gagal di tingkat aplikasi. */
+  onNotify?: (message: string, tone: 'success' | 'error') => void;
 }
 
 /** Laporan yang tampil pertama kali saat halaman dibuka. */
 const DEFAULT_REPORT_ID: ReportId = REPORT_CATALOG[0].id;
 
-export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equipments }) => {
+export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equipments, onNotify }) => {
+  /** Kolom ekspor arsip dokumen laporan. */
+  const kolomEkspor: ExportColumn<ReportItem>[] = [
+    { header: 'Kode Dokumen', value: (r) => r.report_code },
+    { header: 'Jenis Laporan', value: (r) => r.report_type },
+    { header: 'Terkait Transaksi', value: (r) => r.rental_code ?? '-' },
+    { header: 'Diterbitkan Oleh', value: (r) => r.generated_by_name ?? '-' },
+    { header: 'Tanggal Terbit', value: (r) => r.generated_at },
+  ];
+
+  /** Mengekspor arsip dokumen ke CSV/Excel/PDF. */
+  const handleExportArsip = (format: ExportFormat) => {
+    const hasil = exportTable(format, reports, kolomEkspor, {
+      title: 'Arsip Dokumen & Laporan',
+      subtitle: `${reports.length} dokumen terarsip`,
+      filename: 'arsip-laporan',
+    });
+    onNotify?.(hasil.message, hasil.ok ? 'success' : 'error');
+  };
+
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
 
   /** Dokumen arsip yang sedang dibuka pratinjaunya (BAST / Surat Jalan). */
@@ -306,6 +329,37 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
           <span>{cetakError}</span>
         </div>
       )}
+
+      {/* Ekspor arsip dokumen */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => handleExportArsip('csv')}
+          title="Unduh arsip dokumen dalam format CSV"
+          style={{ height: '38px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+        >
+          <Download size={15} /> CSV
+        </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => handleExportArsip('excel')}
+          title="Unduh arsip dokumen dalam format Excel"
+          style={{ height: '38px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+        >
+          <FileText size={15} /> Excel
+        </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => handleExportArsip('pdf')}
+          title="Cetak atau simpan arsip dokumen sebagai PDF"
+          style={{ height: '38px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
+        >
+          <Printer size={15} /> PDF
+        </button>
+      </div>
 
       {/* Reports Table */}
       <div className="table-container">
