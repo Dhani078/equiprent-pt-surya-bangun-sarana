@@ -21,6 +21,7 @@ import { getEquipmentImage } from '../../lib/stitchAssets';
 import { formatRupiah, formatTanggal } from '../../lib/businessRules';
 import { fetchDashboardStats } from '../../lib/dashboardClient';
 import type { DashboardSource } from '../../lib/dashboardClient';
+import { Skeleton } from '../../components/Skeleton';
 
 interface AdminDashboardProps {
   onNavigate: (tab: string) => void;
@@ -711,23 +712,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 // ---------------------------------------------------------------------------
 // Komponen kecil pendukung
 // ---------------------------------------------------------------------------
-
-interface SkeletonProps {
-  height: string | number;
-}
-
-/** Balok berdenyut untuk keadaan memuat. */
-const Skeleton: React.FC<SkeletonProps> = ({ height }) => (
-  <div
-    style={{
-      height,
-      borderRadius: 'var(--radius-eight)',
-      background: 'linear-gradient(90deg, #EEF2F7 25%, #E2E8F0 37%, #EEF2F7 63%)',
-      backgroundSize: '400% 100%',
-      animation: 'sbs-shimmer 1.4s ease-in-out infinite',
-    }}
-  />
-);
 
 interface EmptyStateProps {
   pesan: string;

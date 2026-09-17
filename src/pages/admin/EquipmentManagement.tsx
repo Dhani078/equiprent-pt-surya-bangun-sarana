@@ -8,6 +8,7 @@ import { formatRupiah } from '../../lib/businessRules';
 import { validateEquipmentInput, EQUIPMENT_TYPES } from '../../lib/validators';
 import type { ValidatedEquipmentInput } from '../../lib/validators';
 import { Paginator, usePagination } from '../../components/Paginator';
+import { Skeleton } from '../../components/Skeleton';
 
 const PAGE_SIZE_EQUIPMENT = 20;
 
@@ -19,6 +20,8 @@ interface EquipmentManagementProps {
   /** Menampilkan pesan sukses/gagal di tingkat aplikasi. */
   onNotify?: (message: string, tone: 'success' | 'error') => void;
   onNavigateTracking?: () => void;
+  /** Tampilkan skeleton saat data sedang dimuat. */
+  isLoading?: boolean;
 }
 
 export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
@@ -27,7 +30,8 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   onUpdateEquipment,
   onDeleteEquipment,
   onNotify,
-  onNavigateTracking
+  onNavigateTracking,
+  isLoading = false,
 }) => {
   const [filterType, setFilterType] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -170,6 +174,34 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
    */
   const isProtected = (status: Equipment['status']): boolean =>
     status === 'RENTED' || status === 'MAINTENANCE';
+
+  if (isLoading) {
+    return (
+      <div
+        className="animate-fade-in"
+        aria-busy="true"
+        aria-label="Memuat data unit alat berat"
+        style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
+      >
+        {/* Header placeholder — tinggi sama dengan header asli. */}
+        <Skeleton height="60px" />
+        {/* Bento mini stats — 4 kartu. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} height="82px" />
+          ))}
+        </div>
+        {/* Filter bar. */}
+        <Skeleton height="72px" />
+        {/* Grid 3 kolom × 6 kartu — meniru tata letak kartu unit sesungguhnya. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} height="220px" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

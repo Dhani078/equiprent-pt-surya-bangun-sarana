@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User, RoleName, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from './types';
 import { db, stateStore } from './lib/db';
+import { fetchCollectionOrLocal } from './lib/fetchCollection';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import type { SidebarBadges } from './components/Sidebar';
@@ -39,6 +40,54 @@ export const App: React.FC = () => {
 
   /** Notifikasi sederhana di pojok kanan atas (sukses / galat). */
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+
+  /** Memuat data dari edge API; state lokal jadi fallback bila API tidak ada. */
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const handleReloadData = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  /**
+   * Pemuatan awal: ambil koleksi dari edge API (sumber kebenaran produksi).
+   *
+   * Serverless: db.ts tidak punya method "muat semua" — data sudah di-cache
+   * secara reaktif. Fungsinya tetap Async karena resolver HTTP memang async,
+   * sehingga skeleton benar-benar terlihat saat demo di sidang.
+   */
+  useEffect(() => {
+    const controller = new AbortController();
+    let aktif = true;
+
+    const muat = async () => {
+      setDataLoading(true);
+      setDataError(null);
+      try {
+        const [eq, rn] = await Promise.all([
+          fetchCollectionOrLocal('equipments', controller.signal),
+          fetchCollectionOrLocal('rentals', controller.signal),
+        ]);
+        if (!aktif) return;
+        // Hanya menimpa bila edge API memberikan data — sebaliknya
+        // state lokal (seed) tetas dipakai.
+        if (eq.length > 0) stateStore.equipments = eq as Equipment[];
+        if (rn.length > 0) stateStore.rentals = rn as Rental[];
+        refreshData();
+      } catch (err) {
+        if (!aktif) return;
+        setDataError(err instanceof Error ? err.message : 'Gagal memuat data dari server.');
+      } finally {
+        if (aktif) setDataLoading(false);
+      }
+    };
+
+    muat();
+
+    return () => {
+      aktif = false;
+      controller.abort();
+    };
+  }, [reloadKey]);
 
   /** Badge counter Sidebar — dihitung dari state reaktif yang sudah ada. */
   const sidebarBadges: SidebarBadges = {
@@ -179,6 +228,34 @@ export const App: React.FC = () => {
         />
 
         <main style={{ flex: 1, padding: '24px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+          {/* Notifikasi galat pemuatan data awal — bisa dicoba ulang. */}
+          {dataError && !dataLoading && (
+            <div
+              role="alert"
+              className="card-premium animate-fade-in"
+              style={{
+                marginBottom: '20px',
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flexWrap: 'wrap',
+                borderLeft: '4px solid var(--color-error)',
+              }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#991B1B', flex: '1 1 240px' }}>
+                {dataError}
+              </span>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleReloadData}
+                style={{ padding: '7px 14px', fontSize: '12.5px' }}
+              >
+                Coba Ulang
+              </button>
+            </div>
+          )}
           {/* ADMIN SCREENS */}
           {currentUser.role_name === 'ADMIN' && (
             <>
@@ -192,6 +269,7 @@ export const App: React.FC = () => {
                   onUpdateEquipment={handleUpdateEquipment}
                   onDeleteEquipment={handleDeleteEquipment}
                   onNotify={notify}
+                  isLoading={dataLoading}
                 />
               )}
               {activeTab === 'rentals' && (
@@ -204,6 +282,7 @@ export const App: React.FC = () => {
                   onUpdateRentalStatus={handleUpdateRentalStatus}
                   onCreateContract={handleCreateContract}
                   onSignContract={handleSignContract}
+                  isLoading={dataLoading}
                 />
               )}
               {activeTab === 'maintenance' && (
