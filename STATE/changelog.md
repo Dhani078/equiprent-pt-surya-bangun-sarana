@@ -1,3 +1,14 @@
+## [CYCLE 49] 2026-09-24 - RONDE 2+3 DESIGN PREMIUM — DONE
+**Judul:** Audit visual iteratif login + dashboard + chart (ronde 2 & 3)
+**Commit:** cc8c4b0 (ronde 2), 270897a (ronde 3)
+**Perubahan:**
+- Login: label statik "Nama Pengguna" (duplikasi tab dihapus), link underline-only (bold dihapus), tab inactive #475569 (AA pass), brand footer disederhanakan, register link "Daftar Akun Pelanggan"
+- Dashboard: banner servis tampil 5 kode unit + narasi "2 telat, 3 mendekati 250 HM"; fleet math 19 siap + 18 tersewa + 13 dalam servis = 50; pill entity (PELANGGAN/PEMBAYARAN/PENGAJUAN) netral vs pill status solid; card armada "Sebagian Servis" warning saat unit servis; utilisasi 36% "RENDAH" warning
+- Chart: nice-number ticks via niceStep() (Rp 0 / 200 / 400 / 600 / 800 jt), headroom 12% puncak tidak terpotong, badge "Puncak: Rp 800,0 jt", tick format seragam
+- Currency: semua via formatRupiahRingkas tunggal — tidak lagi campur "Rp 1,38 M" vs "Rp 334,3 jt"
+**Verifikasi:** type-check 0 error, 28/28 suite, build sukses, screenshot CDP login+dashboard+chart
+**Audit visual:** 3 ronde vision-analyze (17+14 item), sisa 0 fail mayor
+
 ## [CYCLE 48] 2026-09-24 - T-0054 — P1 — DONE
 **Judul:** Peningkatan Kualitas Design UI ke Level Premium Enterprise
 **Perubahan:**
