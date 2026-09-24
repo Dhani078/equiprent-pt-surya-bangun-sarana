@@ -474,6 +474,44 @@
       ],
       "created_by": "agent-ideation",
       "created_at": "2026-09-17T03:17:28.877918+00:00"
+    },
+    {
+      "id": "T-0053",
+      "title": "F4.8 Skema DB + Settings + Audit Persistensi + Fix VITE_DATABASE_URL",
+      "category": "DATABASE",
+      "priority": "P1",
+      "status": "DONE",
+      "estimate_minutes": 90,
+      "depends_on": [],
+      "files": [
+        "tidb_schema_and_data.sql",
+        "src/lib/db.ts",
+        "src/lib/auditLog.ts",
+        "src/lib/businessRules.ts",
+        "src/lib/contracts.ts",
+        "src/lib/rentalWorkflow.ts",
+        "src/lib/documents.ts",
+        "src/pages/admin/RentalManagement.tsx",
+        "src/pages/admin/ReportsPage.tsx",
+        "src/pages/staff/StaffDashboard.tsx",
+        "src/server/index.ts",
+        "tests/settingsAndAudit.test.mjs",
+        "tests/run-tests.mjs",
+        "tests/contracts.test.mjs",
+        "tests/lateFee.test.mjs",
+        "tests/rentalWorkflow.test.mjs"
+      ],
+      "acceptance_criteria": [
+        "Hapus USE test; tambah tabel audit_log & settings (seed late_penalty_per_day=500000, session_secret, company_name)",
+        "created_at pada rentals/maintenance/reports; CREATE INDEX pada seluruh FK + UNIQUE INDEX kode bisnis",
+        "auditLog INSERT ke audit_log saat DB tersedia; getAuditLog signature tidak berubah",
+        "LATE_PENALTY_PER_DAY dibaca dari settings DB (fallback default)",
+        "db.ts hanya membaca DATABASE_URL (bukan VITE_DATABASE_URL)",
+        "type-check 0 error, seluruh suite lulus, build sukses"
+      ],
+      "created_by": "agent-ideation",
+      "created_at": "2026-09-24T08:55:00.000Z",
+      "completed_at": "2026-09-24T09:40:00.000Z"
     }
   ]
 }

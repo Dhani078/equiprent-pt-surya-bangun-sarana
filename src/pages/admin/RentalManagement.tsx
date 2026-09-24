@@ -4,7 +4,7 @@ import { ContractPanel } from '../../components/ContractPanel';
 import { Plus, Search, CheckCircle, XCircle, Truck, CircleCheck, TriangleAlert, Hourglass } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
-import { formatRupiah, formatTanggal, LATE_PENALTY_PER_DAY } from '../../lib/businessRules';
+import { formatRupiah, formatTanggal, getLatePenaltyPerDay } from '../../lib/businessRules';
 import {
   buildEquipmentAvailability,
   describeBlockedReason,
@@ -378,7 +378,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           </span>
         </div>
         <span style={{ fontSize: '12.5px', color: 'var(--color-secondary)' }}>
-          {dendaBerjalan.lateCount} unit lewat jatuh tempo · tarif {formatRupiah(LATE_PENALTY_PER_DAY)}/hari
+          {dendaBerjalan.lateCount} unit lewat jatuh tempo · tarif {formatRupiah(getLatePenaltyPerDay())}/hari
         </span>
         <strong
           style={{

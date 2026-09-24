@@ -4,7 +4,7 @@ import { FileText, Download, Printer, Eye, CheckCircle2, ShieldCheck, TrendingUp
 import { Modal } from '../../components/Modal';
 import { ReportAnalyticsPanel } from '../../components/ReportAnalyticsPanel';
 import { DocumentPrintPanel } from '../../components/DocumentPrintPanel';
-import { formatRupiah, LATE_PENALTY_PER_DAY } from '../../lib/businessRules';
+import { formatRupiah, getLatePenaltyPerDay } from '../../lib/businessRules';
 import { REPORT_CATALOG } from '../../lib/reports';
 import { fetchReport } from '../../lib/reportsClient';
 import { documentKindFromReportType, buildDocument, type DocumentKind, type OfficialDocument } from '../../lib/documents';
@@ -105,7 +105,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
    *
    * Denda dihitung untuk rental yang masih ON_GOING padahal tanggal
    * pengembaliannya sudah lewat (keterlambatan berjalan).
-   * Tarif: LATE_PENALTY_PER_DAY per hari.
+   * Tarif: getLatePenaltyPerDay() per hari.
    */
   const ringkasan = useMemo(() => {
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -127,7 +127,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
       if (hariTelat <= 0) continue;
 
       terlambat += 1;
-      totalDenda += hariTelat * LATE_PENALTY_PER_DAY;
+      totalDenda += hariTelat * getLatePenaltyPerDay();
     }
 
     return {
@@ -271,7 +271,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600 }}>
-              DENDA KETERLAMBATAN (Rp {LATE_PENALTY_PER_DAY.toLocaleString('id-ID')}/HARI)
+              DENDA KETERLAMBATAN (Rp {getLatePenaltyPerDay().toLocaleString('id-ID')}/HARI)
             </p>
             <p style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#dc2626' }}>
               {formatRupiah(ringkasan.totalDenda)}

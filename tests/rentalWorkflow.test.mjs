@@ -88,7 +88,7 @@ const pada = new Date('2026-09-08T00:00:00Z');
 const telat = wf.getLateReturnInfo(r1, { referenceAt: pada });
 console.log(`  hari telat: ${telat.lateDays} · denda: ${br.formatRupiah(telat.penalty)}`);
 t('lewat 3 hari → 3 hari telat', telat.lateDays === 3);
-t('denda = hari x tarif', telat.penalty === 3 * br.LATE_PENALTY_PER_DAY);
+t('denda = hari x tarif', telat.penalty === 3 * br.getLatePenaltyPerDay());
 t('ditandai terlambat', telat.isLate === true);
 
 const tepat = wf.getLateReturnInfo(r1, { referenceAt: new Date('2026-09-05T00:00:00Z') });
@@ -146,7 +146,7 @@ const contoh = [
 const ringkas = wf.summarizeLatePenalties(contoh, pada);
 console.log(`  terlambat: ${ringkas.lateCount} · total: ${br.formatRupiah(ringkas.penaltyTotal)}`);
 t('hanya ON_GOING yang dihitung', ringkas.lateCount === 2);
-t('total = (3 + 1) x tarif', ringkas.penaltyTotal === 4 * br.LATE_PENALTY_PER_DAY);
+t('total = (3 + 1) x tarif', ringkas.penaltyTotal === 4 * br.getLatePenaltyPerDay());
 t('koleksi kosong → 0', wf.summarizeLatePenalties([], pada).penaltyTotal === 0);
 t('koleksi tanpa status → 0', wf.summarizeLatePenalties(
   [{ status: 'COMPLETED', start_date: '2026-09-01', end_date: '2026-09-02' }], pada
@@ -157,7 +157,7 @@ console.log('\n== Konsistensi dengan Data Nyata (50 rental seed) ==');
 const ringkasNyata = wf.summarizeLatePenalties(S.rentals);
 console.log(`  rental ON_GOING terlambat: ${ringkasNyata.lateCount} · total denda: ${br.formatRupiah(ringkasNyata.penaltyTotal)}`);
 t('setiap rental punya status yang dikenali', S.rentals.every(r => wf.isRentalStatus(r.status)));
-t('denda merupakan kelipatan tarif', ringkasNyata.penaltyTotal % br.LATE_PENALTY_PER_DAY === 0);
+t('denda merupakan kelipatan tarif', ringkasNyata.penaltyTotal % br.getLatePenaltyPerDay() === 0);
 t('denda tidak negatif', ringkasNyata.penaltyTotal >= 0);
 t('jumlah terlambat <= jumlah ON_GOING',
   ringkasNyata.lateCount <= S.rentals.filter(r => r.status === 'ON_GOING').length);
@@ -171,7 +171,7 @@ t('lewat 1 hari → 1', br.countLateDays('2026-09-05', '2026-09-06') === 1);
 t('tanggal rusak → 0', br.countLateDays('xyz', '2026-09-06') === 0);
 t('kalender konsisten dengan calculateRentalCost', (() => {
   const biaya = br.calculateRentalCost(1_000_000, '2026-09-01', '2026-09-05', '2026-09-08');
-  return biaya.lateDays === 3 && biaya.penalty === 3 * br.LATE_PENALTY_PER_DAY;
+  return biaya.lateDays === 3 && biaya.penalty === 3 * br.getLatePenaltyPerDay();
 })());
 
 console.log(`\n=== HASIL: ${pass} PASS, ${fail} FAIL ===`);

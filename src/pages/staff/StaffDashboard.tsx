@@ -4,7 +4,7 @@ import { ClipboardCheck, CreditCard, FileCheck, Check, Eye, Bell, X, Search } fr
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { Modal } from '../../components/Modal';
 import { ContractPanel } from '../../components/ContractPanel';
-import { formatRupiah, LATE_PENALTY_PER_DAY, formatTanggal } from '../../lib/businessRules';
+import { formatRupiah, getLatePenaltyPerDay, formatTanggal } from '../../lib/businessRules';
 import { Paginator, usePagination } from '../../components/Paginator';
 
 const PAGE_SIZE_PAYMENTS = 20;
@@ -122,7 +122,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
    * Notifikasi jatuh tempo & keterlambatan.
    * Fokus pada rental ON_GOING: segera jatuh tempo (≤ 3 hari) atau sudah
    * lewat end_date (berjalan, unit belum kembali).
-   * Denda memakai tarif flat LATE_PENALTY_PER_DAY dari aturan bisnis.
+   * Denda memakai tarif flat getLatePenaltyPerDay() dari aturan bisnis.
    */
   const dueNotifications = useMemo(() => {
     const hariIni = new Date();
@@ -140,7 +140,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           selisihHari,
           terlambat,
           hariTerlambat: terlambat ? Math.abs(selisihHari) : 0,
-          denda: terlambat ? Math.abs(selisihHari) * LATE_PENALTY_PER_DAY : 0,
+          denda: terlambat ? Math.abs(selisihHari) * getLatePenaltyPerDay() : 0,
           segeraJatuhTempo: !terlambat && selisihHari <= 3,
         };
       })
@@ -280,7 +280,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 gap: '8px',
               }}
             >
-              <span>Total estimasi denda keterlambatan (tarif {formatRupiah(LATE_PENALTY_PER_DAY)}/hari)</span>
+              <span>Total estimasi denda keterlambatan (tarif {formatRupiah(getLatePenaltyPerDay())}/hari)</span>
               <span style={{ fontFamily: 'monospace' }}>{formatRupiah(totalDenda)}</span>
             </div>
           )}

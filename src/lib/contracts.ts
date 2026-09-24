@@ -14,7 +14,7 @@
  */
 
 import type { Contract, Equipment, Rental, User } from '../types';
-import { LATE_PENALTY_PER_DAY, formatRupiah, formatTanggal, formatWaktu } from './businessRules';
+import { getLatePenaltyPerDay, formatRupiah, formatTanggal, formatWaktu } from './businessRules';
 
 // ---------------------------------------------------------------------------
 // Konstanta Perusahaan & Kontrak
@@ -50,21 +50,30 @@ const FALLBACK_DATE = '1970-01-01';
  * Disimpan sebagai array baris (bukan satu string panjang) supaya bisa
  * dirender sebagai daftar bernomor di layar maupun di dokumen cetak.
  *
- * Baris denda sengaja memakai tarif dari `LATE_PENALTY_PER_DAY` agar
- * mengikuti konstanta tunggal — tidak ada angka denda yang di-hardcode.
+ * Berupa FUNGSI, bukan konstanta: baris denda memakai tarif dari
+ * `getLatePenaltyPerDay()` yang dapat diubah saat runtime lewat tabel
+ * settings. Array konstanta akan membekukan tarif pada saat impor pertama
+ * (sebelum settings terbaca), sehingga dokumen tak mencerminkan tarif baru.
  */
-export const CONTRACT_TERMS: readonly string[] = [
-  'Penyewa wajib menyediakan operator bersertifikat yang berpengalaman pada unit yang disewa.',
-  'Biaya bahan bakar, pelumas, dan operator sepenuhnya ditanggung oleh penyewa selama masa sewa.',
-  'Kerusakan unit akibat kelalaian penyewa menjadi tanggung jawab penyewa, termasuk biaya perbaikan dan waktu henti operasional.',
-  `Keterlambatan pengembalian unit dikenakan denda ${formatRupiah(LATE_PENALTY_PER_DAY)} per hari keterlambatan.`,
-  'Perpanjangan masa sewa wajib dikonfirmasi paling lambat H-3 sebelum kontrak berakhir.',
-  'Penyewa dilarang memindahkan unit ke lokasi di luar wilayah yang disepakati tanpa persetujuan tertulis.',
-  'Pemeriksaan unit dilakukan bersama pada saat penyerahan (BAST OUT) dan pengembalian (BAST IN).',
-];
+export function buildContractTerms(): readonly string[] {
+  return [
+    'Penyewa wajib menyediakan operator bersertifikat yang berpengalaman pada unit yang disewa.',
+    'Biaya bahan bakar, pelumas, dan operator sepenuhnya ditanggung penyewa selama masa sewa.',
+    'Kerusakan unit akibat kelalaian penyewa menjadi tanggung jawab penyewa, termasuk biaya perbaikan dan waktu henti operasional.',
+    `Keterlambatan pengembalian unit dikenakan denda ${formatRupiah(getLatePenaltyPerDay())} per hari keterlambatan.`,
+    'Perpanjangan masa sewa wajib dikonfirmasi paling lambat H-3 sebelum kontrak berakhir.',
+    'Penyewa dilarang memindahkan unit ke lokasi di luar wilayah yang disepakati tanpa persetujuan tertulis.',
+    'Pemeriksaan unit dilakukan bersama pada saat penyerahan (BAST OUT) dan pengembalian (BAST IN).',
+  ];
+}
 
 /** Gabungan syarat & ketentuan dalam bentuk teks panjang (untuk kolom DB). */
-export const CONTRACT_TERMS_TEXT: string = CONTRACT_TERMS.join('\n');
+export function buildContractTermsText(): string {
+  return buildContractTerms().join('\n');
+}
+
+/** @deprecated Pakai `buildContractTermsText()` — mengikuti settings aktif. */
+export const CONTRACT_TERMS_TEXT: string = buildContractTermsText();
 
 // ---------------------------------------------------------------------------
 // Helper Internal
@@ -341,7 +350,7 @@ export function buildContractPreview(input: ContractPreviewInput): ContractPrevi
     title: 'KONTRAK SEWA-MENYEWA ALAT BERAT',
     intro,
     fields,
-    terms: CONTRACT_TERMS,
+    terms: buildContractTerms(),
     notes,
     parties: {
       left: {

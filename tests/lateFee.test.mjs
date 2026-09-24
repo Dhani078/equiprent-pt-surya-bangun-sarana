@@ -29,15 +29,15 @@ function hitungRingkasan(rentals, sekarang = Date.now()) {
     const hariTelat = Math.ceil((sekarang - batas) / MS_PER_DAY);
     if (hariTelat <= 0) continue;
     terlambat += 1;
-    totalDenda += hariTelat * br.LATE_PENALTY_PER_DAY;
+    totalDenda += hariTelat * br.getLatePenaltyPerDay();
   }
   return { pendapatanKotor, totalDenda, terlambat, totalTransaksi: diproses.length };
 }
 
 const S = stateStore;
 console.log('\n== Tarif Denda ==');
-console.log(`  LATE_PENALTY_PER_DAY = ${br.LATE_PENALTY_PER_DAY}`);
-t('tarif denda = 500.000', br.LATE_PENALTY_PER_DAY === 500000);
+console.log(`  LATE_PENALTY_PER_DAY = ${br.getLatePenaltyPerDay()}`);
+t('tarif denda = 500.000', br.getLatePenaltyPerDay() === 500000);
 
 console.log('\n== Ringkasan dengan Data Nyata ==');
 const r = hitungRingkasan(S.rentals);
@@ -51,7 +51,7 @@ t('pendapatan kotor masuk akal (< 100 M)', r.pendapatanKotor < 100_000_000_000);
 t('transaksi diproses > 0', r.totalTransaksi > 0);
 t('denda tidak negatif', r.totalDenda >= 0);
 t('jumlah terlambat <= total transaksi', r.terlambat <= r.totalTransaksi);
-t('denda konsisten = hari x tarif', r.totalDenda % br.LATE_PENALTY_PER_DAY === 0);
+t('denda konsisten = hari x tarif', r.totalDenda % br.getLatePenaltyPerDay() === 0);
 
 console.log('\n== Uji Batas (edge case) ==');
 const dummy = [
@@ -60,7 +60,7 @@ const dummy = [
 ];
 const pada = new Date('2026-09-04').getTime();
 const e = hitungRingkasan(dummy, pada);
-t('ON_GOING lewat 3 hari → 3 x tarif', e.totalDenda === 3 * br.LATE_PENALTY_PER_DAY);
+t('ON_GOING lewat 3 hari → 3 x tarif', e.totalDenda === 3 * br.getLatePenaltyPerDay());
 t('COMPLETED tidak kena denda', e.terlambat === 1);
 t('subtotal tetap dijumlah', e.pendapatanKotor === 3000);
 

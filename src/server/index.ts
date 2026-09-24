@@ -53,8 +53,9 @@ import {
 } from '../lib/reports';
 import type { ReportDataSource } from '../lib/reports';
 import { buildDashboardStats } from '../lib/dashboard';
-import { auditLog, getAuditLog, auditActor } from '../lib/auditLog';
+import { auditLog, getAuditLog, auditActor, hydrateAuditLog } from '../lib/auditLog';
 import type { AuditEntry } from '../lib/auditLog';
+import { warmSettings } from '../lib/db';
 import { buildFleetTelemetry, normalizeFleetFilter } from '../lib/fleetTelemetry';
 import {
   canTransition,
@@ -184,6 +185,11 @@ app.use('/api/*', async (c, next) => {
   // Workers (bukan process.env), jadi diteruskan di sini. Nilainya dicache
   // di modul auth sehingga pemanggilan berulang tidak mahal.
   configureSessionSecret(c.env?.SESSION_SECRET);
+
+  // Pengaturan aplikasi (tarif denda, dll.) dimuat sekali per isolate dari
+  // tabel settings. `warmSettings()` segera kembali bila DB belum terhubung
+  // atau pengaturan sudah dimuat — tidak menambah beban tiap permintaan.
+  await warmSettings();
 
   const path = new URL(c.req.url).pathname;
 
@@ -1690,6 +1696,11 @@ app.get('/api/audit-log', async (c) => {
     .filter((s) => s.length > 0);
   const userIdRaw = c.req.query('user_id');
   const userId = userIdRaw && Number.isFinite(Number(userIdRaw)) ? Number(userIdRaw) : null;
+
+  // Muat riwayat permanen dari DB ke cache memori (sekali per isolate) agar
+  // entri yang ditulis isolate lain juga terlihat. Bila DB belum terhubung,
+  // fungsi segera kembali dan buffer memori menjadi satu-satunya sumber.
+  await hydrateAuditLog();
 
   const entries = getAuditLog(1000).filter((e) => {
     if (actions.length > 0 && !actions.includes(e.action)) return false;
