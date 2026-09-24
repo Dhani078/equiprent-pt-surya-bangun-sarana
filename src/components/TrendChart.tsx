@@ -27,6 +27,14 @@ const LEBAR = 720
 // Padding kiri lebar: label sumbu Y berformat Rupiah ringkas ("Rp 535,9 jt").
 const PADDING = { atas: 16, kanan: 16, bawah: 28, kiri: 78 }
 
+/** Pembulatan ke angka "cantik" berikutnya (1/2/2.5/5 × 10^n). */
+function niceStep(nilai: number): number {
+	const eksponen = Math.floor(Math.log10(nilai))
+	const dasar = nilai / Math.pow(10, eksponen)
+	const langkah = dasar <= 1 ? 1 : dasar <= 2 ? 2 : dasar <= 2.5 ? 2.5 : dasar <= 5 ? 5 : 10
+	return langkah * Math.pow(10, eksponen)
+}
+
 /** Format ringkas nilai Rupiah untuk sumbu Y: 535.900.000 → "Rp 535,9 jt".
     Konsisten dengan badge nilai (formatRupiahRingkas) di seluruh dashboard. */
 export function ringkasAngka(nilai: number): string {
@@ -34,7 +42,7 @@ export function ringkasAngka(nilai: number): string {
 	if (abs >= 1_000_000_000) return `Rp ${(nilai / 1_000_000_000).toFixed(1).replace('.', ',')} M`
 	if (abs >= 1_000_000) return `Rp ${(nilai / 1_000_000).toFixed(1).replace('.', ',')} jt`
 	if (abs >= 1_000) return `Rp ${(nilai / 1_000).toFixed(0)}rb`
-	return `Rp ${nilai.toFixed(0)}`
+	return `Rp ${nilai.toFixed(1).replace('.', ',')} jt`
 }
 
 /**
@@ -58,7 +66,10 @@ export const TrendChart: React.FC<TrendChartProps> = ({
 
 	const geometri = useMemo(() => {
 		const nilai = data.map((d) => d.value)
-		const maksimum = Math.max(1, ...nilai)
+		// Headroom + nice-number: puncak tidak terpotong, tick bulat (mis. 150/300/450/600)
+		const mentah = Math.max(1, ...nilai) * 1.12
+		const langkahKisi = niceStep(mentah / 4)
+		const maksimum = langkahKisi * 4
 		const areaLebar = LEBAR - PADDING.kiri - PADDING.kanan
 		const areaTinggi = height - PADDING.atas - PADDING.bawah
 		const langkah = data.length > 1 ? areaLebar / (data.length - 1) : areaLebar
@@ -118,7 +129,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({
 						minHeight: '26px',
 					}}
 				>
-					{aktif ? `${aktif.label}: ${formatValue(aktif.value)}` : `Puncak: ${formatValue(maksimum)}`}
+					{aktif
+						? `${aktif.label}: ${formatValue(aktif.value)}`
+						: `Puncak: ${(formatAxisValue ?? formatValue)(maksimum)}`}
 				</div>
 			</div>
 

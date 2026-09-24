@@ -62,6 +62,7 @@ function isAdminDashboardStats(value: unknown): value is AdminDashboardStats {
 
   return (
     Array.isArray(v.serviceDueCodes) &&
+    Array.isArray(v.serviceApproachingCodes) &&
     Array.isArray(v.recentRentals) &&
     Array.isArray(v.serviceQueue) &&
     typeof v.generatedAt === 'string'

@@ -47,8 +47,8 @@ export const SERVICE_QUEUE_LIMIT = 4;
 /** Jumlah unit pada panel "Top Unit Tersewa". */
 export const TOP_EQUIPMENT_LIMIT = 5;
 
-/** Jumlah kode unit yang ditampilkan pada peringatan servis. */
-const SERVICE_CODE_PREVIEW_LIMIT = 5;
+/** Batas default daftar kode unit (disimpan untuk pemakai luar modul). */
+export const SERVICE_CODE_PREVIEW_LIMIT = 5;
 
 /** Status rental yang dihitung sebagai "sedang berjalan". */
 const AKTIF: readonly Rental['status'][] = ['APPROVED', 'ON_GOING'];
@@ -134,6 +134,7 @@ export function buildDashboardStats(
   let serviceDueCount = 0;
   let serviceApproachingCount = 0;
   const serviceDueCodes: string[] = [];
+  const serviceApproachingCodes: string[] = [];
 
   for (const e of equipments) {
     // Unit yang sedang/telah ditangani tidak perlu diperingatkan lagi.
@@ -142,11 +143,10 @@ export function buildDashboardStats(
     const status = getServiceStatus(e, maintSelesaiPerUnit.get(e.id) ?? []);
     if (status.isDue) {
       serviceDueCount += 1;
-      if (serviceDueCodes.length < SERVICE_CODE_PREVIEW_LIMIT) {
-        serviceDueCodes.push(e.equipment_code);
-      }
+      serviceDueCodes.push(e.equipment_code);
     } else if (status.isApproaching) {
       serviceApproachingCount += 1;
+      serviceApproachingCodes.push(e.equipment_code);
     }
   }
 
@@ -297,6 +297,7 @@ export function buildDashboardStats(
     serviceDueCount,
     serviceApproachingCount,
     serviceDueCodes,
+    serviceApproachingCodes,
     pendingMaintenanceCount,
     recentRentals,
     serviceQueue,
@@ -324,6 +325,7 @@ export function emptyDashboardStats(now: Date = new Date()): AdminDashboardStats
     serviceDueCount: 0,
     serviceApproachingCount: 0,
     serviceDueCodes: [],
+    serviceApproachingCodes: [],
     pendingMaintenanceCount: 0,
     recentRentals: [],
     serviceQueue: [],

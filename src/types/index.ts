@@ -227,6 +227,8 @@ export interface AdminDashboardStats {
   serviceApproachingCount: number;
   /** Kode unit yang sudah jatuh tempo servis (maksimal 5, untuk pratinjau). */
   serviceDueCodes: string[];
+  /** Kode unit yang mendekati jatuh tempo servis (maksimal 5, untuk pratinjau). */
+  serviceApproachingCodes: string[];
   /** Servis terjadwal / sedang dikerjakan. */
   pendingMaintenanceCount: number;
   /** Lima transaksi sewa terbaru. */
