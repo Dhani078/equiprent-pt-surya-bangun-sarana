@@ -57,7 +57,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     // Validasi sisi klien (untuk UX). Validasi sesungguhnya tetap di server.
     if (!username.trim()) {
-      setErrorMsg('Username wajib diisi.');
+      setErrorMsg('Nama pengguna wajib diisi.');
       setLoading(false);
       return;
     }
@@ -77,7 +77,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         } else {
           // Pesan seragam sengaja dipakai agar penyerang tidak bisa
           // menebak username mana yang terdaftar (username enumeration).
-          setErrorMsg('Username atau password salah. Silakan periksa kembali kredensial Anda.');
+          setErrorMsg('Nama pengguna atau password salah. Silakan periksa kembali kredensial Anda.');
         }
         setLoading(false);
         return;
@@ -114,20 +114,15 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }, 800);
   };
 
-  // Label field ikut peran terpilih; "Username" netral dipakai saat peran
-  // belum dipilih (tidak mungkin di sini — selalu ada default).
-  const LABEL_FIELD_PERAN: Readonly<Record<RoleName, string>> = {
-    ADMIN: 'Username Administrator',
-    STAFF: 'Username Staf',
-    CUSTOMER: 'Username Pelanggan',
-  };
+  /** Label field statik netral — tidak mengulang nama tab peran yang dipilih. */
+  const LABEL_FIELD = 'Nama Pengguna';
 
-  const getRoleLabel = () => LABEL_FIELD_PERAN[selectedRole];
+  const getRoleLabel = () => LABEL_FIELD;
 
   const getRolePlaceholder = () => {
-    if (selectedRole === 'ADMIN') return 'Masukkan username admin (contoh: admin)';
-    if (selectedRole === 'STAFF') return 'Masukkan username staf (contoh: staff)';
-    return 'Masukkan username pelanggan (contoh: user)';
+    if (selectedRole === 'ADMIN') return 'Masukkan nama pengguna admin (contoh: admin)';
+    if (selectedRole === 'STAFF') return 'Masukkan nama pengguna staf (contoh: staff)';
+    return 'Masukkan nama pengguna pelanggan (contoh: user)';
   };
 
   /** Label tab peran dalam Bahasa Indonesia. */
@@ -230,10 +225,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,30,64,0.02) 0%, rgba(0,30,64,0.6) 100%)' }} />
           </div>
 
-          {/* Info Aplikasi — tanpa branding infrastruktur (audit: hapus TiDB/Edge). */}
+          {/* Info Aplikasi — hanya nomor produk & jaminan data; nama perusahaan
+              sudah ada di logo panel kiri (hindari duplikasi branding). */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(203, 213, 225, 0.7)' }}>
             <span style={{ letterSpacing: '0.05em' }}>
-              EquipRent MS &bull; PT. Surya Bangun Sarana
+              &copy; 2026 EquipRent MS
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Shield size={12} color="#10B981" /> Data Terlindungi
@@ -291,7 +287,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 backgroundColor: '#F1F5F9',
                 padding: '4px',
                 borderRadius: 'var(--radius-eight)',
-                marginBottom: 'var(--space-5)',
+                marginBottom: 'var(--space-4)',
                 border: '1px solid var(--color-border)',
                 gap: '2px',
               }}
@@ -333,7 +329,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             {/* Form Login — gap seragam 16px (grid 8pt) antar blok field */}
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               
-              {/* Field: Username */}
+              {/* Field: Nama Pengguna */}
               <div>
                 <label style={{ display: 'block', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '6px' }}>
                   {getRoleLabel()}
@@ -361,7 +357,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   <a
                     href="#"
                     onClick={(e) => { e.preventDefault(); alert('Silakan hubungi IT Helpdesk PT. Surya Bangun Sarana Banjarmasin di nomor hotline (0511) 325-SBS atau email support@suryaequipment.co.id untuk pemulihan akses akun.'); }}
-                    style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
+                    style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-primary)', fontWeight: 400, textDecoration: 'underline', textUnderlineOffset: '2px' }}
                   >
                     Lupa Kata Sandi?
                   </a>
@@ -422,7 +418,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   onChange={(e) => setRememberDevice(e.target.checked)}
                   style={{ width: '18px', height: '18px', accentColor: 'var(--color-primary)', cursor: 'pointer', margin: 0, flexShrink: 0 }}
                 />
-                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-secondary)' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', color: '#475569' }}>
                   Ingat saya di perangkat ini
                 </span>
               </label>
@@ -472,7 +468,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     padding: 0
                   }}
                 >
-                  Daftar Akses Armada
+                  Daftar Akun Pelanggan
                 </button>
               </p>
             </div>
@@ -535,7 +531,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </div>
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
-                  Registrasi Akses Armada
+                  Daftar Akun Pelanggan
                 </h3>
                 <p style={{ fontSize: '11.5px', color: 'var(--color-secondary)', margin: 0 }}>
                   PT. SURYA BANGUN SARANA BANJARMASIN

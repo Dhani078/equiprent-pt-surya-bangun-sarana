@@ -37,6 +37,17 @@ const LABEL_JENIS_SERVIS: Record<string, string> = {
 };
 
 /**
+ * Merangkai daftar kode unit menjadi kalimat lengkap tanpa potongan "+N lainnya".
+ * Daftar lengkap dipakai supaya narasi banner selalu cocok dengan jumlah unit
+ * yang dinyatakan (lihat audit D3: banner bilang 5 tapi cuma 2 kode tampil).
+ */
+function gabungKode(kode: readonly string[]): string {
+  if (kode.length === 0) return '-';
+  if (kode.length === 1) return kode[0];
+  return `${kode.slice(0, -1).join(', ')} dan ${kode[kode.length - 1]}`;
+}
+
+/**
  * Dashboard Eksekutif Administrator.
  *
  * Semua angka berasal dari `GET /api/dashboard/stats` (agregat dihitung
@@ -216,17 +227,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             flexWrap: 'wrap',
           }}
         >
-          <AlertTriangle size={20} color="#B91C1C" />
+          <AlertTriangle size={20} color="#991B1B" />
           <div style={{ flex: 1, minWidth: '240px' }}>
             <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#7F1D1D' }}>
-              {stats.serviceDueCount + stats.serviceApproachingCount} unit perlu perhatian servis 250 HM
-              {stats.serviceDueCount > 0 ? ` — ${stats.serviceDueCount} sudah telat` : ''}
-              {stats.serviceApproachingCount > 0 ? `, ${stats.serviceApproachingCount} mendekati jadwal` : ''}
+              {stats.serviceDueCount + stats.serviceApproachingCount} unit perlu perhatian
+              {stats.serviceDueCount > 0 ? `: ${stats.serviceDueCount} telat jadwal servis` : ''}
+              {stats.serviceApproachingCount > 0 ? `, ${stats.serviceApproachingCount} mendekati 250 HM` : ''}
             </p>
-            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#991B1B' }}>
+            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#7F1D1D' }}>
               {stats.serviceDueCount > 0
-                ? `${stats.serviceDueCodes.join(', ')}${stats.serviceDueCount > stats.serviceDueCodes.length ? ` +${stats.serviceDueCount - stats.serviceDueCodes.length} lainnya` : ''}`
+                ? `Telat: ${gabungKode(stats.serviceDueCodes)}`
                 : 'Belum ada unit yang melewati jadwal — jadwalkan inspeksi sebelum jatuh tempo.'}
+              {stats.serviceDueCount > 0 && stats.serviceApproachingCount > 0
+                ? `  •  Mendekati: ${gabungKode(stats.serviceApproachingCodes)}`
+                : ''}
             </p>
           </div>
           <button
@@ -266,17 +280,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               <StatCard
                 title="Total Armada Alat Berat"
                 value={`${stats.totalEquipments} Unit`}
-                subtitle={`${stats.availableEquipments} siap sewa, ${stats.rentedEquipments} tersewa`}
+                subtitle={
+                  stats.maintenanceEquipments + stats.unavailableEquipments > 0
+                    ? `${stats.availableEquipments} siap sewa, ${stats.rentedEquipments} tersewa, ${stats.maintenanceEquipments + stats.unavailableEquipments} dalam servis`
+                    : `${stats.availableEquipments} siap sewa, ${stats.rentedEquipments} tersewa`
+                }
                 icon={Truck}
                 iconTone="info"
-                badgeText="Operasional"
-                badgeType="success"
+                badgeText={stats.maintenanceEquipments + stats.unavailableEquipments > 0 ? 'Sebagian Servis' : 'Operasional'}
+                badgeType={stats.maintenanceEquipments + stats.unavailableEquipments > 0 ? 'warning' : 'success'}
                 onClick={() => onNavigate('equipment')}
               />
               <StatCard
                 title="Transaksi Sewa Aktif"
                 value={`${stats.activeRentals} Kontrak`}
-                subtitle="Unit beroperasi di lapangan"
+                subtitle="Kontrak aktif untuk unit di lapangan"
                 icon={ClipboardList}
                 iconTone="info"
                 badgeText="Sedang Berjalan"
@@ -307,7 +325,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 icon={Hourglass}
                 iconTone="warning"
                 badgeText="Pembayaran"
-                badgeType="warning"
+                badgeType="neutral"
                 onClick={() => onNavigate('rentals')}
               />
               <StatCard
@@ -327,7 +345,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 icon={ClipboardList}
                 iconTone="warning"
                 badgeText="Pengajuan"
-                badgeType="warning"
+                badgeType="neutral"
                 onClick={() => onNavigate('rentals')}
               />
               <StatCard
