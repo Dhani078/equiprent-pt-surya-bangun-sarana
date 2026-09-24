@@ -5,7 +5,7 @@
  * dan diurutkan dari yang paling mendesak.
  */
 
-const { buildNotifications, hitungMendesak, selisihHari, AMBANG_JATUH_TEMPO_HARI } =
+const { buildNotifications, hitungMendesak, selisihHari, AMBANG_JATUH_TEMPO_HARI, urutkanPerKategori, URUTAN_KATEGORI, LABEL_KATEGORI } =
   await import('../.tmp_notifications.mjs');
 
 let pass = 0, fail = 0;
@@ -96,7 +96,20 @@ t('Admin melihat pengajuan sewa PENDING', admin.some((i) => i.id === 'rental-pen
 t('Admin melihat perawatan hari ini', admin.some((i) => i.id === 'maint-1'));
 t('Sewa lewat tanggal kembali ditandai telat', admin.some((i) => i.id === 'rental-late-3'));
 t('Notifikasi telat berwarna danger', admin.find((i) => i.id === 'rental-late-3').tone === 'danger');
-t('Notifikasi paling mendesak berada di urutan pertama', admin[0].tone === 'danger');
+t('Kelompok pembayaran tampil paling awal (paling mendesak menurut bisnis)', admin[0].kategori === 'pembayaran');
+t('Dalam kelompok, item danger didahulukan', (() => {
+  const pengembalian = admin.filter((i) => i.kategori === 'pengembalian');
+  return pengembalian[0].tone === 'danger';
+})());
+t('Setiap notifikasi punya kategori', admin.every((i) => typeof i.kategori === 'string' && i.kategori.length > 0));
+t('Urutan kelompok mengikuti URUTAN_KATEGORI', (() => {
+  const idx = (k) => URUTAN_KATEGORI.indexOf(k);
+  const grupPertama = admin.findIndex((i) => i.kategori !== admin[0].kategori);
+  if (grupPertama === -1) return true;
+  return idx(admin[0].kategori) < idx(admin[grupPertama].kategori);
+})());
+t('urutkanPerKategori menjaga semua item tetap ada', urutkanPerKategori(admin).length === admin.length);
+t('LABEL_KATEGORI punya label untuk setiap kategori', admin.every((i) => LABEL_KATEGORI[i.kategori].length > 0));
 t('Setiap notifikasi punya tab tujuan', admin.every((i) => typeof i.tab === 'string' && i.tab.length > 0));
 t('Id notifikasi unik', new Set(admin.map((i) => i.id)).size === admin.length);
 t('hitungMendesak menghitung notifikasi danger', hitungMendesak(admin) === admin.filter((i) => i.tone === 'danger').length);

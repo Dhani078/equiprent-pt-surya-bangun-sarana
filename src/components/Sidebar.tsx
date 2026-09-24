@@ -175,21 +175,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
         </nav>
       </div>
 
-      {/* Footer info in sidebar */}
+      {/* Footer sidebar — satu baris kecil, bukan kartu branding penuh
+          (header navbar sudah menampilkan identitas perusahaan). */}
       <div style={{
-        padding: '12px',
-        backgroundColor: '#F8FAFC',
-        borderRadius: 'var(--radius-eight)',
-        border: '1px solid var(--color-border)',
-        fontSize: '11.5px',
-        color: 'var(--color-secondary)'
+        padding: '10px 12px',
+        fontSize: '10.5px',
+        color: 'var(--color-secondary-light)',
+        textAlign: 'center',
       }}>
-        <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '2px' }}>
-          PT. SBS Banjarmasin
-        </div>
-        <div style={{ fontSize: '10.5px', color: 'var(--color-secondary-light)' }}>
-          Sistem Monitoring &amp; Rental Alat Berat
-        </div>
+        &copy; {new Date().getFullYear()} PT. SBS Banjarmasin
       </div>
     </aside>
   );

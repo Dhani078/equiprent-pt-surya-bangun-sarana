@@ -114,7 +114,15 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }, 800);
   };
 
-  const getRoleLabel = () => 'Username';
+  // Label field ikut peran terpilih; "Username" netral dipakai saat peran
+  // belum dipilih (tidak mungkin di sini — selalu ada default).
+  const LABEL_FIELD_PERAN: Readonly<Record<RoleName, string>> = {
+    ADMIN: 'Username Administrator',
+    STAFF: 'Username Staf',
+    CUSTOMER: 'Username Pelanggan',
+  };
+
+  const getRoleLabel = () => LABEL_FIELD_PERAN[selectedRole];
 
   const getRolePlaceholder = () => {
     if (selectedRole === 'ADMIN') return 'Masukkan username admin (contoh: admin)';
@@ -246,7 +254,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             
             {/* Header Form */}
             <div style={{ marginBottom: 'var(--space-6)' }}>
-              <h3 style={{ fontSize: 'var(--fs-display)', fontWeight: 800, color: 'var(--color-primary)', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+              <h3 style={{ fontSize: 'var(--fs-display)', fontWeight: 800, color: '#001E40', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
                 Selamat Datang Kembali
               </h3>
               <p style={{ fontSize: 'var(--fs-body)', color: 'var(--color-secondary)', margin: 0 }}>
@@ -299,18 +307,20 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     onClick={() => handleRoleSelect(role)}
                     style={{
                       flex: 1,
-                      padding: '9px 4px',
+                      padding: '10px 4px',
                       textAlign: 'center',
                       borderRadius: 'var(--radius-sm)',
                       border: 'none',
                       fontFamily: 'var(--font-primary)',
-                      fontSize: 'var(--fs-xs)',
-                      fontWeight: 700,
+                      fontSize: 'var(--fs-sm)',
+                      fontWeight: aktif ? 800 : 600,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       backgroundColor: aktif ? '#FFFFFF' : 'transparent',
-                      color: aktif ? 'var(--color-primary)' : 'var(--color-secondary)',
-                      boxShadow: aktif ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                      color: aktif ? 'var(--color-primary)' : '#475569',
+                      boxShadow: aktif ? '0 2px 6px rgba(0,51,102,0.12)' : 'none',
+                      outline: aktif ? '1px solid rgba(0, 51, 102, 0.25)' : 'none',
+                      outlineOffset: aktif ? '-1px' : 0,
                     }}
                   >
                     {LABEL_TAB_PERAN[role]}
@@ -320,7 +330,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
 
             {/* Form Login */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Form Login — gap seragam 16px (grid 8pt) antar blok field */}
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               
               {/* Field: Username */}
               <div>
@@ -388,7 +399,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 </div>
               </div>
 
-              {/* Remember Device — target sentuh 44px (audit aksesibilitas) */}
+              {/* Remember Device — target sentuh 44px (audit aksesibilitas).
+                  Blok label menyerap tinggi target; jangan tambah margin yang
+                  memutus ritme 8pt (sebelumnya -6px membuat gap jadi 40px). */}
               <label
                 htmlFor="rememberDevice"
                 style={{
@@ -397,7 +410,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   gap: 'var(--space-2)',
                   minHeight: '44px',
                   padding: '0 4px',
-                  margin: '-6px -4px',
                   cursor: 'pointer',
                   userSelect: 'none',
                   borderRadius: '8px',
@@ -415,38 +427,39 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 </span>
               </label>
 
-              {/* Tombol Submit Login */}
+              {/* Tombol Submit Login.
+                  Klasifikasi CTA: gradient biru khusus agar paling dominan,
+                  sementara heading & aksen lain tetap navy datar (--color-primary). */}
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary"
+                className="btn-cta"
                 style={{
                   height: '46px',
                   fontSize: 'var(--fs-body)',
-                  fontWeight: 700,
+                  fontWeight: 800,
                   letterSpacing: '0.04em',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 'var(--space-2)',
-                  marginTop: 'var(--space-1)',
                 }}
               >
                 {loading ? (
                   <span>Memverifikasi...</span>
                 ) : (
                   <>
-                    <span>MASUK</span>
+                    <span>Masuk</span>
                     <ArrowRight size={16} />
                   </>
                 )}
               </button>
             </form>
 
-            {/* Footer Registration Link */}
+            {/* Footer Registration Link — satu penekanan saja (bold, tanpa underline) */}
             <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-5)', borderTop: '1px solid var(--color-border)', textAlign: 'center' }}>
               <p style={{ fontSize: 'var(--fs-body)', color: 'var(--color-secondary)', margin: 0 }}>
-                Operator atau penyewa baru?{' '}
+                Staf atau pelanggan baru?{' '}
                 <button
                   type="button"
                   onClick={() => setIsRegisterModalOpen(true)}
@@ -456,7 +469,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     color: 'var(--color-primary)',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    textDecoration: 'underline',
                     padding: 0
                   }}
                 >
@@ -523,7 +535,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </div>
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
-                  Registrasi Akses Fleet
+                  Registrasi Akses Armada
                 </h3>
                 <p style={{ fontSize: '11.5px', color: 'var(--color-secondary)', margin: 0 }}>
                   PT. SURYA BANGUN SARANA BANJARMASIN
@@ -613,8 +625,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   className="input-premium"
                   style={{ height: '38px', fontSize: '13px' }}
                 >
-                  <option value="CUSTOMER">PELANGGAN (Customer Portal — Sewa & Kontrak)</option>
-                  <option value="STAFF">STAF SBS (Staff Operational — Verifikasi & Monitoring)</option>
+                  <option value="CUSTOMER">Pelanggan — Portal Sewa & Kontrak</option>
+                  <option value="STAFF">Staf SBS — Verifikasi & Monitoring</option>
                 </select>
               </div>
 
