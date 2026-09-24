@@ -10,15 +10,38 @@ import { formatRupiah, formatTanggal } from './businessRules'
 
 export type NotificationTone = 'danger' | 'warning' | 'info'
 
+/** Kategori pengelompokan notifikasi di Pusat Notifikasi. */
+export type NotificationKategori = 'pembayaran' | 'persetujuan' | 'perawatan' | 'kontrak' | 'pengembalian'
+
 export interface NotificationItem {
 	/** Id unik & stabil (dipakai sebagai key React). */
 	id: string
 	title: string
 	detail: string
 	tone: NotificationTone
+	/** Kelompok notifikasi (dipakai untuk header pengelompokan di panel). */
+	kategori: NotificationKategori
 	/** Id tab tujuan saat notifikasi diklik. */
 	tab: string
 }
+
+/** Label tampil per kategori (urutan pengelompokan mengikuti definisi tipe). */
+export const LABEL_KATEGORI: Readonly<Record<NotificationKategori, string>> = {
+	pembayaran: 'Pembayaran',
+	persetujuan: 'Persetujuan Sewa',
+	perawatan: 'Jadwal Perawatan',
+	kontrak: 'Kontrak',
+	pengembalian: 'Pengembalian Unit',
+}
+
+/** Urutan kelompok di panel: paling mendesak dulu. */
+export const URUTAN_KATEGORI: readonly NotificationKategori[] = [
+	'pembayaran',
+	'persetujuan',
+	'perawatan',
+	'pengembalian',
+	'kontrak',
+]
 
 /** Sumber data yang dibutuhkan untuk menyusun notifikasi. */
 export interface NotificationSource {
@@ -66,6 +89,7 @@ export function buildNotifications(
 				title: `Pembayaran ${p.payment_code} menunggu verifikasi`,
 				detail: `${formatRupiah(p.amount)} • ${p.payment_method} • ${formatTanggal(p.payment_date)}`,
 				tone: 'warning',
+				kategori: 'pembayaran',
 				tab: 'payments',
 			})
 		}
@@ -77,6 +101,7 @@ export function buildNotifications(
 				title: `Pengajuan sewa ${r.rental_code} menunggu persetujuan`,
 				detail: `${r.customer_name ?? 'Pelanggan'} • ${r.equipment_name ?? 'Unit'} • ${formatTanggal(r.start_date)}`,
 				tone: 'info',
+				kategori: 'persetujuan',
 				tab: 'rentals',
 			})
 		}
@@ -89,11 +114,12 @@ export function buildNotifications(
 			items.push({
 				id: `maint-${m.id}`,
 				title:
-					selisih > 0
-						? `Perawatan ${m.maintenance_code} terlewat ${selisih} hari`
-						: `Perawatan ${m.maintenance_code} dijadwalkan hari ini`,
+				selisih > 0
+					? `Perawatan ${m.maintenance_code} terlewat ${selisih} hari`
+					: `Perawatan ${m.maintenance_code} dijadwalkan hari ini`,
 				detail: `${m.maintenance_type} • HM ${m.hour_meter_at_maintenance} • ${formatTanggal(m.scheduled_date)}`,
 				tone: selisih > 0 ? 'danger' : 'warning',
+				kategori: 'perawatan',
 				tab: 'maintenance',
 			})
 		}
@@ -105,11 +131,12 @@ export function buildNotifications(
 			items.push({
 				id: `pay-due-${p.id}`,
 				title:
-					p.status === 'FAILED'
-						? `Pembayaran ${p.payment_code} ditolak`
-						: `Tagihan ${p.payment_code} belum dibayar`,
+				p.status === 'FAILED'
+					? `Pembayaran ${p.payment_code} ditolak`
+					: `Tagihan ${p.payment_code} belum dibayar`,
 				detail: `${formatRupiah(p.amount)} • unggah ulang bukti transfer bila perlu`,
 				tone: p.status === 'FAILED' ? 'danger' : 'warning',
+				kategori: 'pembayaran',
 				tab: 'payments',
 			})
 		}
@@ -123,6 +150,7 @@ export function buildNotifications(
 				title: `Kontrak ${c.contract_code} belum ditandatangani`,
 				detail: `Berlaku sampai ${formatTanggal(c.valid_until)}`,
 				tone: 'info',
+				kategori: 'kontrak',
 				tab: 'contracts',
 			})
 		}
@@ -138,6 +166,7 @@ export function buildNotifications(
 				title: `Sewa ${r.rental_code} telat ${Math.abs(sisa)} hari`,
 				detail: `${r.equipment_name ?? 'Unit'} • seharusnya kembali ${formatTanggal(r.end_date)} • denda berjalan`,
 				tone: 'danger',
+				kategori: 'pengembalian',
 				tab: 'rentals',
 			})
 		} else if (sisa <= AMBANG_JATUH_TEMPO_HARI) {
@@ -146,14 +175,26 @@ export function buildNotifications(
 				title: sisa === 0 ? `Sewa ${r.rental_code} berakhir hari ini` : `Sewa ${r.rental_code} berakhir ${sisa} hari lagi`,
 				detail: `${r.equipment_name ?? 'Unit'} • jadwal kembali ${formatTanggal(r.end_date)}`,
 				tone: 'warning',
+				kategori: 'pengembalian',
 				tab: 'rentals',
 			})
 		}
 	}
 
-	// Urutan tampil: paling mendesak di atas.
+	// Urutan tampil: dikelompokkan & diurutkan oleh `urutkanPerKategori`.
+	return urutkanPerKategori(items)
+}
+
+// Urutan tampil: dikelompokkan per kategori (paling mendesak dulu), lalu
+// di dalam kelompok diurutkan dari tingkat urgensi tertinggi.
+export function urutkanPerKategori(items: readonly NotificationItem[]): NotificationItem[] {
 	const bobot: Record<NotificationTone, number> = { danger: 0, warning: 1, info: 2 }
-	return items.sort((a, b) => bobot[a.tone] - bobot[b.tone])
+	const urutan = new Map(URUTAN_KATEGORI.map((k, i) => [k, i]))
+	return [...items].sort((a, b) => {
+		const ka = urutan.get(a.kategori) ?? 99
+		const kb = urutan.get(b.kategori) ?? 99
+		return ka - kb || bobot[a.tone] - bobot[b.tone]
+	})
 }
 
 /** Menghitung jumlah notifikasi mendesak (perlu tindakan segera). */

@@ -22,7 +22,7 @@ import { formatRupiah, formatRupiahRingkas, formatTanggal } from '../../lib/busi
 import { fetchDashboardStats } from '../../lib/dashboardClient';
 import type { DashboardSource } from '../../lib/dashboardClient';
 import { Skeleton } from '../../components/Skeleton';
-import { TrendChart } from '../../components/TrendChart';
+import { TrendChart, ringkasAngka } from '../../components/TrendChart';
 import { StatusBadge } from '../../components/StatusBadge';
 
 interface AdminDashboardProps {
@@ -197,38 +197,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         </div>
       </div>
 
-      {/* Peringatan Servis Preventif (aturan 250 HM) */}
-      {stats.serviceDueCount > 0 && (
+      {/* Peringatan Servis Preventif (aturan 250 HM).
+          Narasi menyatu: banner hanya muncul bila ada unit telat, dan
+          langsung menyatakan total perlu-perhatian = telat + mendekati.
+          Kontras ditingkatkan: teks gelap di atas pink muda, tombol navy solid. */}
+      {(stats.serviceDueCount > 0 || stats.serviceApproachingCount > 0) && (
         <div
           className="animate-fade-in"
           role="alert"
           style={{
             padding: '14px 18px',
             borderRadius: '14px',
-            border: '1px solid rgba(220, 38, 38, 0.35)',
-            background: 'rgba(220, 38, 38, 0.08)',
+            border: '1px solid #FECACA',
+            background: '#FEF2F2',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
             flexWrap: 'wrap',
           }}
         >
-          <AlertTriangle size={20} color="#dc2626" />
+          <AlertTriangle size={20} color="#B91C1C" />
           <div style={{ flex: 1, minWidth: '240px' }}>
-            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>
-              {stats.serviceDueCount} unit telah melewati jadwal servis 250 HM
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#7F1D1D' }}>
+              {stats.serviceDueCount + stats.serviceApproachingCount} unit perlu perhatian servis 250 HM
+              {stats.serviceDueCount > 0 ? ` — ${stats.serviceDueCount} sudah telat` : ''}
+              {stats.serviceApproachingCount > 0 ? `, ${stats.serviceApproachingCount} mendekati jadwal` : ''}
             </p>
-            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--color-secondary)' }}>
-              {stats.serviceDueCodes.join(', ')}
-              {stats.serviceDueCount > stats.serviceDueCodes.length
-                ? ` +${stats.serviceDueCount - stats.serviceDueCodes.length} lainnya`
-                : ''}
+            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#991B1B' }}>
+              {stats.serviceDueCount > 0
+                ? `${stats.serviceDueCodes.join(', ')}${stats.serviceDueCount > stats.serviceDueCodes.length ? ` +${stats.serviceDueCount - stats.serviceDueCodes.length} lainnya` : ''}`
+                : 'Belum ada unit yang melewati jadwal — jadwalkan inspeksi sebelum jatuh tempo.'}
             </p>
           </div>
           <button
             onClick={() => onNavigate('maintenance')}
             className="btn-primary"
-            style={{ fontSize: '12px', padding: '8px 14px' }}
+            style={{ fontSize: '12px', padding: '8px 14px', flexShrink: 0 }}
           >
             Jadwalkan Servis
           </button>
@@ -281,16 +285,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               />
               <StatCard
                 title="Jadwal Servis Mendesak"
-                value={`${stats.pendingMaintenanceCount} Unit`}
+                value={`${stats.serviceDueCount + stats.serviceApproachingCount} Unit`}
                 subtitle={
-                  stats.serviceApproachingCount > 0
-                    ? `${stats.serviceApproachingCount} unit mendekati 250 HM`
-                    : 'Perlu inspeksi teknisi mekanik'
+                  stats.serviceDueCount > 0
+                    ? `${stats.serviceDueCount} telat + ${stats.serviceApproachingCount} mendekati 250 HM`
+                    : stats.serviceApproachingCount > 0
+                      ? `${stats.serviceApproachingCount} unit mendekati 250 HM`
+                      : 'Perlu inspeksi teknisi mekanik'
                 }
                 icon={Wrench}
-                iconTone="danger"
-                badgeText="Penting"
-                badgeType="danger"
+                iconTone={stats.serviceDueCount > 0 ? 'danger' : 'warning'}
+                badgeText={stats.serviceDueCount > 0 ? 'Telat' : 'Mendesak'}
+                badgeType={stats.serviceDueCount > 0 ? 'danger' : 'warning'}
                 onClick={() => onNavigate('maintenance')}
               />
               <StatCard
@@ -300,7 +306,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 subtitle={`${stats.pendingPaymentCount} pembayaran belum diverifikasi`}
                 icon={Hourglass}
                 iconTone="warning"
-                badgeText="Menunggu"
+                badgeText="Pembayaran"
                 badgeType="warning"
                 onClick={() => onNavigate('rentals')}
               />
@@ -320,7 +326,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 subtitle="Menunggu persetujuan staf"
                 icon={ClipboardList}
                 iconTone="warning"
-                badgeText="Menunggu"
+                badgeText="Pengajuan"
                 badgeType="warning"
                 onClick={() => onNavigate('rentals')}
               />
@@ -329,9 +335,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 value={`${persenUtilisasi}%`}
                 subtitle={`${stats.rentedEquipments} dari ${stats.totalEquipments} unit tersewa`}
                 icon={Gauge}
-                iconTone={persenUtilisasi >= 60 ? 'success' : 'neutral'}
-                badgeText={persenUtilisasi >= 60 ? 'Tinggi' : 'Normal'}
-                badgeType={persenUtilisasi >= 60 ? 'success' : 'neutral'}
+                iconTone={persenUtilisasi >= 60 ? 'success' : 'warning'}
+                badgeText={persenUtilisasi >= 60 ? 'Tinggi' : 'Rendah'}
+                badgeType={persenUtilisasi >= 60 ? 'success' : 'warning'}
                 onClick={() => onNavigate('equipment')}
               />
             </>
@@ -340,13 +346,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       </div>
 
       {/* Grafik tren pendapatan (SVG interaktif, tanpa pustaka pihak ketiga).
-          Diletakkan di atas agar langsung terlihat tanpa menggulir. */}
+          Diletakkan SETELAH baris pertama StatCard (bukan setelah 2 baris)
+          agar sebagian besar grafik terlihat tanpa menggulir. */}
       {stats.revenueTrend.length > 0 && (
         <TrendChart
           title="Tren Pendapatan 12 Bulan Terakhir"
           subtitle="Arahkan kursor ke titik untuk melihat nilai per bulan — hanya pembayaran berstatus Lunas"
           data={stats.revenueTrend.map((d) => ({ label: d.label, value: d.amount }))}
           formatValue={formatRupiah}
+          formatAxisValue={ringkasAngka}
+          height={180}
         />
       )}
 

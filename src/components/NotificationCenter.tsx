@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Bell, BellOff, AlertTriangle, AlertCircle, Info, CheckCircle2 } from 'lucide-react'
-import type { NotificationItem, NotificationTone } from '../lib/notifications'
-import { hitungMendesak } from '../lib/notifications'
+import type { NotificationItem, NotificationKategori, NotificationTone } from '../lib/notifications'
+import { hitungMendesak, LABEL_KATEGORI, URUTAN_KATEGORI } from '../lib/notifications'
 
 interface NotificationCenterProps {
 	/** Daftar notifikasi hasil `buildNotifications`. */
@@ -141,56 +141,85 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ items, o
 								</p>
 							</div>
 						) : (
-							items.map((n) => {
-								const warna = WARNA[n.tone]
-								return (
-									<button
-										key={n.id}
-										type="button"
-										onClick={() => buka(n.tab)}
-										style={{
-											display: 'flex',
-											alignItems: 'flex-start',
-											gap: '10px',
-											width: '100%',
-											textAlign: 'left',
-											padding: '10px 11px',
-											marginBottom: '6px',
-											borderRadius: '7px',
-											border: `1px solid ${warna.tepi}`,
-											backgroundColor: warna.latar,
-											cursor: 'pointer',
-											transition: 'var(--transition-base)',
-										}}
-									>
-										<span style={{ marginTop: '1px', flexShrink: 0 }}>
-											<IkonTone tone={n.tone} />
-										</span>
-										<span style={{ flex: 1 }}>
-											<span
+							URUTAN_KATEGORI
+								.filter((k) => items.some((n) => n.kategori === k))
+								.map((kategori) => {
+									const grup = items.filter((n) => n.kategori === kategori)
+									return (
+										<div key={kategori} style={{ marginBottom: '10px' }}>
+											<div
 												style={{
-													display: 'block',
-													fontSize: '12.5px',
-													fontWeight: 700,
-													color: warna.teks,
-													lineHeight: 1.35,
+													display: 'flex',
+													alignItems: 'center',
+													justifyContent: 'space-between',
+													padding: '6px 6px 5px 6px',
+													fontSize: '10.5px',
+													fontWeight: 800,
+													letterSpacing: '0.06em',
+													textTransform: 'uppercase',
+													color: 'var(--color-secondary-light)',
 												}}
 											>
-												{n.title}
-											</span>
-											<span
-												style={{ display: 'block', fontSize: '11.5px', color: warna.teks, opacity: 0.85, marginTop: '2px' }}
-											>
-												{n.detail}
-											</span>
-										</span>
-									</button>
-								)
-							})
+												<span>{LABEL_KATEGORI[kategori as NotificationKategori]}</span>
+												<span style={{ fontFamily: 'var(--font-mono)' }}>{grup.length}</span>
+											</div>
+											{grup.map((n) => (
+												<ItemNotifikasi key={n.id} item={n} onClick={() => buka(n.tab)} />
+											))}
+										</div>
+									)
+								})
 						)}
 					</div>
 				</div>
 			)}
 		</div>
+	)
+}
+
+/** Satu butir notifikasi (dipisah agar bisa dipakai ulang per kelompok). */
+function ItemNotifikasi({ item, onClick }: { item: NotificationItem; onClick: () => void }) {
+	const warna = WARNA[item.tone]
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			style={{
+				display: 'flex',
+				alignItems: 'flex-start',
+				gap: '10px',
+				width: '100%',
+				textAlign: 'left',
+				padding: '10px 11px',
+				marginBottom: '6px',
+				borderRadius: '7px',
+				border: `1px solid ${warna.tepi}`,
+				backgroundColor: warna.latar,
+				cursor: 'pointer',
+				transition: 'var(--transition-base)',
+			}}
+		>
+			<span style={{ marginTop: '1px', flexShrink: 0 }}>
+				<IkonTone tone={item.tone} />
+			</span>
+			<span style={{ flex: 1 }}>
+				<span
+					style={{
+						display: 'block',
+						fontSize: '12.5px',
+						fontWeight: 700,
+						color: warna.teks,
+						lineHeight: 1.35,
+					}}
+				>
+					{item.title}
+				</span>
+				<span
+					style={{ display: 'block', fontSize: '11.5px', color: warna.teks, opacity: 0.85, marginTop: '2px' }}
+				>
+					{item.detail}
+				</span>
+			</span>
+		</button>
 	)
 }

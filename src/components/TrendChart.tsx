@@ -12,23 +12,29 @@ interface TrendChartProps {
 	title: string
 	subtitle?: string
 	data: readonly TrendPoint[]
-	/** Pemformat nilai untuk tooltip & sumbu Y (mis. formatRupiah). */
+	/** Pemformat nilai untuk tooltip, badge puncak & sumbu Y (mis. formatRupiah). */
 	formatValue: (value: number) => string
+	/** Pemformat opsional khusus label sumbu Y. Default: `formatValue` dipakai
+	 * utuh (bisa panjang) — sediakan versi ringkas (mis. `formatRupiahRingkas`)
+	 * agar label sumbu Y konsisten dengan badge nilai. */
+	formatAxisValue?: (value: number) => string
 	variant?: 'area' | 'bar'
 	color?: string
 	height?: number
 }
 
 const LEBAR = 720
-const PADDING = { atas: 16, kanan: 16, bawah: 28, kiri: 64 }
+// Padding kiri lebar: label sumbu Y berformat Rupiah ringkas ("Rp 535,9 jt").
+const PADDING = { atas: 16, kanan: 16, bawah: 28, kiri: 78 }
 
-/** Meringkas angka besar pada sumbu Y: 1.500.000 → 1,5jt. */
+/** Format ringkas nilai Rupiah untuk sumbu Y: 535.900.000 → "Rp 535,9 jt".
+    Konsisten dengan badge nilai (formatRupiahRingkas) di seluruh dashboard. */
 export function ringkasAngka(nilai: number): string {
 	const abs = Math.abs(nilai)
-	if (abs >= 1_000_000_000) return `${(nilai / 1_000_000_000).toFixed(1).replace('.', ',')}M`
-	if (abs >= 1_000_000) return `${(nilai / 1_000_000).toFixed(1).replace('.', ',')}jt`
-	if (abs >= 1_000) return `${(nilai / 1_000).toFixed(0)}rb`
-	return nilai.toFixed(0)
+	if (abs >= 1_000_000_000) return `Rp ${(nilai / 1_000_000_000).toFixed(1).replace('.', ',')} M`
+	if (abs >= 1_000_000) return `Rp ${(nilai / 1_000_000).toFixed(1).replace('.', ',')} jt`
+	if (abs >= 1_000) return `Rp ${(nilai / 1_000).toFixed(0)}rb`
+	return `Rp ${nilai.toFixed(0)}`
 }
 
 /**
@@ -43,6 +49,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
 	subtitle,
 	data,
 	formatValue,
+	formatAxisValue,
 	variant = 'area',
 	color = 'var(--color-primary)',
 	height = 220,
@@ -145,7 +152,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
 								fill="var(--color-secondary)"
 								fontFamily="var(--font-mono)"
 							>
-								{ringkasAngka(g.nilai)}
+								{(formatAxisValue ?? formatValue)(g.nilai)}
 							</text>
 						</g>
 					))}
