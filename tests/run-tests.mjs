@@ -132,6 +132,7 @@ const suites = [
   'tableExport.test.mjs',
   'notifications.test.mjs',
   'auditLog.test.mjs',
+  'settingsAndAudit.test.mjs',
   'seedData.test.mjs',
 ];
 

@@ -2,8 +2,9 @@ import { connect } from '@tidbcloud/serverless';
 import { User, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from '../types';
 import { hashPassword, isDemoAccount, isStoredPasswordHash, verifyPassword } from './auth';
 import { getTransitionEffect } from './rentalWorkflow';
+import { setLatePenaltyPerDay } from './businessRules';
 import { canChangePaymentStatus, summarizeRentalPayment } from './paymentWorkflow';
-import { CONTRACT_TERMS_TEXT, generateContractCode } from './contracts';
+import { buildContractTermsText, generateContractCode } from './contracts';
 import {
   GENERATED_USERS,
   GENERATED_EQUIPMENTS,
@@ -41,7 +42,11 @@ function resolveEnv(): Record<string, string | undefined> {
 }
 
 const envLookup = resolveEnv();
-const databaseUrl = envLookup.VITE_DATABASE_URL ?? envLookup.DATABASE_URL ?? '';
+// HANYA `DATABASE_URL`. Prefiks `VITE_` sengaja TIDAK dipakai: nilai dengan
+// prefiks itu ikut terbawa ke bundle klien (vite memasukkannya ke kode yang
+// diunduh browser), sehingga kredensial database bocor ke publik. Worker
+// Cloudflare hanya mengikat `DATABASE_URL` (server-only).
+const databaseUrl = envLookup.DATABASE_URL ?? '';
 
 /** Client TiDB. Null ketika DATABASE_URL belum dikonfigurasi → fallback ke in-memory store. */
 type TidbClient = { execute: (sql: string, params: unknown[]) => Promise<unknown> };
@@ -362,7 +367,7 @@ export const db = {
       valid_until: validUntil,
       // Syarat & ketentuan baku diambil dari modul kontrak, bukan
       // ditulis ulang di sini, agar dokumen & pratinjau tidak menyimpang.
-      terms_conditions: CONTRACT_TERMS_TEXT,
+      terms_conditions: buildContractTermsText(),
       is_signed_customer: 0,
       signed_at: null,
       signer_name: null,
@@ -507,3 +512,38 @@ export const db = {
   // Reports
   getReports: async () => stateStore.reports,
 };
+
+// ---------------------------------------------------------------------------
+// Pengaturan Aplikasi (tabel `settings`)
+// ---------------------------------------------------------------------------
+// Saat DB terhubung, tarif denda & konfigurasi lain dibaca dari tabel settings.
+// Cache di sini (bukan di businessRules) karena modul ini pemilik koneksi DB;
+// businessRules hanya menerima nilai lewat setter agar tidak timbul dependensi
+// melingkar (businessRules adalah modul murni tanpa import db).
+// ponytail: tidak ada notifikasi perubahan dari DB. Cache hanya disegarkan
+// ulang per isolate lewat warmSettings(); naik ke: pub/sub atau TTL bila
+// pengaturan banyak diubah dari banyak isolate.
+
+let settingsDimuat = false;
+
+async function muatSettings(): Promise<void> {
+  settingsDimuat = true;
+  if (!isDatabaseConnected()) return; // mode IN_MEMORY_DEMO → nilai default kode
+
+  const rows = await executeSql<{ value: string | null }>(
+    'SELECT `value` FROM `settings` WHERE `key` = ? LIMIT 1',
+    ['late_penalty_per_day']
+  );
+  const mentah = rows.length > 0 ? rows[0]?.value : null;
+  const angka = typeof mentah === 'string' ? Number(mentah) : NaN;
+  setLatePenaltyPerDay(Number.isFinite(angka) && angka >= 0 ? angka : null);
+}
+
+/**
+ * Muat pengaturan sekali per isolate. Dipanggil middleware API; bila DB belum
+ * terhubung, segera ditandai agar tidak mengulang setiap permintaan.
+ */
+export async function warmSettings(): Promise<void> {
+  if (settingsDimuat) return;
+  await muatSettings();
+}

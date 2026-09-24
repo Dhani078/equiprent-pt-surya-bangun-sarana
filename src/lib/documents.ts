@@ -16,7 +16,7 @@
 
 import type { Equipment, Rental, ReportItem } from '../types';
 import {
-  LATE_PENALTY_PER_DAY,
+  getLatePenaltyPerDay,
   formatRupiah,
   formatTanggal,
   formatWaktu,
@@ -255,7 +255,7 @@ export function buildDocument(input: DocumentInput): OfficialDocument {
 
   // Keterlambatan hanya relevan untuk BAST IN (unit kembali ke perusahaan).
   const lateDays = kind === 'BAST_IN' ? hitungHariTerlambat(rental.end_date, tanggalKembali) : 0;
-  const penalty = lateDays * LATE_PENALTY_PER_DAY;
+  const penalty = lateDays * getLatePenaltyPerDay();
 
   const lokasi = rental.notes ?? 'Lokasi proyek sesuai kontrak kerja sama';
 

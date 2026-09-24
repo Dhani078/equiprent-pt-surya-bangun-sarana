@@ -1,3 +1,19 @@
+## [CYCLE 47] 2026-09-24 - T-0053 — P1 — DONE
+**Judul:** Skema DB + Settings + Audit Persistensi + Fix VITE_DATABASE_URL
+**Perubahan:**
+- `tidb_schema_and_data.sql`: hapus `USE `test`;` (TiDB Serverless hanya 1 DB per connection string, nama hardcoded bikin error). Tambah tabel `audit_log` (id BIGINT AI PK, user_id INT NULL, username/role/action/entity VARCHAR(50), entity_id INT NULL, detail TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) — kolom disusun persis sama dengan interface `AuditEntry` di auditLog.ts. Tambah tabel `settings` (key VARCHAR(100) UNIQUE, value TEXT, updated_at ON UPDATE) + seed `late_penalty_per_day=500000`, `session_secret`, `company_name='PT. SURYA BANGUN SARANA BANJARMASIN'`. Tambah kolom `created_at` ke rentals, maintenance, reports. 20 indeks baru: 12 CREATE INDEX pada kolom FK (rentals customer_id/equipment_id/status, contracts rental_id/customer_id, payments contract_id/customer_id/status, maintenance equipment_id/technician_id, gps_tracking equipment_id, reports rental_id), 3 pada audit_log (user_id, entity, created_at), 5 UNIQUE INDEX kode bisnis (equipments equipment_code, rentals rental_code, contracts contract_code, payments payment_code, users email). DELETE + RESET AUTO_INCREMENT untuk audit_log & settings.
+- `src/lib/auditLog.ts`: kini dual-store. `auditLog()` tetap mengisi in-memory ring buffer (maks 1000) DAN menulis permanen ke `audit_log` saat `isDatabaseConnected()` (parameterized INSERT, zero string concat, fire-and-forget — kegagalan tulis tidak memutus aksi utama). Fungsi baru `hydrateAuditLog()` memuat 1000 entri terbaru dari DB ke buffer sekali per isolate. `getAuditLog()` TETAP SYNC dan signature-nya tidak berubah — pemanggil lama (server, UI, pengujian) tidak perlu diubah.
+- `src/server/index.ts`: endpoint `/api/audit-log` memanggil `hydrateAuditLog()` sebelum membaca; middleware `/api/*` memanggil `warmSettings()`.
+- `src/lib/businessRules.ts`: `LATE_PENALTY_PER_DAY` (konstanta hardcoded) diganti dengan `DEFAULT_LATE_PENALTY_PER_DAY` + `getLatePenaltyPerDay()` + `setLatePenaltyPerDay()`. Tarif disimpan di objek penampung `rateState` (bukan `let` modul-level) agar perubahan terlihat di semua salinan modul.
+- `src/lib/db.ts`: (a) lookup env hanya `DATABASE_URL` — `VITE_DATABASE_URL` dihapus karena prefix VITE_ terbawa ke client bundle (kredensial DB bocor ke publik); (b) `warmSettings()` membaca `late_penalty_per_day` dari tabel settings sekali per isolate dan mendorongnya lewat `setLatePenaltyPerDay()`; bila DB belum terhubung atau nilai invalid, pakai default kode.
+- `src/lib/contracts.ts`: `CONTRACT_TERMS` jadi fungsi `buildContractTerms()` + `buildContractTermsText()` — array konstanta membekukan tarif denda saat impor pertama (sebelum settings terbaca); fungsi mengikuti tarif aktif.
+- Konsumen tarif denda beralih ke getter sama: `src/lib/rentalWorkflow.ts`, `src/lib/documents.ts`, `src/pages/admin/RentalManagement.tsx`, `src/pages/admin/ReportsPage.tsx`, `src/pages/staff/StaffDashboard.tsx`.
+- `.env`: baris `VITE_DATABASE_URL` dihapus.
+**Detail:** Audit persistensi memakai `void persistAuditEntry(...)` agar promise tidak tertahan request; buffer memori tetap menjadi cache baca (GET tidak menyentuh DB setiap kali). `setLatePenaltyPerDay(null)` kembali ke default; nilai negatif/NaN/Infinity/string ditolak; tarif 0 sah (kebijakan bebas denda). Ponytail: tidak ada notifikasi perubahan settings dari DB — cache hanya disegarkan per isolate; naik ke pub/sub atau TTL bila banyak isolate mengubah pengaturan.
+**Verifikasi:** type-check PASS (tsc --noEmit, 0 error) · test PASS 28/28 suite · build PASS (705.72 kB, 1646 modul) · grep bundle dist = 0 string `VITE_`/`tidbcloud` · 59 statement SQL lolos parse sqlglot (mysql dialect), 0 error
+
+---
+
 ## [CYCLE 37] 2026-09-16 - T-0038 — P1 — DONE
 **Judul:** Audit Trail Logging
 **Perubahan:**

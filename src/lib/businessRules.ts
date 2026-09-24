@@ -23,8 +23,55 @@ export const SERVICE_INTERVAL_HM = 250;
 /** Ambang peringatan: unit dianggap "mendekati servis" jika sisa HM <= nilai ini. */
 export const SERVICE_WARNING_THRESHOLD_HM = 50;
 
-/** Tarif denda keterlambatan per hari (Rupiah). */
-export const LATE_PENALTY_PER_DAY = 500_000;
+/**
+ * Tarif denda keterlambatan per hari (Rupiah).
+ *
+ * Sumber kebenaran: tabel `settings` (key `late_penalty_per_day`) saat TiDB
+ * terhubung — dipindahkan ke sini sekali per isolate oleh `setLatePenaltyPerDay()`
+ * di db.ts (lihat `warmSettings()`). Bila DB belum terhubung atau nilai di
+ * tabel bukan angka valid, dipakai DEFAULT_LATE_PENALTY_PER_DAY di bawah.
+ *
+ * Modul ini sengaja tidak mengimpor db.ts agar tetap murni (bisa diuji tanpa
+ * koneksi database); db.ts mendorong nilai lewat `setLatePenaltyPerDay()`.
+ *
+ * Nilai disimpan dalam satu objek penampung (`rateState`) — BUKAN `let`
+ * modul-level. Sebab: banyak modul (rentalWorkflow, documents, contracts,
+ * UI) memakai `LATE_PENALTY_PER_DAY` dan masing-masing dapat ter-bundle
+ * terpisah; reassign `let` tidak terlihat lintas salinan modul, sehingga
+ * tarif yang diubah lewat settings hanya berlaku di satu salinan.
+ * Objek penampung membuat semua pemakai membaca nilai yang SAMA.
+ */
+
+/** Nilai baku saat settings DB tidak tersedia / tidak valid. */
+export const DEFAULT_LATE_PENALTY_PER_DAY = 500_000;
+
+const rateState = { value: DEFAULT_LATE_PENALTY_PER_DAY };
+
+/**
+ * Tarif denda aktif. Satu-satunya cara membaca yang BENAR: pemanggil
+ * `setLatePenaltyPerDay()` (db.ts) mengubah `rateState.value`, dan semua
+ * perhitungan denda membaca lewat fungsi ini.
+ *
+ * Cara lama `export let LATE_PENALTY_PER_DAY` sengaja dihapus: banyak modul
+ * memakainya dan TiDB/settings bisa mengubahnya saat runtime, tetapi
+ * reassign `let` tidak terlihat lintas salinan modul yang ter-bundle terpisah
+ * (rentalWorkflow, documents, contracts, UI) — tarif baru hanya berlaku di
+ * satu salinan. Objek penampung + fungsi pembaca membuat semua pemakai
+ * membaca nilai yang SAMA tanpa memperkenalkan dependensi melingkar.
+ */
+export function getLatePenaltyPerDay(): number {
+  return rateState.value;
+}
+
+/**
+ * Ganti tarif denda aktif. Dipanggil db.ts setelah membaca tabel `settings`;
+ * `null` mengembalikan ke nilai default.
+ */
+export function setLatePenaltyPerDay(value: number | null): void {
+  rateState.value = typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : DEFAULT_LATE_PENALTY_PER_DAY;
+}
 
 // ---------------------------------------------------------------------------
 // Hour Meter & Servis Preventif
@@ -234,7 +281,7 @@ export function calculateRentalCost(
 
   const lateDays = countLateDays(endDate, actualReturnDate);
 
-  const penalty = lateDays * LATE_PENALTY_PER_DAY;
+  const penalty = lateDays * getLatePenaltyPerDay();
 
   return {
     days,

@@ -70,10 +70,10 @@ t('kontrak yang sudah lewat tidak aktif',
 
 // ---------------------------------------------------------------------------
 console.log('\n== Syarat & Ketentuan ==');
-t('syarat tidak kosong', c.CONTRACT_TERMS.length > 0);
-t('syarat menyebut denda', c.CONTRACT_TERMS.some(x => x.toLowerCase().includes('denda')));
-t('teks syarat dipisah baris baru', c.CONTRACT_TERMS_TEXT.includes('\n'));
-t('teks syarat tidak melebihi batas kolom', c.CONTRACT_TERMS_TEXT.length <= 4000);
+t('syarat tidak kosong', c.buildContractTerms().length > 0);
+t('syarat menyebut denda', c.buildContractTerms().some(x => x.toLowerCase().includes('denda')));
+t('teks syarat dipisah baris baru', c.buildContractTermsText().includes('\n'));
+t('teks syarat tidak melebihi batas kolom', c.buildContractTermsText().length <= 4000);
 
 // ---------------------------------------------------------------------------
 console.log('\n== Keamanan: Escape & Data URL ==');
@@ -96,7 +96,7 @@ console.log('\n== Pratinjau Kontrak ==');
 const kontrak = {
   id: 1, contract_code: 'SBS/CONTRACT/2026/09/0042', rental_id: 1, rental_code: 'RNT-001',
   customer_id: 9, customer_name: 'Budi Santoso', contract_date: '2026-09-04',
-  valid_until: '2026-10-04', terms_conditions: c.CONTRACT_TERMS_TEXT,
+  valid_until: '2026-10-04', terms_conditions: c.buildContractTermsText(),
   is_signed_customer: 0, signed_at: null, signer_name: null, signature_data_url: null,
 };
 const rental = {
@@ -140,7 +140,7 @@ const html = c.renderContractHtml(preview);
 t('HTML berupa dokumen penuh', html.trimStart().startsWith('<!DOCTYPE html>'));
 t('memuat aturan cetak A4', html.includes('@page') && html.includes('A4'));
 t('memuat kode kontrak', html.includes('SBS/CONTRACT/2026/09/0042'));
-t('memuat seluruh syarat', c.CONTRACT_TERMS.every(s => html.includes(s.slice(0, 30))));
+t('memuat seluruh syarat', c.buildContractTerms().every(s => html.includes(s.slice(0, 30))));
 t('tanda tangan kosong tidak menyisipkan src', !html.includes('<img class="goresan"'));
 
 const htmlTtd = c.renderContractHtml(signed);

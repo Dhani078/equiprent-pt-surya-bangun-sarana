@@ -14,7 +14,7 @@
  */
 
 import type { Rental } from '../types';
-import { countLateDays, LATE_PENALTY_PER_DAY } from './businessRules';
+import { countLateDays, getLatePenaltyPerDay } from './businessRules';
 
 // ---------------------------------------------------------------------------
 // Tipe
@@ -184,7 +184,7 @@ export function getAllowedNextStatuses(current: RentalStatus): readonly RentalSt
  * Menghitung keterlambatan pengembalian sebuah rental.
  *
  * ATURAN BISNIS (§4.3 poin 7): denda dihitung per hari keterlambatan
- * dengan tarif `LATE_PENALTY_PER_DAY` yang TIDAK di-hardcode di sini.
+ * dengan tarif `getLatePenaltyPerDay()` yang TIDAK di-hardcode di sini.
  *
  * - Rental yang sudah COMPLETED memakai `returnDate` bila tersedia;
  *   bila kosong, memakai `endDate` (dianggap kembali tepat waktu).
@@ -211,7 +211,7 @@ export function getLateReturnInfo(
 
   return {
     lateDays,
-    penalty: lateDays * LATE_PENALTY_PER_DAY,
+    penalty: lateDays * getLatePenaltyPerDay(),
     isLate: lateDays > 0,
   };
 }

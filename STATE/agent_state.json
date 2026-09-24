@@ -1,26 +1,23 @@
 {
-  "cycle": 46,
-  "last_run": "2026-09-17T12:15:00.000Z",
+  "cycle": 47,
+  "last_run": "2026-09-24T09:40:00.000Z",
   "current_task_id": null,
   "current_phase": "FASE 4: Polish & Academic Readiness",
   "completed_this_cycle": [
-    "T-0049",
-    "T-0050",
-    "T-0051",
-    "T-0052"
+    "T-0053"
   ],
-  "session_summary": "T-0050 DONE: Seed data realistis untuk demo sidang. Temuan terverifikasi: seedGenerator.ts SUDAH memenuhi 4 acceptance criteria (50 unit/50 rental/55 GPS/konsisten lintas tabel) TETAPI tanggal referensi dipaku ke 2026-09-04 sehingga rental ON_GOING terlihat selesai & GPS basi saat demo di tanggal lain. Diperbaiki: HARI_INI = new Date() menggantikan 3x tanggal konstan. Ditambah tests/seedData.test.mjs (46 asersi) memverifikasi volume, variasi tipe/brand, penyebaran 5 status rental, koordinat GPS Kalsel, integritas relasional, subtotal=days*rate, ON_GOING wajib PAID, tanpa double-booking, kesegaran tanggal. Data final: 50 user (2 ADMIN/6 STAFF/42 CUSTOMER), 50 unit (7 tipe/9 brand), 50 rental (7 PENDING/8 APPROVED/10 ON_GOING/21 COMPLETED/4 REJECTED), 50 kontrak, 50 pembayaran (31 PAID/9 PENDING_VERIFICATION/6 UNPAID/4 FAILED), 25 maintenance, 55 GPS, 20 laporan. 0 referential violation.",
+  "session_summary": "T-0053 DONE: sinkronisasi skema DB + keamanan. (1) tidb_schema_and_data.sql: hapus USE test (TiDB Serverless 1 DB), tambah tabel audit_log (kolom = interface AuditEntry) dan settings (seed late_penalty_per_day=500000, session_secret, company_name), created_at pada rentals/maintenance/reports, 12 CREATE INDEX FK + 3 audit_log + 5 UNIQUE INDEX kode bisnis. (2) auditLog.ts: INSERT ke audit_log via executeSql saat isDatabaseConnected (fire-and-forget, parameterized, zero string concat), buffer memori tetap jadi fallback + hydrateAuditLog() memuat riwayat DB sekali per isolate; signature auditLog/getAuditLog TIDAK berubah. (3) businessRules.ts: LATE_PENALTY_PER_DAY jadi getLatePenaltyPerDay()+setLatePenaltyPerDay(); db.ts warmSettings() baca settings (fallback DEFAULT=500000) - tarif denda configurable tanpa hardcoded konstanta. Kontrak dan UI (contracts, documents, rentalWorkflow, RentalManagement, ReportsPage, StaffDashboard) kini baca getter sama. (4) db.ts: hapus VITE_DATABASE_URL dari lookup (anti-pattern: kredensial bocor ke client bundle); .env dibersihkan; verifikasi grep bundle dist = 0 string VITE_/tidbcloud. Gate: tsc 0 error, 28/28 suite lulus (suite baru settingsAndAudit 26 asersi), build 705.72 kB.",
   "quality_gate": {
     "type_check": "PASS",
-    "test": "PASS (27/27 suite)",
-    "build": "PASS (705.79 kB, 1646 modul)",
-    "verified_at": "2026-09-17T12:15:00.000Z"
+    "test": "PASS (28/28 suite)",
+    "build": "PASS (705.72 kB, 1646 modul)",
+    "verified_at": "2026-09-24T09:40:00.000Z"
   },
-  "test_suites": 27,
-  "commits": 41,
+  "test_suites": 28,
+  "commits": 42,
   "deploy": {
     "status": "READY",
     "note": "npm run deploy = npm run build && npx wrangler deploy; deploy:dry untuk uji tanpa publish"
   },
-  "next_focus": "T-0051 (README + PANDUAN_SIDANG_SKRIPSI.md: ERD 9 tabel, flowchart, daftar test)"
+  "next_focus": "T-0054 (opsional): halaman admin manajemen settings + endpoint PUT /api/settings (RBAC ADMIN) agar tarif denda dapat diubah dari UI tanpa edit DB"
 }

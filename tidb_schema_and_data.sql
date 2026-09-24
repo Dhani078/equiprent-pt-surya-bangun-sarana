@@ -2,7 +2,10 @@
 -- SKEMA BASIS DATA & PENGISIAN LENGKAP - PT. SURYA BANGUN SARANA BANJARMASIN
 -- KOMPATIBEL PENUH DENGAN TIDB CLOUD (MYSQL 8.0 COMPATIBLE)
 -- =====================================================================
-USE `test`;
+-- Catatan: TiDB Serverless hanya menyediakan SATU database per connection
+-- string, sehingga `USE <nama_db>` harus dihindari — nama database sudah
+-- ditentukan oleh DATABASE_URL dan hardcode nama di sini membuat skema gagal
+-- dijalankan pada database dengan nama lain.
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -15,6 +18,8 @@ DROP TABLE IF EXISTS `rentals`;
 DROP TABLE IF EXISTS `equipments`;
 DROP TABLE IF EXISTS `users`;
 DROP TABLE IF EXISTS `roles`;
+DROP TABLE IF EXISTS `audit_log`;
+DROP TABLE IF EXISTS `settings`;
 
 CREATE TABLE `roles` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -66,6 +71,7 @@ CREATE TABLE `rentals` (
     `subtotal` DECIMAL(12,2) NOT NULL,
     `status` ENUM('PENDING', 'APPROVED', 'ON_GOING', 'COMPLETED', 'REJECTED') DEFAULT 'PENDING',
     `notes` TEXT,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`customer_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`equipment_id`) REFERENCES `equipments`(`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -115,6 +121,7 @@ CREATE TABLE `maintenance` (
     `cost` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     `technician_id` INT NULL,
     `status` ENUM('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED') DEFAULT 'SCHEDULED',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`equipment_id`) REFERENCES `equipments`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`technician_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -139,9 +146,70 @@ CREATE TABLE `reports` (
     `generated_by` INT NOT NULL,
     `file_path` VARCHAR(255) NOT NULL,
     `generated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`rental_id`) REFERENCES `rentals`(`id`) ON DELETE SET NULL,
     FOREIGN KEY (`generated_by`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Audit trail: jejak mutasi penting operasional. Kolom disusun persis sama
+-- dengan interface `AuditEntry` di src/lib/auditLog.ts agar pemetaan
+-- aplikasi ↔ database satu-satu (id, user_id, username, role, action,
+-- entity, entity_id, detail, created_at ↔ timestamp).
+CREATE TABLE `audit_log` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NULL,
+    `username` VARCHAR(50) NOT NULL,
+    `role` VARCHAR(50) NOT NULL,
+    `action` VARCHAR(50) NOT NULL,
+    `entity` VARCHAR(50) NOT NULL,
+    `entity_id` INT NULL,
+    `detail` TEXT,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Pengaturan aplikasi yang dapat diubah tanpa kode ulang (tarif denda,
+-- nama perusahaan, kunci sesi). Kunci `late_penalty_per_day` harus selalu
+-- selesai dengan nilai di DEFAULT_LATE_PENALTY_PER_DAY businessRules.ts.
+CREATE TABLE `settings` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `key` VARCHAR(100) NOT NULL UNIQUE,
+    `value` TEXT,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================================================================
+-- INDEX
+-- =====================================================================
+-- Indeks pada kolom foreign key & status: mempercepat JOIN, filter, dan
+-- urutan penampilan data sehari-hari. Dideklarasikan eksplisit (bukan
+-- lewat UNIQUE inline di atas) agar daftar indeks rapi di satu tempat.
+
+-- FK: tabel anak mencari induknya
+CREATE INDEX `idx_rentals_customer_id` ON `rentals` (`customer_id`);
+CREATE INDEX `idx_rentals_equipment_id` ON `rentals` (`equipment_id`);
+CREATE INDEX `idx_rentals_status` ON `rentals` (`status`);
+CREATE INDEX `idx_contracts_rental_id` ON `contracts` (`rental_id`);
+CREATE INDEX `idx_contracts_customer_id` ON `contracts` (`customer_id`);
+CREATE INDEX `idx_payments_contract_id` ON `payments` (`contract_id`);
+CREATE INDEX `idx_payments_customer_id` ON `payments` (`customer_id`);
+CREATE INDEX `idx_payments_status` ON `payments` (`status`);
+CREATE INDEX `idx_maintenance_equipment_id` ON `maintenance` (`equipment_id`);
+CREATE INDEX `idx_maintenance_technician_id` ON `maintenance` (`technician_id`);
+CREATE INDEX `idx_gps_tracking_equipment_id` ON `gps_tracking` (`equipment_id`);
+CREATE INDEX `idx_reports_rental_id` ON `reports` (`rental_id`);
+
+-- Audit trail: filter entity & pelaku, urut entri terbaru dulu
+CREATE INDEX `idx_audit_log_user_id` ON `audit_log` (`user_id`);
+CREATE INDEX `idx_audit_log_entity` ON `audit_log` (`entity`);
+CREATE INDEX `idx_audit_log_created_at` ON `audit_log` (`created_at`);
+
+-- Kode bisnis unik: balok data ganda / dobel booking
+CREATE UNIQUE INDEX `idx_equipments_equipment_code` ON `equipments` (`equipment_code`);
+CREATE UNIQUE INDEX `idx_rentals_rental_code` ON `rentals` (`rental_code`);
+CREATE UNIQUE INDEX `idx_contracts_contract_code` ON `contracts` (`contract_code`);
+CREATE UNIQUE INDEX `idx_payments_payment_code` ON `payments` (`payment_code`);
+CREATE UNIQUE INDEX `idx_users_email` ON `users` (`email`);
 
 
 -- =====================================================================
@@ -183,6 +251,12 @@ ALTER TABLE `equipments` AUTO_INCREMENT = 1;
 
 DELETE FROM `users`;
 ALTER TABLE `users` AUTO_INCREMENT = 1;
+
+DELETE FROM `audit_log`;
+ALTER TABLE `audit_log` AUTO_INCREMENT = 1;
+
+DELETE FROM `settings`;
+ALTER TABLE `settings` AUTO_INCREMENT = 1;
 
 DELETE FROM `roles`;
 ALTER TABLE `roles` AUTO_INCREMENT = 1;
@@ -684,6 +758,18 @@ INSERT INTO `reports` (`id`, `report_code`, `rental_id`, `report_type`, `generat
 (48, 'REP-BASTOUT-20260525-024', 32, 'BAST_OUT', 3, 'exports/reports/BAST_OUT_LOAD_02.pdf'),
 (49, 'REP-FIN-20260531-001', NULL, 'FINANCIAL_SUMMARY', 2, 'exports/reports/LAPORAN_BULANAN_MEI_2026.pdf'),
 (50, 'REP-FIN-20260430-001', NULL, 'FINANCIAL_SUMMARY', 2, 'exports/reports/LAPORAN_BULANAN_APR_2026.pdf');
+
+-- 10. DATA SETTINGS (Konfigurasi Aplikasi)
+-- Nilai late_penalty_per_day harus tetap seimbang dengan
+-- DEFAULT_LATE_PENALTY_PER_DAY di src/lib/businessRules.ts (fallback bila
+-- database belum terhubung). session_secret kosong di sini karena diambil
+-- dari environment Cloudflare Workers (SESSION_SECRET) — nilai di tabel
+-- hanya cadangan; tidak ada kredensial yang ditulis di berkas ini.
+DELETE FROM `settings`;
+INSERT INTO `settings` (`id`, `key`, `value`) VALUES
+(1, 'late_penalty_per_day', '500000'),
+(2, 'session_secret', ''),
+(3, 'company_name', 'PT. SURYA BANGUN SARANA BANJARMASIN');
 
 -- =====================================================================
 -- PENGISIAN DATA SELESAI
