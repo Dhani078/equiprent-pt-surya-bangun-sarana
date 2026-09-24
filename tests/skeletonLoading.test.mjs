@@ -56,7 +56,7 @@ html = renderToStaticMarkup(React.createElement(EquipmentManagement, {
 }));
 t('kartu unit dirender (default)', html.includes(stateStore.equipments[0].equipment_code));
 t('toggle tampilan kartu/tabel tampil', html.includes('aria-pressed'));
-t('badge status di kartu unit', /badge-(available|rented|maintenance|unavailable)/.test(html));
+t('badge status di kartu unit', /badge-sem-(success|info|warning|danger)/.test(html));
 t('label tarif per hari di kartu', html.includes('Tarif / Hari'));
 t('label servis terakhir di kartu', html.includes('Servis terakhir'));
 t('tombol "Tambah Alat Baru" tampil', html.includes('Tambah Alat Baru'));

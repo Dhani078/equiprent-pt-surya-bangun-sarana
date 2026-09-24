@@ -315,15 +315,15 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 					}}
 				>
 					<div>
-						<strong>Runtime:</strong> Cloudflare Workers (V8 Edge)
+						<strong>Server:</strong> Cloud (Produksi)
 					</div>
 					<div>
-						<strong>Basis data:</strong> TiDB Cloud Serverless (kompatibel MySQL 8.0)
+						<strong>Basis data:</strong> MySQL 8.0 (Cloud)
 					</div>
 					<div>
 						<strong>Mode data:</strong>{' '}
 						<span style={{ color: modeData === 'TIDB' ? '#047857' : '#B45309', fontWeight: 700 }}>
-							{modeData === 'TIDB' ? 'TIDB (tersambung)' : 'IN_MEMORY_DEMO (data contoh)'}
+							{modeData === 'TIDB' ? 'Tersambung (data resmi)' : 'Data contoh (demo)'}
 						</span>
 					</div>
 					<div>

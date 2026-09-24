@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User, RoleName } from '../types';
-import { LogOut, Shield, RefreshCw, Moon, Sun, ChevronDown } from 'lucide-react';
+import { LogOut, Shield, Moon, Sun, ChevronDown } from 'lucide-react';
 import { getUserAvatar } from '../lib/stitchAssets';
 import { NotificationCenter } from './NotificationCenter';
 import type { NotificationItem } from '../lib/notifications';
@@ -8,7 +8,11 @@ import type { NotificationItem } from '../lib/notifications';
 interface NavbarProps {
   currentUser: User;
   onLogout: () => void;
-  onSwitchRole: (role: RoleName) => void;
+  /**
+   * Pengganti peran cepat (pola dev/impersonation). Tidak dirender lagi di
+   * UI produksi — tetap diterima agar App tidak perlu menghapus handlernya.
+   */
+  onSwitchRole?: (role: RoleName) => void;
   /** Notifikasi siap tampil (hasil `buildNotifications`). */
   notifications?: readonly NotificationItem[];
   /** Dipanggil saat notifikasi diklik, dengan id tab tujuan. */
@@ -16,6 +20,13 @@ interface NavbarProps {
 }
 
 const STORAGE_KEY = 'sbs-theme';
+
+/** Label peran dalam Bahasa Indonesia untuk header & profil. */
+const ROLE_LABEL: Readonly<Record<string, string>> = {
+  ADMIN: 'Administrator',
+  STAFF: 'Staf Operasional',
+  CUSTOMER: 'Pelanggan',
+};
 
 function initTheme(): boolean {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -27,7 +38,6 @@ function initTheme(): boolean {
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onLogout,
-  onSwitchRole,
   notifications = [],
   onSelectTab,
 }) => {
@@ -72,11 +82,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           SBS
         </div>
         <div>
-          <h1 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)', margin: 0, lineHeight: 1.2 }}>
+          <h1 style={{ fontSize: 'var(--fs-h2)', fontWeight: 800, color: 'var(--color-primary)', margin: 0, lineHeight: 1.2 }}>
             PT. SURYA BANGUN SARANA BANJARMASIN
           </h1>
-          <p style={{ fontSize: '11.5px', color: 'var(--color-secondary)', margin: 0 }}>
-            Sistem Monitoring & Rental Alat Berat &bull; <span style={{ fontFamily: 'monospace', color: '#059669', fontWeight: 600 }}>TiDB Serverless</span>
+          <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-secondary)', margin: 0 }}>
+            Sistem Monitoring &amp; Rental Alat Berat
           </p>
         </div>
       </div>
@@ -100,45 +110,26 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span style={{ fontSize: '11.5px', fontWeight: 600 }}>{dark ? 'Terang' : 'Gelap'}</span>
         </button>
 
-        {/* Multi-Role Quick Context Switcher */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          background: '#F1F5F9',
-          padding: '3px 6px',
-          borderRadius: '8px',
-          border: '1px solid var(--color-border)',
-          fontSize: '11.5px'
-        }}>
-          <span style={{ color: 'var(--color-secondary)', fontWeight: 600, padding: '0 4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <RefreshCw size={11} /> Peran:
-          </span>
-          {(['ADMIN', 'STAFF', 'CUSTOMER'] as RoleName[]).map((role) => {
-            const isActive = currentUser.role_name === role;
-            return (
-              <button
-                key={role}
-                type="button"
-                onClick={() => onSwitchRole(role)}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '5px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  fontSize: '11px',
-                  fontFamily: 'monospace',
-                  transition: 'all 0.15s ease',
-                  backgroundColor: isActive ? 'var(--color-primary)' : 'transparent',
-                  color: isActive ? '#FFFFFF' : 'var(--color-secondary)',
-                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                }}
-              >
-                {role}
-              </button>
-            );
-          })}
+        {/* Penanda peran aktif — read-only. Penggantian peran adalah pola dev
+            (impersonation); di produksi pengguna harus masuk kembali dengan
+            akun yang sesuai, jadi tidak ada tombol pindah peran di top bar. */}
+        <div
+          title={`Anda masuk sebagai ${currentUser.role_name}. Keluar lalu masuk kembali untuk berganti peran.`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+            background: '#F1F5F9',
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            fontSize: 'var(--fs-xs)',
+            color: 'var(--color-secondary)',
+            fontWeight: 700,
+          }}
+        >
+          <Shield size={12} color="var(--color-primary)" />
+          <span>{ROLE_LABEL[currentUser.role_name ?? ''] ?? currentUser.role_name}</span>
         </div>
 
         {/* User Profile Avatar with Dropdown */}
@@ -175,7 +166,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10.5px', color: 'var(--color-secondary)' }}>
                 <Shield size={10} color="var(--color-primary)" />
-                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{currentUser.role_name}</span>
+                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{ROLE_LABEL[currentUser.role_name ?? ''] ?? currentUser.role_name}</span>
               </div>
             </div>
             <ChevronDown size={14} color="var(--color-secondary)" />

@@ -29,9 +29,32 @@
   /* Typography */
   --font-primary: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
-  
-  /* Layout & Rounding */
+
+  /* Type scale — satu skala modular untuk seluruh aplikasi */
+  --fs-display: 24px;   /* judul halaman */
+  --fs-h1: 20px;        /* judul panel */
+  --fs-h2: 15px;        /* judul kartu */
+  --fs-body: 13.5px;    /* teks utama */
+  --fs-sm: 12.5px;      /* label & subteks */
+  --fs-xs: 11.5px;      /* meta & keterangan kecil */
+  --fs-mono-sm: 12px;   /* kode/angka monospace */
+
+  /* Spacing scale — kelipatan 4px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Radius scale */
+  --radius-sm: 6px;
   --radius-eight: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
   --transition-base: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-premium: all 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
   
@@ -228,11 +251,39 @@ body {
   color: #92400E;
   border: 1px solid #FDE68A;
 }
-.badge-unavailable, .badge-rejected, .badge-suspended, .badge-failed {
+.badge-unavailable, .badge-rejected, .badge-suspended, .badge-failed, .badge-important, .badge-danger, .badge-error {
   background-color: #FEF2F2;
   color: #991B1B;
   border: 1px solid #FECACA;
 }
+
+/* Alias nada semantik untuk StatCard (badgeType) — agar pill KPI berwarna,
+   bukan jatuh ke style dasar badge. */
+.badge-success, .badge-info, .badge-warning, .badge-error {
+  border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 11px; font-weight: 700; padding: 2px 8px; display: inline-flex; align-items: center;
+}
+.badge-success { background-color: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+.badge-info    { background-color: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; }
+.badge-warning { background-color: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
+.badge-error, .badge-danger { background-color: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+.badge-neutral { background-color: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }
+
+/* Nada semantik eksplisit: merah=kritis, hijau=lunas/selesai, biru=berjalan,
+   kuning=menunggu, abu-abu=netral. Dipakai lewat helper <StatusBadge>. */
+.badge-sem-danger  { background-color: #FEF2F2; color: #991B1B;  border: 1px solid #FECACA; }
+.badge-sem-success { background-color: #ECFDF5; color: #065F46;  border: 1px solid #A7F3D0; }
+.badge-sem-info    { background-color: #EFF6FF; color: #1E40AF;  border: 1px solid #BFDBFE; }
+.badge-sem-warning { background-color: #FFFBEB; color: #92400E;  border: 1px solid #FDE68A; }
+.badge-sem-neutral { background-color: #F1F5F9; color: #475569;  border: 1px solid #E2E8F0; }
+
+/* Tile ikon StatCard — warna dibedakan per jenis/tingkat keparahan agar
+   tidak semua seragam biru (sesuai audit visual). */
+.tile-success { background-color: #ECFDF5; color: #047857; }
+.tile-info    { background-color: #EFF6FF; color: #1D4ED8; }
+.tile-warning { background-color: #FFFBEB; color: #B45309; }
+.tile-danger  { background-color: #FEF2F2; color: #B91C1C; }
+.tile-neutral { background-color: #F1F5F9; color: var(--color-primary); }
 
 /* Telemetry & Code Typography */
 .telemetry-data,

@@ -5,8 +5,9 @@ import type { MaintenanceTypeValue } from '../../lib/validators';
 import { Plus, Search, Filter, Wrench, CheckCircle, Clock, Calendar, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
-import { getUnitsDueForService, formatRupiah, SERVICE_INTERVAL_HM, predictNextServiceDate } from '../../lib/businessRules';
+import { getUnitsDueForService, formatRupiah, formatRupiahRingkas, SERVICE_INTERVAL_HM, predictNextServiceDate } from '../../lib/businessRules';
 import { exportTable } from '../../lib/tableExport';
+import { StatusBadge } from '../../components/StatusBadge';
 import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 
@@ -514,25 +515,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                         {formatRupiah(Number(m.cost ?? 0))}
                       </td>
                       <td style={{ padding: '8px 10px' }}>
-                        <span
-                          style={{
-                            fontSize: '10.5px',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            backgroundColor:
-                              m.status === 'COMPLETED' ? '#DCFCE7'
-                                : m.status === 'IN_PROGRESS' ? '#DBEAFE'
-                                  : '#FEF3C7',
-                            color:
-                              m.status === 'COMPLETED' ? '#166534'
-                                : m.status === 'IN_PROGRESS' ? '#1E40AF'
-                                  : '#92400E',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {m.status}
-                        </span>
+                        <StatusBadge kind="maintenance" status={m.status} fontSize={10.5} />
                       </td>
                     </tr>
                   ))}
@@ -564,9 +547,9 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
           onChange={(e) => setFilterStatus(e.target.value)}
         >
           <option value="ALL">Semua Status Perawatan</option>
-          <option value="SCHEDULED">SCHEDULED (Terjadwal)</option>
-          <option value="IN_PROGRESS">IN_PROGRESS (Sedang Dikerjakan)</option>
-          <option value="COMPLETED">COMPLETED (Selesai)</option>
+          <option value="SCHEDULED">Dijadwalkan</option>
+          <option value="IN_PROGRESS">Sedang Dikerjakan</option>
+          <option value="COMPLETED">Selesai</option>
         </select>
 
         {/* Ekspor data sesuai filter aktif */}
@@ -648,13 +631,11 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                   <td style={{ fontSize: '12.5px' }}>
                     <strong>{m.technician_name || 'Ahmad Ridwan (Mekanik)'}</strong>
                   </td>
-                  <td style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A', fontFamily: 'monospace' }}>
-                    {formatRupiah(Number(m.cost))}
+                  <td className="serial-code" style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A' }} title={formatRupiah(Number(m.cost))}>
+                    {formatRupiahRingkas(Number(m.cost)).ringkas}
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <span className={`badge badge-${m.status.toLowerCase()}`}>
-                      {m.status}
-                    </span>
+                    <StatusBadge kind="maintenance" status={m.status} />
                   </td>
                 </tr>
               );

@@ -173,7 +173,7 @@ function generateUsers(): User[] {
       role_name: 'CUSTOMER',
       username,
       email: `${username}@${perusahaan.toLowerCase().replace(/[^a-z]/g, '')}.co.id`,
-      full_name: `${nama} (${pick(['Logistik', 'Direktur', 'Manajer Proyek', 'Kasi Operasional', 'Procurement'])})`,
+      full_name: `${nama} (${pick(['Logistik', 'Direktur', 'Manajer Proyek', 'Kasi Operasional', 'Pengadaan'])})`,
       phone: `0812${String(10000000 + intBetween(0, 89999999)).slice(0, 10)}`,
       address: `${pick(JALAN_BANJARMASIN)} No. ${intBetween(1, 120)}, Banjarmasin`,
       company_name: perusahaan,
