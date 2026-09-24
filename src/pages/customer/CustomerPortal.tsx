@@ -5,8 +5,9 @@ import { Modal } from '../../components/Modal';
 import { ContractPanel } from '../../components/ContractPanel';
 import { LeafletMap } from '../../components/LeafletMap';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
-import { formatRupiah, formatWaktu } from '../../lib/businessRules';
+import { formatRupiah, formatRupiahRingkas, formatWaktu } from '../../lib/businessRules';
 import { getPaymentStatusLabel, isPaymentFinal, validatePaymentProofPath } from '../../lib/paymentWorkflow';
+import { StatusBadge } from '../../components/StatusBadge';
 import {
   buildCatalog,
   buildRentalJourney,
@@ -672,7 +673,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
                           <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>Tarif Sewa:</div>
-                          <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'monospace' }}>
+                          <div className="serial-code" style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)' }}>
                             {formatRupiah(Number(eq.rental_price_per_day))}
                             <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-secondary)' }}> /hari</span>
                           </div>
@@ -842,32 +843,32 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             }}>
               <div style={{ padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Total Tagihan</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'monospace' }}>
-                  {formatRupiah(ringkasanTagihan.totalAmount)}
+                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-primary)' }} title={formatRupiah(ringkasanTagihan.totalAmount)}>
+                  {formatRupiahRingkas(ringkasanTagihan.totalAmount).ringkas}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{ringkasanTagihan.total} tagihan</div>
               </div>
 
               <div style={{ padding: '12px 14px', backgroundColor: '#F0FDF4', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Sudah Lunas</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#059669', fontFamily: 'monospace' }}>
-                  {formatRupiah(ringkasanTagihan.lunasAmount)}
+                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: '#059669' }} title={formatRupiah(ringkasanTagihan.lunasAmount)}>
+                  {formatRupiahRingkas(ringkasanTagihan.lunasAmount).ringkas}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{ringkasanTagihan.lunasCount} tagihan</div>
               </div>
 
               <div style={{ padding: '12px 14px', backgroundColor: '#FFFBEB', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Menunggu Verifikasi</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#B45309', fontFamily: 'monospace' }}>
-                  {formatRupiah(ringkasanTagihan.menungguVerifikasiAmount)}
+                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: '#B45309' }} title={formatRupiah(ringkasanTagihan.menungguVerifikasiAmount)}>
+                  {formatRupiahRingkas(ringkasanTagihan.menungguVerifikasiAmount).ringkas}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{ringkasanTagihan.menungguVerifikasiCount} tagihan</div>
               </div>
 
               <div style={{ padding: '12px 14px', backgroundColor: '#FEF2F2', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Belum Dibayar</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#DC2626', fontFamily: 'monospace' }}>
-                  {formatRupiah(ringkasanTagihan.belumBayarAmount)}
+                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: '#DC2626' }} title={formatRupiah(ringkasanTagihan.belumBayarAmount)}>
+                  {formatRupiahRingkas(ringkasanTagihan.belumBayarAmount).ringkas}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
                   {ringkasanTagihan.belumBayarCount} tagihan
@@ -907,7 +908,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
                         {p.payment_code}
                       </td>
-                      <td style={{ fontWeight: 700, fontSize: '13.5px', fontFamily: 'monospace' }}>
+                      <td className="serial-code" style={{ fontWeight: 700, fontSize: '13.5px' }}>
                         {formatRupiah(Number(p.amount))}
                       </td>
                       <td style={{ fontSize: '12.5px' }}>
@@ -917,9 +918,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                         {p.payment_date}
                       </td>
                       <td>
-                        <span className={`badge badge-${p.status.toLowerCase()}`}>
-                          {getPaymentStatusLabel(p.status)}
-                        </span>
+                        <StatusBadge kind="payment" status={p.status} />
                         {p.status === 'FAILED' && (
                           <div style={{ fontSize: '10.5px', color: '#991B1B', marginTop: '3px', fontWeight: 600 }}>
                             Bukti ditolak — silakan lampirkan ulang
@@ -1055,7 +1054,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 <div style={{ color: 'var(--color-secondary)', fontSize: '11.5px', marginBottom: '4px' }}>
                   Kode: <span className="serial-code">{selectedEquipment.equipment_code}</span> &bull; {selectedEquipment.brand} {selectedEquipment.model}
                 </div>
-                <div style={{ fontWeight: 800, color: '#0F172A', fontFamily: 'monospace' }}>
+                <div className="serial-code" style={{ fontWeight: 800, color: '#0F172A' }}>
                   {formatRupiah(Number(selectedEquipment.rental_price_per_day))} / hari
                 </div>
               </div>
@@ -1126,7 +1125,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)' }}>
                 <span>Total Estimasi Biaya Sewa:</span>
-                <span style={{ fontFamily: 'monospace' }}>
+                <span className="serial-code">
                   {estimasi.ok ? formatRupiah(estimasi.subtotal) : '-'}
                 </span>
               </div>

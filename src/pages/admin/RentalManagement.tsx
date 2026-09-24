@@ -415,11 +415,11 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           aria-label="Saring transaksi berdasarkan status"
         >
           <option value="ALL">Semua Status Transaksi</option>
-          <option value="PENDING">PENDING (Menunggu Persetujuan)</option>
-          <option value="APPROVED">APPROVED (Disetujui)</option>
-          <option value="ON_GOING">ON_GOING (Mobilisasi / Beroperasi)</option>
-          <option value="COMPLETED">COMPLETED (Selesai)</option>
-          <option value="REJECTED">REJECTED (Ditolak)</option>
+          <option value="PENDING">Menunggu Persetujuan</option>
+          <option value="APPROVED">Disetujui</option>
+          <option value="ON_GOING">Sedang Berjalan</option>
+          <option value="COMPLETED">Selesai</option>
+          <option value="REJECTED">Ditolak</option>
         </select>
 
         {/* Ekspor data sesuai filter aktif */}
@@ -512,7 +512,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                     )}
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', fontFamily: 'monospace' }}>
+                    <div className="serial-code" style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A' }}>
                       {formatRupiah(Number(r.subtotal))}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>

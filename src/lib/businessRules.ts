@@ -346,6 +346,31 @@ export function formatRupiah(value: number): string {
   }).format(value);
 }
 
+/**
+ * Format Rupiah ringkas (compact notation) untuk ruang sempit.
+ *
+ * `1.376.750.000` → `Rp 1,38 M`, `334.300.000` → `Rp 334,3 jt`.
+ * Pembulatan memakai aturan "round-half-up" bawaan Intl NumberFormat
+ * dengan notasi compact bahasa Indonesia.
+ *
+ * @param full nilai utuh untuk tooltip/`title` (atribut HTML bawaan peramban).
+ */
+export function formatRupiahRingkas(value: number): { ringkas: string; full: string } {
+  const full = formatRupiah(value);
+  const abs = Math.abs(value);
+  if (abs < 1_000_000) {
+    return { ringkas: full, full };
+  }
+  const ringkas = new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 2,
+  }).format(value);
+  return { ringkas, full };
+}
+
 /** Format tanggal menjadi `04 September 2026`. */
 export function formatTanggal(date: string | Date | null | undefined): string {
   if (!date) return '-';

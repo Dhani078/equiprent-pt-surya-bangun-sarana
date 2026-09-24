@@ -14,15 +14,16 @@ import {
   Hourglass,
   Gauge,
   Trophy,
-  TrendingUp,
+  MapPin,
 } from 'lucide-react';
 import type { AdminDashboardStats } from '../../types';
 import { getEquipmentImage } from '../../lib/stitchAssets';
-import { formatRupiah, formatTanggal } from '../../lib/businessRules';
+import { formatRupiah, formatRupiahRingkas, formatTanggal } from '../../lib/businessRules';
 import { fetchDashboardStats } from '../../lib/dashboardClient';
 import type { DashboardSource } from '../../lib/dashboardClient';
 import { Skeleton } from '../../components/Skeleton';
 import { TrendChart } from '../../components/TrendChart';
+import { StatusBadge } from '../../components/StatusBadge';
 
 interface AdminDashboardProps {
   onNavigate: (tab: string) => void;
@@ -161,45 +162,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       : Math.round((stats.rentedEquipments / stats.totalEquipments) * 100);
 
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
       {/* Page Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
+          <h2 style={{ fontSize: 'var(--fs-display)', fontWeight: 800, color: 'var(--color-primary)', margin: 0, letterSpacing: '-0.02em' }}>
             Dashboard Eksekutif Administrator
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--color-secondary)', margin: '4px 0 0 0' }}>
+          <p style={{ fontSize: 'var(--fs-body)', color: 'var(--color-secondary)', margin: '4px 0 0 0' }}>
             Pemantauan performa finansial, utilisasi armada alat berat, dan agenda pemeliharaan PT. SBS Banjarmasin.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <span
-            className="badge"
-            aria-label="Sumber data ringkasan"
-            style={{
-              fontSize: '11px',
-              background: source === 'API' ? 'rgba(5, 150, 105, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-              color: source === 'API' ? '#059669' : '#B45309',
-            }}
-          >
-            {source === 'API' ? 'Sumber: Edge API' : 'Sumber: Perhitungan lokal'}
-          </span>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             type="button"
             onClick={handleRetry}
             className="btn-secondary"
-            style={{ fontSize: '13px', padding: '8px 14px' }}
+            style={{ fontSize: 'var(--fs-body)', padding: '8px 14px' }}
             aria-label="Muat ulang ringkasan dashboard"
+            title={source === 'API' ? 'Sumber data: Edge API' : 'Sumber data: perhitungan lokal (edge API tidak terjangkau)'}
           >
             <RefreshCw size={15} />
             <span>Muat Ulang</span>
           </button>
-          <button onClick={() => onNavigate('equipment')} className="btn-primary" style={{ fontSize: '13px', padding: '8px 14px' }}>
+          <button onClick={() => onNavigate('equipment')} className="btn-primary" style={{ fontSize: 'var(--fs-body)', padding: '8px 14px' }}>
             <Truck size={15} />
             <span>Kelola Unit</span>
           </button>
-          <button onClick={() => onNavigate('tracking')} className="btn-secondary" style={{ fontSize: '13px', padding: '8px 14px' }}>
-            <span>Live GPS Map</span>
+          <button onClick={() => onNavigate('tracking')} className="btn-secondary" style={{ fontSize: 'var(--fs-body)', padding: '8px 14px' }}>
+            <MapPin size={15} />
+            <span>Peta GPS Langsung</span>
             <ArrowUpRight size={15} />
           </button>
         </div>
@@ -248,91 +240,118 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-          gap: '16px',
+          gap: 'var(--space-4)',
         }}
       >
-        <StatCard
-          title="Total Pendapatan Terbayar"
-          value={formatRupiah(stats.totalRevenue)}
-          subtitle="Akumulasi pembayaran sewa lunas"
-          icon={DollarSign}
-          badgeText="Lunas"
-          badgeType="success"
-        />
-        <StatCard
-          title="Total Armada Alat Berat"
-          value={`${stats.totalEquipments} Unit`}
-          subtitle={`${stats.availableEquipments} siap sewa, ${stats.rentedEquipments} tersewa`}
-          icon={Truck}
-          badgeText="Operasional"
-          badgeType="info"
-        />
-        <StatCard
-          title="Transaksi Sewa Aktif"
-          value={`${stats.activeRentals} Kontrak`}
-          subtitle="Unit beroperasi di lapangan"
-          icon={ClipboardList}
-          badgeText="On Going"
-          badgeType="info"
-        />
-        <StatCard
-          title="Jadwal Servis Mendesak"
-          value={`${stats.pendingMaintenanceCount} Unit`}
-          subtitle={
-            stats.serviceApproachingCount > 0
-              ? `${stats.serviceApproachingCount} unit mendekati 250 HM`
-              : 'Perlu inspeksi teknisi mekanik'
-          }
-          icon={Wrench}
-          badgeText="Penting"
-          badgeType="warning"
-        />
+        {(() => {
+          const totalRevenue = formatRupiahRingkas(stats.totalRevenue);
+          const menunggu = formatRupiahRingkas(stats.pendingPaymentAmount);
+          return (
+            <>
+              <StatCard
+                title="Total Pendapatan Terbayar"
+                value={totalRevenue.ringkas}
+                valueTitle={totalRevenue.full}
+                subtitle="Akumulasi pembayaran sewa lunas"
+                icon={DollarSign}
+                iconTone="success"
+                badgeText="Lunas"
+                badgeType="success"
+                onClick={() => onNavigate('reports')}
+              />
+              <StatCard
+                title="Total Armada Alat Berat"
+                value={`${stats.totalEquipments} Unit`}
+                subtitle={`${stats.availableEquipments} siap sewa, ${stats.rentedEquipments} tersewa`}
+                icon={Truck}
+                iconTone="info"
+                badgeText="Operasional"
+                badgeType="success"
+                onClick={() => onNavigate('equipment')}
+              />
+              <StatCard
+                title="Transaksi Sewa Aktif"
+                value={`${stats.activeRentals} Kontrak`}
+                subtitle="Unit beroperasi di lapangan"
+                icon={ClipboardList}
+                iconTone="info"
+                badgeText="Sedang Berjalan"
+                badgeType="info"
+                onClick={() => onNavigate('rentals')}
+              />
+              <StatCard
+                title="Jadwal Servis Mendesak"
+                value={`${stats.pendingMaintenanceCount} Unit`}
+                subtitle={
+                  stats.serviceApproachingCount > 0
+                    ? `${stats.serviceApproachingCount} unit mendekati 250 HM`
+                    : 'Perlu inspeksi teknisi mekanik'
+                }
+                icon={Wrench}
+                iconTone="danger"
+                badgeText="Penting"
+                badgeType="danger"
+                onClick={() => onNavigate('maintenance')}
+              />
+              <StatCard
+                title="Menunggu Verifikasi"
+                value={menunggu.ringkas}
+                valueTitle={menunggu.full}
+                subtitle={`${stats.pendingPaymentCount} pembayaran belum diverifikasi`}
+                icon={Hourglass}
+                iconTone="warning"
+                badgeText="Menunggu"
+                badgeType="warning"
+                onClick={() => onNavigate('rentals')}
+              />
+              <StatCard
+                title="Pelanggan Terdaftar"
+                value={`${stats.totalCustomers} Akun`}
+                subtitle="Perusahaan penyewa aktif"
+                icon={Users}
+                iconTone="neutral"
+                badgeText="Pelanggan"
+                badgeType="neutral"
+                onClick={() => onNavigate('users')}
+              />
+              <StatCard
+                title="Pengajuan Masuk"
+                value={`${stats.pendingRentals} Pengajuan`}
+                subtitle="Menunggu persetujuan staf"
+                icon={ClipboardList}
+                iconTone="warning"
+                badgeText="Menunggu"
+                badgeType="warning"
+                onClick={() => onNavigate('rentals')}
+              />
+              <StatCard
+                title="Tingkat Utilisasi Armada"
+                value={`${persenUtilisasi}%`}
+                subtitle={`${stats.rentedEquipments} dari ${stats.totalEquipments} unit tersewa`}
+                icon={Gauge}
+                iconTone={persenUtilisasi >= 60 ? 'success' : 'neutral'}
+                badgeText={persenUtilisasi >= 60 ? 'Tinggi' : 'Normal'}
+                badgeType={persenUtilisasi >= 60 ? 'success' : 'neutral'}
+                onClick={() => onNavigate('equipment')}
+              />
+            </>
+          );
+        })()}
       </div>
 
-      {/* Baris kedua: piutang, pelanggan, utilisasi, penyewa selesai */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-          gap: '16px',
-        }}
-      >
-        <StatCard
-          title="Menunggu Verifikasi"
-          value={formatRupiah(stats.pendingPaymentAmount)}
-          subtitle={`${stats.pendingPaymentCount} pembayaran belum diverifikasi`}
-          icon={Hourglass}
-          badgeText="Pending"
-          badgeType="warning"
+      {/* Grafik tren pendapatan (SVG interaktif, tanpa pustaka pihak ketiga).
+          Diletakkan di atas agar langsung terlihat tanpa menggulir. */}
+      {stats.revenueTrend.length > 0 && (
+        <TrendChart
+          title="Tren Pendapatan 12 Bulan Terakhir"
+          subtitle="Arahkan kursor ke titik untuk melihat nilai per bulan — hanya pembayaran berstatus Lunas"
+          data={stats.revenueTrend.map((d) => ({ label: d.label, value: d.amount }))}
+          formatValue={formatRupiah}
         />
-        <StatCard
-          title="Pelanggan Terdaftar"
-          value={`${stats.totalCustomers} Akun`}
-          subtitle="Perusahaan penyewa aktif"
-          icon={Users}
-          badgeText="Customer"
-          badgeType="info"
-        />
-        <StatCard
-          title="Pengajuan Masuk"
-          value={`${stats.pendingRentals} Pengajuan`}
-          subtitle="Menunggu persetujuan staf"
-          icon={ClipboardList}
-          badgeText="PENDING"
-          badgeType="warning"
-        />
-        <StatCard
-          title="Tingkat Utilisasi Armada"
-          value={`${persenUtilisasi}%`}
-          subtitle={`${stats.rentedEquipments} dari ${stats.totalEquipments} unit tersewa`}
-          icon={Gauge}
-          badgeText={persenUtilisasi >= 60 ? 'Tinggi' : 'Normal'}
-          badgeType={persenUtilisasi >= 60 ? 'success' : 'info'}
-        />
-      </div>
+      )}
 
       {/* Two Column Grid: Recent Rentals & Urgent Maintenance */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '20px' }}>
         {/* Recent Rentals Card */}
         <div className="card-premium" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -361,39 +380,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Kode Sewa</th>
-                    <th>Klien Perusahaan</th>
-                    <th>Alat Berat</th>
-                    <th>Subtotal</th>
-                    <th>Status</th>
+                    <th style={{ padding: '10px 10px' }}>Kode Sewa</th>
+                    <th style={{ padding: '10px 8px' }}>Klien</th>
+                    <th style={{ padding: '10px 10px' }}>Subtotal</th>
+                    <th style={{ padding: '10px 8px' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stats.recentRentals.map((r) => {
-                    const imgUrl = getEquipmentImage(r.equipment_code);
                     return (
                       <tr key={r.id}>
-                        <td className="serial-code" style={{ fontWeight: 600, fontSize: '12px', color: 'var(--color-primary)' }}>
+                        <td className="serial-code" style={{ fontWeight: 600, fontSize: '11px', color: 'var(--color-primary)', whiteSpace: 'nowrap', padding: '10px 6px' }}>
                           {r.rental_code}
                         </td>
-                        <td>
-                          <div style={{ fontWeight: 600, fontSize: '13px' }}>{r.company_name || r.customer_name}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{r.customer_name}</div>
+                        <td style={{ minWidth: '0', padding: '10px 6px', maxWidth: '0' }}>
+                          <div style={{ fontWeight: 600, fontSize: '12.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.company_name || r.customer_name}</div>
+                          <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.equipment_name}</div>
                         </td>
-                        <td style={{ fontSize: '12.5px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <img src={imgUrl} alt={r.equipment_name} style={{ width: '30px', height: '30px', borderRadius: '4px', objectFit: 'cover' }} />
-                            <div>
-                              <div>{r.equipment_name}</div>
-                              <span className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{r.equipment_code}</span>
-                            </div>
-                          </div>
+                        <td className="serial-code" style={{ fontWeight: 700, fontSize: '12px', whiteSpace: 'nowrap', padding: '10px 6px' }} title={formatRupiah(r.subtotal)}>
+                          {formatRupiahRingkas(r.subtotal).ringkas}
                         </td>
-                        <td style={{ fontWeight: 700, fontSize: '13px', fontFamily: 'monospace' }}>
-                          {formatRupiah(r.subtotal)}
-                        </td>
-                        <td>
-                          <span className={`badge badge-${r.status.toLowerCase()}`}>{r.status}</span>
+                        <td style={{ padding: '10px 6px', whiteSpace: 'nowrap' }}>
+                          <StatusBadge kind="rental" status={r.status} short fontSize={10} />
                         </td>
                       </tr>
                     );
@@ -451,8 +459,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                           <span className="serial-code" style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--color-primary)' }}>
                             {m.maintenance_code}
                           </span>
-                          <span className={`badge badge-${m.status.toLowerCase()}`} style={{ fontSize: '10px' }}>
-                            {m.status}
+                          <span>
+                            <StatusBadge kind="maintenance" status={m.status} fontSize={10} />
                           </span>
                         </div>
                         <div style={{ fontWeight: 600, fontSize: '13px', color: '#1E293B' }}>
@@ -612,111 +620,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             })}
           </div>
         )}
-      </div>
-      {/* Grafik tren interaktif (SVG, tanpa pustaka pihak ketiga) */}
-      {stats.revenueTrend.length > 0 && (
-        <div className="card-premium" style={{ padding: '20px' }}>
-          <TrendChart
-            title="Kurva Pendapatan 12 Bulan"
-            subtitle="Arahkan kursor ke titik untuk melihat nilai per bulan"
-            data={stats.revenueTrend.map((d) => ({ label: d.label, value: d.amount }))}
-            formatValue={formatRupiah}
-          />
-        </div>
-      )}
-
-      {/* Revenue Trend — bar chart CSS-only 12 bulan */}
-      <div className="card-premium" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <TrendingUp size={18} color="var(--color-primary)" />
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-              Tren Pendapatan 12 Bulan Terakhir
-            </h3>
-          </div>
-          <span style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
-            Hanya pembayaran berstatus LUNAS
-          </span>
-        </div>
-
-        {stats.revenueTrend.length === 0 ? (
-          <EmptyState
-            pesan="Belum ada data pendapatan"
-            keterangan="Grafik akan muncul setelah ada pembayaran yang diverifikasi lunas."
-            ariaLabel="Belum ada data tren pendapatan"
-          />
-        ) : (() => {
-          const maxAmount = Math.max(...stats.revenueTrend.map(d => d.amount), 1);
-          return (
-            <div
-              role="img"
-              aria-label="Bar chart tren pendapatan 12 bulan terakhir"
-              style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '180px', paddingBottom: '28px', position: 'relative' }}
-            >
-              {stats.revenueTrend.map((item) => {
-                const pct = Math.round((item.amount / maxAmount) * 100);
-                const isCurrentMonth = item.amount === maxAmount && maxAmount > 0;
-                return (
-                  <div
-                    key={`${item.year}-${item.month}`}
-                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'flex-end' }}
-                  >
-                    {/* Nilai rupiah di atas bar — hanya tampil bila ada */}
-                    {item.amount > 0 && (
-                      <span
-                        title={formatRupiah(item.amount)}
-                        style={{
-                          fontSize: '9px',
-                          fontWeight: 700,
-                          color: isCurrentMonth ? 'var(--color-primary)' : 'var(--color-secondary)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          maxWidth: '100%',
-                          textAlign: 'center',
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {item.amount >= 1_000_000_000
-                          ? `${(item.amount / 1_000_000_000).toFixed(1)}M`
-                          : `${Math.round(item.amount / 1_000_000)}jt`}
-                      </span>
-                    )}
-                    {/* Batang */}
-                    <div
-                      style={{
-                        width: '100%',
-                        height: `${Math.max(pct, item.amount > 0 ? 4 : 0)}%`,
-                        borderRadius: '4px 4px 0 0',
-                        background: isCurrentMonth
-                          ? 'var(--color-primary)'
-                          : item.amount > 0
-                            ? 'rgba(0,51,102,0.45)'
-                            : 'var(--color-border)',
-                        transition: 'height 0.4s cubic-bezier(0.25,0.8,0.25,1)',
-                        minHeight: item.amount > 0 ? '4px' : '2px',
-                      }}
-                      role="presentation"
-                    />
-                    {/* Label bulan */}
-                    <span
-                      style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        fontSize: '9.5px',
-                        color: 'var(--color-secondary)',
-                        textAlign: 'center',
-                        width: `calc(${100 / stats.revenueTrend.length}% - 6px)`,
-                        lineHeight: 1,
-                      }}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
       </div>
     </div>
   );

@@ -5,7 +5,8 @@ import { Modal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { HmProgressBar } from '../../components/HmProgressBar';
 import { getEquipmentImage } from '../../lib/stitchAssets';
-import { formatRupiah, formatTanggal, getServiceStatus, SERVICE_INTERVAL_HM } from '../../lib/businessRules';
+import { formatRupiah, formatRupiahRingkas, formatTanggal, getServiceStatus, SERVICE_INTERVAL_HM } from '../../lib/businessRules';
+import { StatusBadge } from '../../components/StatusBadge';
 import { validateEquipmentInput, EQUIPMENT_TYPES } from '../../lib/validators';
 import type { ValidatedEquipmentInput } from '../../lib/validators';
 import { Paginator, usePagination } from '../../components/Paginator';
@@ -349,7 +350,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
           <p style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
             Total Unit
           </p>
-          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'monospace' }}>
+          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-primary)' }}>
             {totalUnit} Unit
           </div>
         </div>
@@ -358,7 +359,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
           <p style={{ fontSize: '11px', color: '#059669', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
             Tersedia
           </p>
-          <div style={{ fontSize: '26px', fontWeight: 800, color: '#059669', fontFamily: 'monospace' }}>
+          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: '#059669' }}>
             {availableUnit} Unit
           </div>
         </div>
@@ -367,7 +368,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
           <p style={{ fontSize: '11px', color: '#2563EB', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
             Disewa (Aktif)
           </p>
-          <div style={{ fontSize: '26px', fontWeight: 800, color: '#2563EB', fontFamily: 'monospace' }}>
+          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: '#2563EB' }}>
             {rentedUnit} Unit
           </div>
         </div>
@@ -376,7 +377,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
           <p style={{ fontSize: '11px', color: '#D97706', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
             Maintenance
           </p>
-          <div style={{ fontSize: '26px', fontWeight: 800, color: '#D97706', fontFamily: 'monospace' }}>
+          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: '#D97706' }}>
             {maintenanceUnit} Unit
           </div>
         </div>
@@ -498,9 +499,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                       flexShrink: 0,
                     }}
                   />
-                  <span className={`badge badge-${eq.status.toLowerCase()}`}>
-                    {eq.status === 'AVAILABLE' ? 'Tersedia' : eq.status === 'RENTED' ? 'Disewa' : eq.status === 'MAINTENANCE' ? 'Servis' : 'Nonaktif'}
-                  </span>
+                  <StatusBadge kind="equipment" status={eq.status} fontSize={10} />
                 </div>
 
                 <div>
@@ -532,7 +531,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                     <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
                       Tarif / Hari
                     </div>
-                    <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', fontFamily: 'monospace' }}>
+                    <div className="serial-code" style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>
                       {formatRupiah(Number(eq.rental_price_per_day))}
                     </div>
                     <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -636,13 +635,11 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                       <span>{Number(eq.hour_meter).toFixed(2)} jam</span>
                     </div>
                   </td>
-                  <td style={{ fontWeight: 700, color: '#0F172A', fontSize: '13.5px', textAlign: 'right', fontFamily: 'monospace' }}>
-                    {formatRupiah(Number(eq.rental_price_per_day))}
+                  <td className="serial-code" style={{ fontWeight: 700, color: '#0F172A', fontSize: '13.5px', textAlign: 'right' }} title={formatRupiah(Number(eq.rental_price_per_day))}>
+                    {formatRupiahRingkas(Number(eq.rental_price_per_day)).ringkas}
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <span className={`badge badge-${eq.status.toLowerCase()}`}>
-                      {eq.status === 'AVAILABLE' ? 'Tersedia' : eq.status === 'RENTED' ? 'Disewa' : eq.status}
-                    </span>
+                    <StatusBadge kind="equipment" status={eq.status} />
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>

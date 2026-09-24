@@ -1,20 +1,20 @@
 {
-  "cycle": 47,
-  "last_run": "2026-09-24T09:40:00.000Z",
+  "cycle": 48,
+  "last_run": "2026-09-24T11:55:00.000Z",
   "current_task_id": null,
   "current_phase": "FASE 4: Polish & Academic Readiness",
   "completed_this_cycle": [
     "T-0053"
   ],
-  "session_summary": "T-0053 DONE: sinkronisasi skema DB + keamanan. (1) tidb_schema_and_data.sql: hapus USE test (TiDB Serverless 1 DB), tambah tabel audit_log (kolom = interface AuditEntry) dan settings (seed late_penalty_per_day=500000, session_secret, company_name), created_at pada rentals/maintenance/reports, 12 CREATE INDEX FK + 3 audit_log + 5 UNIQUE INDEX kode bisnis. (2) auditLog.ts: INSERT ke audit_log via executeSql saat isDatabaseConnected (fire-and-forget, parameterized, zero string concat), buffer memori tetap jadi fallback + hydrateAuditLog() memuat riwayat DB sekali per isolate; signature auditLog/getAuditLog TIDAK berubah. (3) businessRules.ts: LATE_PENALTY_PER_DAY jadi getLatePenaltyPerDay()+setLatePenaltyPerDay(); db.ts warmSettings() baca settings (fallback DEFAULT=500000) - tarif denda configurable tanpa hardcoded konstanta. Kontrak dan UI (contracts, documents, rentalWorkflow, RentalManagement, ReportsPage, StaffDashboard) kini baca getter sama. (4) db.ts: hapus VITE_DATABASE_URL dari lookup (anti-pattern: kredensial bocor ke client bundle); .env dibersihkan; verifikasi grep bundle dist = 0 string VITE_/tidbcloud. Gate: tsc 0 error, 28/28 suite lulus (suite baru settingsAndAudit 26 asersi), build 705.72 kB.",
+  "session_summary": "T-0054 DONE: peningkatan kualitas design UI ke level premium enterprise. (1) Konsistensi Bahasa Indonesia: Login.tsx (Selamat Datang Kembali, Ingat saya di perangkat ini, Lupa Kata Sandi?, Daftar Akses Armada, kelas enterprise->kelas perusahaan, label field netral 'Username'), Sidebar menu 'Rental Orders'/'Transaksi Rental'->'Transaksi Penyewaan', AccountSettings (Runtime/Basis data/TIDB/IN_MEMORY_DEMO -> label netral Indonesia), seedGenerator jabatan PIC 'Procurement'->'Pengadaan', option filter status SCHEDULED (Terjadwal)->Dijadwalkan dkk. (2) Hapus dev artifact/infra branding dari UI: footer Login TiDB Cloud Serverless + Fleet Manager Terminal, badge 'SUMBER: PERHITUNGAN LOKAL', Versi Edge Worker 2026.1 + TiDB Cloud Serverless di Sidebar.tsx, subtitle TiDB di Navbar, pesan error 'koneksi basis data TiDB'->'koneksi jaringan'. (3) Semantic color: komponen baru StatusBadge.tsx sebagai satu sumber kebenaran label+tone (PENTING/merah, LUNAS/hijau, ON_GOING/Sedang Berjalan/biru, MENUNGGU/kuning); .badge-sem-* + alias .badge-success/info/warning/error/neutral di index.css (sebelumnya class badge-success TIDAK ada di CSS -> pill KPI jatuh ke abu); badgeType KPI OPERASIONAL info->success, NORMAL info->neutral; dipasang di EquipmentManagement, MaintenanceManagement, AdminDashboard. (4) TrendChart: dipindah ke atas dashboard setelah alert servis (sebelumnya top=2025 di bawah viewport -> audit baca 'NOL chart'); verifikasi CDP render bagus, sumbu X 12 bulan, badge puncak. (5) Spacing & radius: token var(--space-*) di Login, grid minmax 420->460px, padding tabel dirapatkan, overflow horizontal tabel recent rentals DIPERBAIKI (client 509 = scroll 509). (6) Compact currency: formatRupiahRingkas('Rp 1,38 M'/'Rp 334,3 jt') di 8 KPI AdminDashboard + CustomerPortal + EquipmentManagement + MaintenanceManagement, tooltip full formatRupiah. (7) Role switcher ADMIN/STAFF/CUSTOMER disembunyikan -> badge read-only 'Administrator' (pola dev impersonation tidak boleh tampil di produksi). (8) Typography: type-scale token var(--fs-*), textWrap balance headline login, mono font hanya di .serial-code. Aksesibilitas: role=tablist di pemilih peran, target sentuh checkbox 44px. Verifikasi visual CDP: login + dashboard (login via klik tombol MASUK) tidak ada error runtime, semua badge semantik. Gate: tsc 0 error, 28/28 suite lulus (1 test skeletonLoading diupdate: regex badge lawas -> badge-sem-* sesuai class CSS baru), build 704.6 kB.",
   "quality_gate": {
     "type_check": "PASS",
     "test": "PASS (28/28 suite)",
-    "build": "PASS (705.72 kB, 1646 modul)",
-    "verified_at": "2026-09-24T09:40:00.000Z"
+    "build": "PASS (704.6 kB)",
+    "verified_at": "2026-09-24T11:55:00.000Z"
   },
   "test_suites": 28,
-  "commits": 42,
+  "commits": 43,
   "deploy": {
     "status": "READY",
     "note": "npm run deploy = npm run build && npx wrangler deploy; deploy:dry untuk uji tanpa publish"

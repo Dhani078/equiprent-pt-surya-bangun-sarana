@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
         return [
           { id: 'dashboard', label: 'Dashboard Utama', icon: LayoutDashboard },
           { id: 'equipment', label: 'Inventaris Alat Berat', icon: Truck },
-          { id: 'rentals', label: 'Transaksi Rental', icon: ClipboardList, badge: badges.rentals, badgeTone: 'warning' as const },
+          { id: 'rentals', label: 'Transaksi Penyewaan', icon: ClipboardList, badge: badges.rentals, badgeTone: 'warning' as const },
           { id: 'maintenance', label: 'Perawatan & Servis', icon: Wrench, badge: badges.maintenance, badgeTone: 'warning' as const },
           { id: 'tracking', label: 'Pelacakan GPS Telemetri', icon: MapPin },
           { id: 'reports', label: 'Laporan & Dokumen', icon: FileText },
@@ -77,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
       case 'STAFF':
         return [
           { id: 'dashboard', label: 'Dashboard Operasional', icon: LayoutDashboard },
-          { id: 'rentals', label: 'Rental Orders', icon: ClipboardList, badge: badges.rentals, badgeTone: 'warning' as const },
+          { id: 'rentals', label: 'Transaksi Penyewaan', icon: ClipboardList, badge: badges.rentals, badgeTone: 'warning' as const },
           { id: 'contracts', label: 'Kontrak Sewa Digital', icon: FileCheck },
           { id: 'payments', label: 'Verifikasi Pembayaran', icon: CreditCard, badge: badges.payments, badgeTone: 'error' as const },
           { id: 'maintenance', label: 'Penjadwalan Servis', icon: Wrench, badge: badges.maintenance, badgeTone: 'warning' as const },
@@ -188,8 +188,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
           PT. SBS Banjarmasin
         </div>
         <div style={{ fontSize: '10.5px', color: 'var(--color-secondary-light)' }}>
-          Versi Edge Worker 2026.1<br/>
-          TiDB Cloud Serverless
+          Sistem Monitoring &amp; Rental Alat Berat
         </div>
       </div>
     </aside>

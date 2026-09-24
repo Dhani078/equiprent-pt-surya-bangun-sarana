@@ -4,8 +4,9 @@ import { ClipboardCheck, CreditCard, FileCheck, Check, Eye, Bell, X, Search } fr
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { Modal } from '../../components/Modal';
 import { ContractPanel } from '../../components/ContractPanel';
-import { formatRupiah, getLatePenaltyPerDay, formatTanggal } from '../../lib/businessRules';
+import { formatRupiah, formatRupiahRingkas, getLatePenaltyPerDay, formatTanggal } from '../../lib/businessRules';
 import { Paginator, usePagination } from '../../components/Paginator';
+import { StatusBadge } from '../../components/StatusBadge';
 
 const PAGE_SIZE_PAYMENTS = 20;
 import {
@@ -241,10 +242,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
                 {terlambat && (
                   <span
+                    className="serial-code"
                     style={{
                       fontSize: '12px',
                       fontWeight: 800,
-                      fontFamily: 'monospace',
                       color: '#991B1B',
                       whiteSpace: 'nowrap',
                     }}
@@ -281,7 +282,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               }}
             >
               <span>Total estimasi denda keterlambatan (tarif {formatRupiah(getLatePenaltyPerDay())}/hari)</span>
-              <span style={{ fontFamily: 'monospace' }}>{formatRupiah(totalDenda)}</span>
+              <span className="serial-code" title={formatRupiah(totalDenda)}>{formatRupiahRingkas(totalDenda).ringkas}</span>
             </div>
           )}
         </div>
@@ -418,8 +419,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               <span style={{ color: '#92400E', fontWeight: 600 }}>
                 Nilai tagihan menunggu verifikasi
               </span>
-              <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#92400E' }}>
-                {formatRupiah(antrean.pendingAmount)}
+              <span className="serial-code" style={{ fontWeight: 800, color: '#92400E' }} title={formatRupiah(antrean.pendingAmount)}>
+                {formatRupiahRingkas(antrean.pendingAmount).ringkas}
               </span>
             </div>
           )}
@@ -461,8 +462,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                           <strong>{p.customer_name || 'Pelanggan SBS'}</strong>
                           <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{p.contract_code}</div>
                         </td>
-                        <td style={{ fontWeight: 700, fontSize: '13.5px', fontFamily: 'monospace' }}>
-                          {formatRupiah(Number(p.amount))}
+                        <td className="serial-code" style={{ fontWeight: 700, fontSize: '13.5px' }} title={formatRupiah(Number(p.amount))}>
+                          {formatRupiahRingkas(Number(p.amount)).ringkas}
                         </td>
                         <td style={{ fontSize: '12.5px' }}>
                           {p.payment_method}
@@ -486,9 +487,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                           )}
                         </td>
                         <td>
-                          <span className={`badge badge-${p.status.toLowerCase()}`}>
-                            {getPaymentStatusLabel(p.status)}
-                          </span>
+                          <StatusBadge kind="payment" status={p.status} />
                           {/* Jejak peninjau: siapa & kapan tagihan ini disahkan/ditolak. */}
                           {p.verified_at && (
                             <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', marginTop: '3px' }}>
@@ -600,13 +599,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                       <td style={{ fontSize: '12px' }}>
                         {r.start_date} s/d {r.end_date} ({r.total_days} hari)
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>
-                        {formatRupiah(Number(r.subtotal))}
+                      <td className="serial-code" style={{ textAlign: 'right', fontWeight: 700 }} title={formatRupiah(Number(r.subtotal))}>
+                        {formatRupiahRingkas(Number(r.subtotal)).ringkas}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span className={`badge badge-${r.status.toLowerCase()}`}>
-                          {r.status}
-                        </span>
+                        <StatusBadge kind="rental" status={r.status} />
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {r.status === 'PENDING' ? (

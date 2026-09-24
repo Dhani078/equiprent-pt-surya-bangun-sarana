@@ -94,7 +94,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       onLoginSuccess(user);
     } catch {
-      setErrorMsg('Gagal memverifikasi login. Periksa koneksi basis data TiDB.');
+      setErrorMsg('Gagal memverifikasi login. Periksa koneksi jaringan Anda.');
     } finally {
       setLoading(false);
     }
@@ -114,16 +114,19 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }, 800);
   };
 
-  const getRoleLabel = () => {
-    if (selectedRole === 'ADMIN') return 'Admin Username';
-    if (selectedRole === 'STAFF') return 'Employee ID / Staff Username';
-    return 'Customer ID or Username';
-  };
+  const getRoleLabel = () => 'Username';
 
   const getRolePlaceholder = () => {
     if (selectedRole === 'ADMIN') return 'Masukkan username admin (contoh: admin)';
     if (selectedRole === 'STAFF') return 'Masukkan username staf (contoh: staff)';
     return 'Masukkan username pelanggan (contoh: user)';
+  };
+
+  /** Label tab peran dalam Bahasa Indonesia. */
+  const LABEL_TAB_PERAN: Readonly<Record<RoleName, string>> = {
+    ADMIN: 'Administrator',
+    STAFF: 'Staf',
+    CUSTOMER: 'Pelanggan',
   };
 
   return (
@@ -190,13 +193,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
 
             {/* Tagline Besar */}
-            <h2 style={{ fontSize: '30px', fontWeight: 800, lineHeight: 1.25, letterSpacing: '-0.02em', margin: '0 0 14px 0' }}>
-              Reliability in every <span style={{ color: '#93C5FD' }}>heavy operation.</span>
+            <h2 style={{ fontSize: '30px', fontWeight: 800, lineHeight: 1.25, letterSpacing: '-0.02em', margin: '0 0 14px 0', textWrap: 'balance' } as React.CSSProperties}>
+              Andal di setiap <span style={{ color: '#93C5FD' }}>operasi alat berat.</span>
             </h2>
-            
+
             {/* Deskripsi Sistem */}
             <p style={{ fontSize: '14.5px', color: '#CBD5E1', lineHeight: 1.6, margin: 0, maxWidth: '420px' }}>
-              Enterprise-grade fleet management for construction, logistics, and heavy machinery operations di Kalimantan Selatan.
+              Sistem manajemen armada kelas perusahaan untuk operasi konstruksi, logistik, dan alat berat di Kalimantan Selatan.
             </p>
           </div>
 
@@ -207,22 +210,25 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             overflow: 'hidden',
             boxShadow: '0 20px 30px rgba(0, 0, 0, 0.4)',
             border: '1px solid rgba(255, 255, 255, 0.15)',
-            maxHeight: '220px'
+            maxHeight: '220px',
+            position: 'relative'
           }}>
             <img
               src={STITCH_IMAGES.LOGIN_HERO}
-              alt="Heavy Equipment Excavator Fleet"
+              alt="Armada excavator alat berat"
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
+            {/* Overlay gradien: kurangi plastisitas foto & satukan dengan panel navy. */}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,30,64,0.02) 0%, rgba(0,30,64,0.6) 100%)' }} />
           </div>
 
-          {/* Info Versi Terminal */}
+          {/* Info Aplikasi — tanpa branding infrastruktur (audit: hapus TiDB/Edge). */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(203, 213, 225, 0.7)' }}>
-            <span style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-              Fleet Manager Terminal v4.2.0
+            <span style={{ letterSpacing: '0.05em' }}>
+              EquipRent MS &bull; PT. Surya Bangun Sarana
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Shield size={12} color="#10B981" /> TiDB Cloud Serverless
+              <Shield size={12} color="#10B981" /> Data Terlindungi
             </span>
           </div>
         </div>
@@ -239,12 +245,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <div style={{ maxWidth: '380px', margin: '0 auto', width: '100%' }}>
             
             {/* Header Form */}
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-primary)', margin: '0 0 6px 0' }}>
-                Welcome Back
+            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <h3 style={{ fontSize: 'var(--fs-display)', fontWeight: 800, color: 'var(--color-primary)', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+                Selamat Datang Kembali
               </h3>
-              <p style={{ fontSize: '13.5px', color: 'var(--color-secondary)', margin: 0 }}>
-                Pilih peran dan masukkan kredensial untuk masuk ke terminal.
+              <p style={{ fontSize: 'var(--fs-body)', color: 'var(--color-secondary)', margin: 0 }}>
+                Pilih peran dan masukkan kredensial untuk masuk ke sistem.
               </p>
             </div>
 
@@ -268,39 +274,49 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </div>
             )}
 
-            {/* ROLE SELECTOR TABS (ADMIN, STAFF, CUSTOMER) */}
-            <div style={{
-              display: 'flex',
-              backgroundColor: '#F1F5F9',
-              padding: '4px',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              border: '1px solid var(--color-border)'
-            }}>
-              {(['ADMIN', 'STAFF', 'CUSTOMER'] as RoleName[]).map((role) => (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => handleRoleSelect(role)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 4px',
-                    textAlign: 'center',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontFamily: 'monospace',
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    backgroundColor: selectedRole === role ? '#FFFFFF' : 'transparent',
-                    color: selectedRole === role ? 'var(--color-primary)' : 'var(--color-secondary)',
-                    boxShadow: selectedRole === role ? '0 2px 4px rgba(0,0,0,0.06)' : 'none'
-                  }}
-                >
-                  {role}
-                </button>
-              ))}
+            {/* PILIH PERAN (tablist ARIA) — label Bahasa Indonesia */}
+            <div
+              role="tablist"
+              aria-label="Pilih peran pengguna"
+              style={{
+                display: 'flex',
+                backgroundColor: '#F1F5F9',
+                padding: '4px',
+                borderRadius: 'var(--radius-eight)',
+                marginBottom: 'var(--space-5)',
+                border: '1px solid var(--color-border)',
+                gap: '2px',
+              }}
+            >
+              {(['ADMIN', 'STAFF', 'CUSTOMER'] as RoleName[]).map((role) => {
+                const aktif = selectedRole === role;
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    role="tab"
+                    aria-selected={aktif}
+                    onClick={() => handleRoleSelect(role)}
+                    style={{
+                      flex: 1,
+                      padding: '9px 4px',
+                      textAlign: 'center',
+                      borderRadius: 'var(--radius-sm)',
+                      border: 'none',
+                      fontFamily: 'var(--font-primary)',
+                      fontSize: 'var(--fs-xs)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: aktif ? '#FFFFFF' : 'transparent',
+                      color: aktif ? 'var(--color-primary)' : 'var(--color-secondary)',
+                      boxShadow: aktif ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                    }}
+                  >
+                    {LABEL_TAB_PERAN[role]}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Form Login */}
@@ -308,7 +324,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               
               {/* Field: Username */}
               <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '6px' }}>
                   {getRoleLabel()}
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -328,15 +344,15 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               {/* Field: Password */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                    Password
+                  <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-primary)' }}>
+                    Kata Sandi
                   </label>
                   <a
                     href="#"
                     onClick={(e) => { e.preventDefault(); alert('Silakan hubungi IT Helpdesk PT. Surya Bangun Sarana Banjarmasin di nomor hotline (0511) 325-SBS atau email support@suryaequipment.co.id untuk pemulihan akses akun.'); }}
-                    style={{ fontSize: '11.5px', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
+                    style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
                   >
-                    Lupa Password?
+                    Lupa Kata Sandi?
                   </a>
                 </div>
                 <div style={{ position: 'relative' }}>
@@ -372,19 +388,32 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 </div>
               </div>
 
-              {/* Remember Device */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Remember Device — target sentuh 44px (audit aksesibilitas) */}
+              <label
+                htmlFor="rememberDevice"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  minHeight: '44px',
+                  padding: '0 4px',
+                  margin: '-6px -4px',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  borderRadius: '8px',
+                }}
+              >
                 <input
                   type="checkbox"
                   id="rememberDevice"
                   checked={rememberDevice}
                   onChange={(e) => setRememberDevice(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--color-primary)', cursor: 'pointer', margin: 0, flexShrink: 0 }}
                 />
-                <label htmlFor="rememberDevice" style={{ fontSize: '12.5px', color: 'var(--color-secondary)', cursor: 'pointer', userSelect: 'none' }}>
-                  Ingat perangkat ini
-                </label>
-              </div>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-secondary)' }}>
+                  Ingat saya di perangkat ini
+                </span>
+              </label>
 
               {/* Tombol Submit Login */}
               <button
@@ -392,22 +421,22 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 disabled={loading}
                 className="btn-primary"
                 style={{
-                  height: '44px',
-                  fontSize: '13.5px',
+                  height: '46px',
+                  fontSize: 'var(--fs-body)',
                   fontWeight: 700,
                   letterSpacing: '0.04em',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  marginTop: '6px'
+                  gap: 'var(--space-2)',
+                  marginTop: 'var(--space-1)',
                 }}
               >
                 {loading ? (
-                  <span>AUTHENTICATING...</span>
+                  <span>Memverifikasi...</span>
                 ) : (
                   <>
-                    <span>MASUK TERMINAL</span>
+                    <span>MASUK</span>
                     <ArrowRight size={16} />
                   </>
                 )}
@@ -415,8 +444,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </form>
 
             {/* Footer Registration Link */}
-            <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid var(--color-border)', textAlign: 'center' }}>
-              <p style={{ fontSize: '13px', color: 'var(--color-secondary)', margin: 0 }}>
+            <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-5)', borderTop: '1px solid var(--color-border)', textAlign: 'center' }}>
+              <p style={{ fontSize: 'var(--fs-body)', color: 'var(--color-secondary)', margin: 0 }}>
                 Operator atau penyewa baru?{' '}
                 <button
                   type="button"
@@ -431,7 +460,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     padding: 0
                   }}
                 >
-                  Register Fleet Access
+                  Daftar Akses Armada
                 </button>
               </p>
             </div>
