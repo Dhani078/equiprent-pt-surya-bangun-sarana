@@ -251,7 +251,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
       {/* Ringkasan Agregat */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
         gap: '12px',
         padding: '16px',
         backgroundColor: 'var(--color-surface)',
@@ -295,7 +295,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
           icon={<AlertTriangle size={12} color={summary.criticalFuelCount > 0 ? 'var(--fg-danger)' : 'var(--color-secondary)'} />}
         />
         <SummaryCard
-          label="Titik Usang (>6 jam)"
+          label="Titik Data Lama (>6 jam)"
           value={`${summary.staleCount} Unit`}
           tone={summary.staleCount > 0 ? 'warning' : 'neutral'}
           icon={<Clock size={12} color="var(--fg-amber)" />}
@@ -521,7 +521,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                     }}
                   >
                     <AlertTriangle size={10} />
-                    Titik Usang
+                    Titik Data Lama
                   </span>
                 )}
                 {/* Unit di luar semua zona site (T-0060). */}
