@@ -32,3 +32,11 @@
 - Audit visual dark: kartu/input/pill/label sudah themed (klaim vision "putih" ditegakkan via computed style = bukan bug).
 - AccountSettings.tsx: jargon 'MySQL 8.0 (Cloud)' -> 'Terpusat (Cloud)'; peringatan DATABASE_URL -> bahasa awam.
 - Gate: tsc 0, 29/29, build OK.
+
+## Cycle 58 selesai — Customer portal & settings (2026-09-26)
+- CustomerPortal: nav "Penyewaan Saya"/"Tagihan"/"Lacak"/"Kontrak" dulu hanya highlight, konten tetap katalog -> activeMenu prop + peta menu->tab. Verified CDP: tiap klik ganti heading panel.
+- AccountSettings: 'MySQL 8.0 (Cloud)'->'Terpusat (Cloud)', peringatan DATABASE_URL -> bahasa awam. Verified browser.
+- StaffDashboard: tanggal sewa ISO -> formatTanggal.
+- Klaim vision "date input putih / tile putih" ditegakkan via computed style (sudah dark; artifact screenshot lama).
+- deleg_8dff4f3a mati (Connection error 322s) sebelum menyentuh tree — dikerjakan manual.
+- Gate: tsc 0, 29/29, build OK. Commits: 666aec4, db879fa, 900aada, (tanggal lokal).
