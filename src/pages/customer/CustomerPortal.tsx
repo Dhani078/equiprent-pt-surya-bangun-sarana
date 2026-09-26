@@ -232,7 +232,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
       {/* Customer Header Banner */}
       <div style={{
         padding: '24px',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'var(--color-surface)',
         borderRadius: '12px',
         border: '1px solid var(--color-border)',
         display: 'flex',
@@ -269,7 +269,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           alignItems: 'center',
           gap: '12px',
           padding: '10px 16px',
-          backgroundColor: '#F8FAFC',
+          backgroundColor: 'var(--bg-raised)',
           borderRadius: '8px',
           border: '1px solid var(--color-border)'
         }}>
@@ -285,7 +285,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)' }}>
               Rahmat Hidayat, S.T.
             </div>
-            <div style={{ fontSize: '11px', color: '#059669', fontWeight: 600 }}>
+            <div style={{ fontSize: '11px', color: 'var(--fg-success-deep)', fontWeight: 600 }}>
               WA: +62 811-500-8899 (Online)
             </div>
           </div>
@@ -301,7 +301,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             padding: '14px',
             borderRadius: '8px',
             border: activeTab === 'catalog' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeTab === 'catalog' ? '#EFF6FF' : '#FFFFFF',
+            backgroundColor: activeTab === 'catalog' ? 'var(--bg-blue-soft)' : '#FFFFFF',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
@@ -314,7 +314,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             width: '36px',
             height: '36px',
             borderRadius: '8px',
-            backgroundColor: activeTab === 'catalog' ? 'var(--color-primary)' : '#F1F5F9',
+            backgroundColor: activeTab === 'catalog' ? 'var(--color-primary)' : 'var(--bg-subtle)',
             color: activeTab === 'catalog' ? '#FFFFFF' : 'var(--color-primary)',
             display: 'flex',
             alignItems: 'center',
@@ -323,7 +323,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             <Truck size={18} />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'catalog' ? 'var(--color-primary)' : '#1E293B' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'catalog' ? 'var(--color-primary)' : 'var(--text-strong)' }}>
               Katalog Alat
             </div>
             <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
@@ -339,7 +339,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             padding: '14px',
             borderRadius: '8px',
             border: activeTab === 'my_rentals' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeTab === 'my_rentals' ? '#EFF6FF' : '#FFFFFF',
+            backgroundColor: activeTab === 'my_rentals' ? 'var(--bg-blue-soft)' : '#FFFFFF',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
@@ -352,7 +352,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             width: '36px',
             height: '36px',
             borderRadius: '8px',
-            backgroundColor: activeTab === 'my_rentals' ? 'var(--color-primary)' : '#F1F5F9',
+            backgroundColor: activeTab === 'my_rentals' ? 'var(--color-primary)' : 'var(--bg-subtle)',
             color: activeTab === 'my_rentals' ? '#FFFFFF' : 'var(--color-primary)',
             display: 'flex',
             alignItems: 'center',
@@ -361,7 +361,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             <ClipboardList size={18} />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'my_rentals' ? 'var(--color-primary)' : '#1E293B' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'my_rentals' ? 'var(--color-primary)' : 'var(--text-strong)' }}>
               Sewa Saya
             </div>
             <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
@@ -377,7 +377,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             padding: '14px',
             borderRadius: '8px',
             border: activeTab === 'contracts' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeTab === 'contracts' ? '#EFF6FF' : '#FFFFFF',
+            backgroundColor: activeTab === 'contracts' ? 'var(--bg-blue-soft)' : '#FFFFFF',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
@@ -390,7 +390,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             width: '36px',
             height: '36px',
             borderRadius: '8px',
-            backgroundColor: activeTab === 'contracts' ? 'var(--color-primary)' : '#F1F5F9',
+            backgroundColor: activeTab === 'contracts' ? 'var(--color-primary)' : 'var(--bg-subtle)',
             color: activeTab === 'contracts' ? '#FFFFFF' : 'var(--color-primary)',
             display: 'flex',
             alignItems: 'center',
@@ -399,7 +399,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             <FileCheck size={18} />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'contracts' ? 'var(--color-primary)' : '#1E293B' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'contracts' ? 'var(--color-primary)' : 'var(--text-strong)' }}>
               Kontrak & E-Sign
             </div>
             <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
@@ -415,7 +415,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             padding: '14px',
             borderRadius: '8px',
             border: activeTab === 'payments' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeTab === 'payments' ? '#EFF6FF' : '#FFFFFF',
+            backgroundColor: activeTab === 'payments' ? 'var(--bg-blue-soft)' : '#FFFFFF',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
@@ -428,7 +428,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             width: '36px',
             height: '36px',
             borderRadius: '8px',
-            backgroundColor: activeTab === 'payments' ? 'var(--color-primary)' : '#F1F5F9',
+            backgroundColor: activeTab === 'payments' ? 'var(--color-primary)' : 'var(--bg-subtle)',
             color: activeTab === 'payments' ? '#FFFFFF' : 'var(--color-primary)',
             display: 'flex',
             alignItems: 'center',
@@ -437,7 +437,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             <CreditCard size={18} />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'payments' ? 'var(--color-primary)' : '#1E293B' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'payments' ? 'var(--color-primary)' : 'var(--text-strong)' }}>
               Tagihan & Transfer
             </div>
             <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
@@ -455,7 +455,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             padding: '14px',
             borderRadius: '8px',
             border: activeTab === 'tracking' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeTab === 'tracking' ? '#EFF6FF' : '#FFFFFF',
+            backgroundColor: activeTab === 'tracking' ? 'var(--bg-blue-soft)' : '#FFFFFF',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
@@ -469,7 +469,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             width: '36px',
             height: '36px',
             borderRadius: '8px',
-            backgroundColor: activeTab === 'tracking' ? 'var(--color-primary)' : '#F1F5F9',
+            backgroundColor: activeTab === 'tracking' ? 'var(--color-primary)' : 'var(--bg-subtle)',
             color: activeTab === 'tracking' ? '#FFFFFF' : 'var(--color-primary)',
             display: 'flex',
             alignItems: 'center',
@@ -478,7 +478,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             <MapPin size={18} />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'tracking' ? 'var(--color-primary)' : '#1E293B' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: activeTab === 'tracking' ? 'var(--color-primary)' : 'var(--text-strong)' }}>
               Lacak Unit Saya
             </div>
             <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
@@ -644,7 +644,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
               return (
                 <div key={eq.id} className="card-premium" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <div style={{ height: '175px', width: '100%', overflow: 'hidden', position: 'relative', backgroundColor: '#E2E8F0' }}>
+                  <div style={{ height: '175px', width: '100%', overflow: 'hidden', position: 'relative', backgroundColor: 'var(--color-border)' }}>
                     <img
                       src={imgUrl}
                       alt={eq.name}
@@ -662,7 +662,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       <div className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary)', marginBottom: '4px' }}>
                         {eq.equipment_code}
                       </div>
-                      <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: '0 0 6px 0', lineHeight: 1.3 }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-strong)', margin: '0 0 6px 0', lineHeight: 1.3 }}>
                         {eq.name}
                       </h4>
                       <div style={{ fontSize: '12px', color: 'var(--color-secondary)', marginBottom: '12px' }}>
@@ -694,7 +694,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       {/* Alasan penolakan ditampilkan di kartu — pelanggan tahu
                           unit ini sedang dipakai, bukan sekadar hilang. */}
                       {blockedMessage !== null && (
-                        <div style={{ fontSize: '11.5px', color: '#B45309', lineHeight: 1.4 }}>
+                        <div style={{ fontSize: '11.5px', color: 'var(--fg-warning-deep)', lineHeight: 1.4 }}>
                           {blockedMessage}
                         </div>
                       )}
@@ -757,7 +757,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                         <td style={{ fontSize: '13px' }}>
                           <strong>{r.total_days} Hari</strong>
                         </td>
-                        <td style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', fontFamily: 'monospace' }}>
+                        <td style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-strong)', fontFamily: 'monospace' }}>
                           {formatRupiah(Number(r.subtotal))}
                         </td>
                         <td>
@@ -842,7 +842,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               gap: '12px',
               marginBottom: '16px'
             }}>
-              <div style={{ padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+              <div style={{ padding: '12px 14px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Total Tagihan</div>
                 <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-primary)' }} title={formatRupiah(ringkasanTagihan.totalAmount)}>
                   {formatRupiahRingkas(ringkasanTagihan.totalAmount).ringkas}
@@ -852,23 +852,23 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
               <div style={{ padding: '12px 14px', backgroundColor: '#F0FDF4', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Sudah Lunas</div>
-                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: '#059669' }} title={formatRupiah(ringkasanTagihan.lunasAmount)}>
+                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--fg-success-deep)' }} title={formatRupiah(ringkasanTagihan.lunasAmount)}>
                   {formatRupiahRingkas(ringkasanTagihan.lunasAmount).ringkas}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{ringkasanTagihan.lunasCount} tagihan</div>
               </div>
 
-              <div style={{ padding: '12px 14px', backgroundColor: '#FFFBEB', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+              <div style={{ padding: '12px 14px', backgroundColor: 'var(--bg-amber-soft)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Menunggu Verifikasi</div>
-                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: '#B45309' }} title={formatRupiah(ringkasanTagihan.menungguVerifikasiAmount)}>
+                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--fg-warning-deep)' }} title={formatRupiah(ringkasanTagihan.menungguVerifikasiAmount)}>
                   {formatRupiahRingkas(ringkasanTagihan.menungguVerifikasiAmount).ringkas}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{ringkasanTagihan.menungguVerifikasiCount} tagihan</div>
               </div>
 
-              <div style={{ padding: '12px 14px', backgroundColor: '#FEF2F2', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+              <div style={{ padding: '12px 14px', backgroundColor: 'var(--bg-red-soft)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Belum Dibayar</div>
-                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: '#DC2626' }} title={formatRupiah(ringkasanTagihan.belumBayarAmount)}>
+                <div className="serial-code" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--fg-danger)' }} title={formatRupiah(ringkasanTagihan.belumBayarAmount)}>
                   {formatRupiahRingkas(ringkasanTagihan.belumBayarAmount).ringkas}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
@@ -921,7 +921,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       <td>
                         <StatusBadge kind="payment" status={p.status} />
                         {p.status === 'FAILED' && (
-                          <div style={{ fontSize: '10.5px', color: '#991B1B', marginTop: '3px', fontWeight: 600 }}>
+                          <div style={{ fontSize: '10.5px', color: 'var(--fg-danger-deep)', marginTop: '3px', fontWeight: 600 }}>
                             Bukti ditolak — silakan lampirkan ulang
                           </div>
                         )}
@@ -942,7 +942,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                             <span>{p.status === 'FAILED' ? 'Unggah Ulang Bukti' : 'Unggah Bukti Transfer'}</span>
                           </button>
                         ) : (
-                          <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
+                          <span style={{ fontSize: '12px', color: 'var(--fg-success-deep)', fontWeight: 600 }}>
                             Pembayaran Lunas
                           </span>
                         )}
@@ -1005,12 +1005,12 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       padding: '12px',
                       borderRadius: '8px',
                       border: selectedTrackedUnit === row.equipmentId ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                      backgroundColor: selectedTrackedUnit === row.equipmentId ? '#EFF6FF' : '#FFFFFF',
+                      backgroundColor: selectedTrackedUnit === row.equipmentId ? 'var(--bg-blue-soft)' : '#FFFFFF',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>{row.equipmentName}</div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-strong)' }}>{row.equipmentName}</div>
                         <div className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>
                           {row.equipmentCode}
                         </div>
@@ -1046,7 +1046,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           title={`Pengajuan Sewa: ${selectedEquipment.name}`}
         >
           <form onSubmit={handleConfirmRent} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', gap: '14px', padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', gap: '14px', padding: '12px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
               <img
                 src={selectedEquipment.thumbnail_url || getEquipmentImage(selectedEquipment.equipment_code, selectedEquipment.type)}
                 alt={selectedEquipment.name}
@@ -1057,7 +1057,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 <div style={{ color: 'var(--color-secondary)', fontSize: '11.5px', marginBottom: '4px' }}>
                   Kode: <span className="serial-code">{selectedEquipment.equipment_code}</span> &bull; {selectedEquipment.brand} {selectedEquipment.model}
                 </div>
-                <div className="serial-code" style={{ fontWeight: 800, color: '#0F172A' }}>
+                <div className="serial-code" style={{ fontWeight: 800, color: 'var(--text-strong)' }}>
                   {formatRupiah(Number(selectedEquipment.rental_price_per_day))} / hari
                 </div>
               </div>
@@ -1112,7 +1112,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                   borderRadius: '8px',
                   background: 'rgba(220, 38, 38, 0.08)',
                   border: '1px solid rgba(220, 38, 38, 0.3)',
-                  color: '#dc2626',
+                  color: 'var(--fg-danger)',
                   fontSize: '12.5px',
                   fontWeight: 600
                 }}
@@ -1121,7 +1121,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               </div>
             )}
 
-            <div style={{ padding: '12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+            <div style={{ padding: '12px', backgroundColor: 'var(--bg-blue-soft)', borderRadius: '8px', border: '1px solid var(--border-blue-soft)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--color-secondary)' }}>
                 <span>Durasi: <strong>{estimasi.ok ? `${estimasi.rentalDays} Hari` : '-'}</strong></span>
                 <span>Tarif: <strong>{formatRupiah(Number(selectedEquipment.rental_price_per_day))}</strong>/hari</span>
@@ -1154,7 +1154,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           title={`Konfirmasi Transfer: ${uploadingPayment.payment_code}`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px' }}>
+            <div style={{ padding: '14px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px' }}>
               <div>Jumlah Tagihan: <strong style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatRupiah(Number(uploadingPayment.amount))}</strong></div>
               <div>Metode: <strong>{uploadingPayment.payment_method}</strong></div>
               <div>Rekening Tujuan: <strong>Bank Mandiri 031-00-1234567-8 a/n PT. Surya Bangun Sarana</strong></div>
@@ -1170,7 +1170,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 borderRadius: '8px',
                 overflow: 'hidden',
                 border: '1px solid var(--color-border)',
-                backgroundColor: '#F1F5F9',
+                backgroundColor: 'var(--bg-subtle)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1205,7 +1205,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               {/* Pesan galat divalidasi dengan aturan yang SAMA dengan server,
                   sehingga pelanggan tidak mengirim berkas yang pasti ditolak. */}
               {proofError && (
-                <div role="alert" style={{ fontSize: '11.5px', color: '#DC2626', fontWeight: 600, marginTop: '6px' }}>
+                <div role="alert" style={{ fontSize: '11.5px', color: 'var(--fg-danger)', fontWeight: 600, marginTop: '6px' }}>
                   {proofError}
                 </div>
               )}

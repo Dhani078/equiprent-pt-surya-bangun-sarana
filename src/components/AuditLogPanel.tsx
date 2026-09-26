@@ -36,9 +36,9 @@ function bacaToken(): string | null {
 
 /** Warna badge aksi sesuai kategori mutasi (design system §7). */
 function warnaAksi(action: string): { bg: string; fg: string } {
-  if (action.startsWith('DELETE') || action.includes('REJECT')) return { bg: '#FEE2E2', fg: '#991B1B' };
-  if (action.includes('VERIFY') || action === 'LOGIN' || action.includes('CREATE')) return { bg: '#D1FAE5', fg: '#065F46' };
-  if (action.includes('UPDATE') || action.includes('CHANGE') || action.includes('TOGGLE')) return { bg: '#FEF3C7', fg: '#92400E' };
+  if (action.startsWith('DELETE') || action.includes('REJECT')) return { bg: '#FEE2E2', fg: 'var(--fg-danger-deep)' };
+  if (action.includes('VERIFY') || action === 'LOGIN' || action.includes('CREATE')) return { bg: '#D1FAE5', fg: 'var(--fg-success-deeper)' };
+  if (action.includes('UPDATE') || action.includes('CHANGE') || action.includes('TOGGLE')) return { bg: '#FEF3C7', fg: 'var(--fg-warning-deep)' };
   return { bg: '#E0E7FF', fg: '#3730A3' };
 }
 
@@ -170,9 +170,9 @@ export const AuditLogPanel: React.FC = () => {
             padding: '10px 12px',
             borderRadius: '8px',
             borderLeft: '4px solid var(--color-error)',
-            backgroundColor: '#FEF2F2',
+            backgroundColor: 'var(--bg-red-soft)',
             fontSize: '12.5px',
-            color: '#991B1B',
+            color: 'var(--fg-danger-deep)',
           }}
         >
           {error}
@@ -188,7 +188,7 @@ export const AuditLogPanel: React.FC = () => {
           alignItems: 'center',
           marginBottom: '14px',
           padding: '12px',
-          backgroundColor: '#F8FAFC',
+          backgroundColor: 'var(--bg-raised)',
           borderRadius: '10px',
           border: '1px solid var(--color-border)',
         }}
@@ -226,7 +226,7 @@ export const AuditLogPanel: React.FC = () => {
             border: '1px solid var(--color-border)',
             fontSize: '12.5px',
             fontFamily: 'var(--font-primary)',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--color-surface)',
           }}
         >
           <option value="">Semua entitas</option>
@@ -249,7 +249,7 @@ export const AuditLogPanel: React.FC = () => {
             fontSize: '12.5px',
             fontFamily: 'var(--font-primary)',
             flex: '1 1 180px',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--color-surface)',
           }}
         />
       </div>

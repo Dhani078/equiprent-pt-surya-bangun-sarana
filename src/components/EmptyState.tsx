@@ -42,7 +42,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     aria-label={ariaLabel}
     role="status"
   >
-    <Ikon size={28} color="#94A3B8" aria-hidden />
+    <Ikon size={28} color="var(--text-faint)" aria-hidden />
     <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: 'var(--color-secondary)' }}>
       {pesan}
     </p>

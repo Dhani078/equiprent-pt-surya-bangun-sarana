@@ -94,7 +94,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         style={{
           fontSize: '24px',
           fontWeight: 800,
-          color: '#1E293B',
+          color: 'var(--text-strong)',
           letterSpacing: '-0.02em',
           lineHeight: 1.2,
         }}

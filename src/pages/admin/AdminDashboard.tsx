@@ -172,9 +172,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           textAlign: 'center',
         }}
       >
-        <AlertTriangle size={34} color="#dc2626" />
+        <AlertTriangle size={34} color="var(--fg-danger)" />
         <div>
-          <p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#991B1B' }}>
+          <p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--fg-danger-deep)' }}>
             Ringkasan dashboard gagal dimuat
           </p>
           <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: 'var(--color-secondary)', maxWidth: '460px' }}>
@@ -513,7 +513,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                         padding: '12px',
                         borderRadius: 'var(--radius-eight)',
                         border: '1px solid var(--color-border)',
-                        backgroundColor: '#F8FAFC',
+                        backgroundColor: 'var(--bg-raised)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '12px',
@@ -529,7 +529,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                             <StatusBadge kind="maintenance" status={m.status} fontSize={10} />
                           </span>
                         </div>
-                        <div style={{ fontWeight: 600, fontSize: '13px', color: '#1E293B' }}>
+                        <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-strong)' }}>
                           {m.equipment_name}
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--color-secondary-light)', marginTop: '1px' }}>
@@ -552,9 +552,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             style={{
               marginTop: '16px',
               padding: '12px 16px',
-              backgroundColor: '#EFF6FF',
+              backgroundColor: 'var(--bg-blue-soft)',
               borderRadius: 'var(--radius-eight)',
-              border: '1px solid #BFDBFE',
+              border: '1px solid var(--border-blue-soft)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -603,7 +603,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {stats.topEquipments.map((item, idx) => {
               const imgUrl = getEquipmentImage(item.equipment_code);
-              const medalColors = ['#F59E0B', '#94A3B8', '#CD7F32'];
+              const medalColors = ['#F59E0B', 'var(--text-faint)', '#CD7F32'];
               const medalColor = medalColors[idx] ?? 'var(--color-secondary)';
               const barPct = Math.round(
                 (item.rental_count / (stats.topEquipments[0]?.rental_count || 1)) * 100
@@ -618,7 +618,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                     padding: '10px 12px',
                     borderRadius: 'var(--radius-eight)',
                     border: '1px solid var(--color-border)',
-                    backgroundColor: idx === 0 ? 'rgba(245, 158, 11, 0.05)' : '#F8FAFC',
+                    backgroundColor: idx === 0 ? 'rgba(245, 158, 11, 0.05)' : 'var(--bg-raised)',
                   }}
                 >
                   {/* Rank badge */}
@@ -651,7 +651,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                   {/* Nama + bar */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13px', color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-strong)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {item.equipment_name}
                       </span>
                       <span style={{ fontWeight: 800, fontSize: '13px', color: 'var(--color-primary)', flexShrink: 0 }}>
@@ -719,7 +719,7 @@ const PanelUtilisasiBulanan: React.FC<{ data: readonly import('../../lib/analyti
   // Persentase maksimum dipakai untuk menentukan nada warna puncak.
   const puncak = Math.max(...data.map((d) => d.persentase));
   const nadaPuncak = getTingkatUtilisasi(puncak);
-  const warnaPuncak = nadaPuncak === 'success' ? '#059669' : nadaPuncak === 'warning' ? '#D97706' : '#DC2626';
+  const warnaPuncak = nadaPuncak === 'success' ? 'var(--fg-success-deep)' : nadaPuncak === 'warning' ? 'var(--fg-amber)' : 'var(--fg-danger)';
 
   // Geometri bar — skala sumbu Y 0–100% (utilisasi selalu persen).
   const TINGGI = 170;
@@ -782,7 +782,7 @@ const PanelUtilisasiBulanan: React.FC<{ data: readonly import('../../lib/analyti
           const tinggi = Math.max(0.5, (d.persentase / 100) * areaTinggi);
           const y = PAD_ATAS + areaTinggi - tinggi;
           const nada = getTingkatUtilisasi(d.persentase);
-          const warna = nada === 'success' ? '#059669' : nada === 'warning' ? '#D97706' : '#DC2626';
+          const warna = nada === 'success' ? 'var(--fg-success-deep)' : nada === 'warning' ? 'var(--fg-amber)' : 'var(--fg-danger)';
           return (
             <g key={d.label}>
               <title>{`${d.label}: ${d.persentase}% (${d.unitDisewa} dari ${d.totalUnit} unit)`}</title>
@@ -830,7 +830,7 @@ const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data 
     ) : (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {data.map((item, idx) => {
-          const medalColors = ['#F59E0B', '#94A3B8', '#CD7F32'];
+          const medalColors = ['#F59E0B', 'var(--text-faint)', '#CD7F32'];
           const medalColor = medalColors[idx] ?? 'var(--color-secondary)';
           const barPct = Math.round(
             (item.totalNilai / (data[0]?.totalNilai || 1)) * 100
@@ -845,7 +845,7 @@ const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data 
                 padding: '10px 12px',
                 borderRadius: 'var(--radius-eight)',
                 border: '1px solid var(--color-border)',
-                backgroundColor: idx === 0 ? 'rgba(245, 158, 11, 0.05)' : '#F8FAFC',
+                backgroundColor: idx === 0 ? 'rgba(245, 158, 11, 0.05)' : 'var(--bg-raised)',
               }}
             >
               <div
@@ -870,7 +870,7 @@ const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
                   <span
-                    style={{ fontWeight: 700, fontSize: '13px', color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-strong)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                     title={item.company_name ? `${item.company_name}` : item.nama}
                   >
                     {item.nama}
@@ -884,7 +884,7 @@ const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data 
                     {t('dashboard.sewa_kali', { n: item.jumlahRental })}{item.company_name ? ` · ${item.company_name}` : ''}
                   </span>
                   <div
-                    style={{ height: '4px', width: '38%', backgroundColor: '#E2E8F0', borderRadius: '2px', overflow: 'hidden' }}
+                    style={{ height: '4px', width: '38%', backgroundColor: 'var(--color-border)', borderRadius: '2px', overflow: 'hidden' }}
                     role="progressbar"
                     aria-valuenow={barPct}
                     aria-valuemin={0}

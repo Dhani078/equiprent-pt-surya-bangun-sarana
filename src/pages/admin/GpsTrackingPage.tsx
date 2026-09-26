@@ -93,9 +93,9 @@ function SummaryCard({
 }) {
   const colors: Record<string, string> = {
     primary: 'var(--color-primary)',
-    success: '#059669',
-    warning: '#D97706',
-    danger: '#DC2626',
+    success: 'var(--fg-success-deep)',
+    warning: 'var(--fg-amber)',
+    danger: 'var(--fg-danger)',
     neutral: 'var(--color-secondary)',
   };
   const warna = colors[tone ?? 'neutral'];
@@ -104,7 +104,7 @@ function SummaryCard({
     <div
       style={{
         padding: '12px 14px',
-        backgroundColor: '#F8FAFC',
+        backgroundColor: 'var(--bg-raised)',
         borderRadius: '8px',
         border: '1px solid var(--color-border)',
         display: 'flex',
@@ -135,9 +135,9 @@ function EngineBadge({ status }: { status: 'ON' | 'OFF' }) {
 /** Badge kelas bahan bakar — merah kritis, kuning rendah, hijau aman. */
 function FuelBadge({ kelas }: { kelas: FleetTelemetryRow['fuel'] }) {
   const gaya: Record<FleetTelemetryRow['fuel'], { latar: string; teks: string }> = {
-    KRITIS: { latar: '#FEF2F2', teks: '#991B1B' },
-    RENDAH: { latar: '#FFFBEB', teks: '#92400E' },
-    NORMAL: { latar: '#ECFDF5', teks: '#065F46' },
+    KRITIS: { latar: 'var(--bg-red-soft)', teks: 'var(--fg-danger-deep)' },
+    RENDAH: { latar: 'var(--bg-amber-soft)', teks: 'var(--fg-warning-deep)' },
+    NORMAL: { latar: 'var(--bg-green-soft)', teks: 'var(--fg-success-deeper)' },
   };
   const s = gaya[kelas];
   return (
@@ -236,12 +236,12 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
           alignItems: 'center',
           gap: '8px',
           padding: '6px 12px',
-          backgroundColor: '#ECFDF5',
+          backgroundColor: 'var(--bg-green-soft)',
           border: '1px solid #A7F3D0',
           borderRadius: '20px',
           fontSize: '12px',
           fontWeight: 700,
-          color: '#065F46'
+          color: 'var(--fg-success-deeper)'
         }}>
           <Radio size={14} className="animate-pulse" />
           <span>Sinyal GPS Satelit Aktif</span>
@@ -254,7 +254,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
         gap: '12px',
         padding: '16px',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'var(--color-surface)',
         borderRadius: 'var(--radius-eight)',
         border: '1px solid var(--color-border)',
       }}>
@@ -268,7 +268,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
           label="Mesin Menyala"
           value={`${summary.engineOnCount} / ${summary.totalUnits}`}
           tone="success"
-          icon={<Power size={12} color="#059669" />}
+          icon={<Power size={12} color="var(--fg-success-deep)" />}
         />
         <SummaryCard
           label="Sedang Bergerak"
@@ -292,19 +292,19 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
           label="BBM Kritis / Rendah"
           value={`${summary.criticalFuelCount} / ${summary.lowFuelCount}`}
           tone={summary.criticalFuelCount > 0 ? 'danger' : 'neutral'}
-          icon={<AlertTriangle size={12} color={summary.criticalFuelCount > 0 ? '#DC2626' : 'var(--color-secondary)'} />}
+          icon={<AlertTriangle size={12} color={summary.criticalFuelCount > 0 ? 'var(--fg-danger)' : 'var(--color-secondary)'} />}
         />
         <SummaryCard
           label="Titik Usang (>6 jam)"
           value={`${summary.staleCount} Unit`}
           tone={summary.staleCount > 0 ? 'warning' : 'neutral'}
-          icon={<Clock size={12} color="#D97706" />}
+          icon={<Clock size={12} color="var(--fg-amber)" />}
         />
         <SummaryCard
           label="Keluar Zona Site"
           value={`${ringkasanZona.jumlahBreach} Unit`}
           tone={ringkasanZona.jumlahBreach > 0 ? 'danger' : 'success'}
-          icon={<ShieldAlert size={12} color={ringkasanZona.jumlahBreach > 0 ? '#DC2626' : '#059669'} />}
+          icon={<ShieldAlert size={12} color={ringkasanZona.jumlahBreach > 0 ? 'var(--fg-danger)' : 'var(--fg-success-deep)'} />}
         />
       </div>
 
@@ -319,26 +319,26 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
           className="card-premium animate-fade-in"
           style={{
             padding: '14px 16px',
-            borderLeft: '4px solid #DC2626',
+            borderLeft: '4px solid var(--fg-danger)',
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <AlertTriangle size={16} color="#DC2626" />
-            <span style={{ fontSize: '13px', fontWeight: 800, color: '#991B1B', flex: '1 1 260px' }}>
+            <AlertTriangle size={16} color="var(--fg-danger)" />
+            <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--fg-danger-deep)', flex: '1 1 260px' }}>
               {alertZona.length} unit terdeteksi di luar zona site operasional
             </span>
             <span
               style={{
                 fontSize: '11px',
                 fontWeight: 700,
-                color: '#991B1B',
-                backgroundColor: '#FEF2F2',
+                color: 'var(--fg-danger-deep)',
+                backgroundColor: 'var(--bg-red-soft)',
                 padding: '4px 10px',
                 borderRadius: '999px',
-                border: '1px solid #FECACA',
+                border: '1px solid var(--border-red-soft)',
               }}
             >
               Pelanggaran terjauh: {formatJarakZona(ringkasanZona.jarakTerjauhMeter)}
@@ -357,7 +357,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                   flexWrap: 'wrap',
                 }}
               >
-                <span className="serial-code" style={{ fontWeight: 700, color: '#991B1B' }}>
+                <span className="serial-code" style={{ fontWeight: 700, color: 'var(--fg-danger-deep)' }}>
                   {b.equipmentCode}
                 </span>
                 <span style={{ fontWeight: 600, flex: '1 1 180px' }}>{b.equipmentName}</span>
@@ -369,7 +369,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
             ))}
           </div>
           {alertZona.length > 5 && (
-            <div style={{ fontSize: '11px', color: '#B91C1C', fontWeight: 600 }}>
+            <div style={{ fontSize: '11px', color: 'var(--fg-danger-deep)', fontWeight: 600 }}>
               + {alertZona.length - 5} unit lainnya juga di luar zona.
             </div>
           )}
@@ -486,7 +486,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                 <EngineBadge status={selectedUnit.engineStatus} />
               </div>
 
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1E293B', margin: '0 0 12px 0' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-strong)', margin: '0 0 12px 0' }}>
                 {selectedUnit.equipmentName}
               </h3>
 
@@ -498,7 +498,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                     fontWeight: 700,
                     padding: '2px 6px',
                     borderRadius: '4px',
-                    backgroundColor: selectedUnit.movement === 'BERGERAK' ? '#EFF6FF' : '#F1F5F9',
+                    backgroundColor: selectedUnit.movement === 'BERGERAK' ? 'var(--bg-blue-soft)' : 'var(--bg-subtle)',
                     color: selectedUnit.movement === 'BERGERAK' ? 'var(--color-primary)' : 'var(--color-secondary)',
                   }}
                 >
@@ -513,8 +513,8 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                       fontWeight: 700,
                       padding: '2px 6px',
                       borderRadius: '4px',
-                      backgroundColor: '#FFFBEB',
-                      color: '#92400E',
+                      backgroundColor: 'var(--bg-amber-soft)',
+                      color: 'var(--fg-warning-deep)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '3px',
@@ -532,8 +532,8 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                       fontWeight: 700,
                       padding: '2px 6px',
                       borderRadius: '4px',
-                      backgroundColor: '#FEF2F2',
-                      color: '#991B1B',
+                      backgroundColor: 'var(--bg-red-soft)',
+                      color: 'var(--fg-danger-deep)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '3px',
@@ -546,7 +546,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ padding: '12px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-secondary-light)', marginBottom: '4px' }}>
                     <Navigation size={12} color="var(--color-primary)" />
                     <span>Kecepatan</span>
@@ -556,7 +556,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                   </div>
                 </div>
 
-                <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ padding: '12px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-secondary-light)', marginBottom: '4px' }}>
                     <Fuel size={12} color="#F59E0B" />
                     <span>Level Solar</span>
@@ -622,14 +622,14 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                       padding: '10px 12px',
                       borderRadius: '8px',
                       border: diLuarZona
-                        ? '2px solid #DC2626'
+                        ? '2px solid var(--fg-danger)'
                         : isSelected
                           ? '2px solid var(--color-primary)'
                           : '1px solid var(--color-border)',
                       backgroundColor: diLuarZona
-                        ? '#FEF2F2'
+                        ? 'var(--bg-red-soft)'
                         : isSelected
-                          ? '#EFF6FF'
+                          ? 'var(--bg-blue-soft)'
                           : '#FFFFFF',
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -637,7 +637,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: diLuarZona ? '#991B1B' : isSelected ? 'var(--color-primary)' : '#1E293B' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: diLuarZona ? 'var(--fg-danger-deep)' : isSelected ? 'var(--color-primary)' : 'var(--text-strong)' }}>
                         {item.equipmentName}
                       </div>
                       <div className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>
@@ -651,7 +651,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                           style={{
                             fontSize: '10px',
                             fontWeight: 800,
-                            color: '#991B1B',
+                            color: 'var(--fg-danger-deep)',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '3px',
@@ -702,7 +702,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                     justifyContent: 'center',
                     fontSize: '12.5px',
                     color: 'var(--color-secondary)',
-                    backgroundColor: '#F1F5F9',
+                    backgroundColor: 'var(--bg-subtle)',
                     gap: '8px',
                   }}
                 >
@@ -728,7 +728,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
             gap: '12px',
             flexWrap: 'wrap',
             padding: '10px 16px',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--color-surface)',
             borderRadius: 'var(--radius-eight)',
             border: '1px solid var(--color-border)',
             fontSize: '12px',

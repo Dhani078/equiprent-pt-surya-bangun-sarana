@@ -137,7 +137,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#F1F5F9',
+      backgroundColor: 'var(--bg-subtle)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -147,20 +147,20 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       <div className="animate-fade-in" style={{
         width: '100%',
         maxWidth: '1050px',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'var(--color-surface)',
         borderRadius: '16px',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'row',
         boxShadow: '0 25px 50px -12px rgba(0, 51, 102, 0.15)',
-        border: '1px solid #E2E8F0',
+        border: '1px solid var(--color-border)',
         minHeight: '620px'
       }}>
         
         {/* PANEL KIRI: Ilustrasi & Branding Perusahaan (Deep Blue) */}
         <div style={{
           flex: '1 1 50%',
-          backgroundColor: '#001E40',
+          backgroundColor: 'var(--text-heading)',
           backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px)',
           backgroundSize: '28px 28px',
           padding: '48px',
@@ -246,13 +246,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          backgroundColor: '#FFFFFF'
+          backgroundColor: 'var(--color-surface)'
         }}>
           <div style={{ maxWidth: '380px', margin: '0 auto', width: '100%' }}>
             
             {/* Header Form */}
             <div style={{ marginBottom: 'var(--space-6)' }}>
-              <h3 style={{ fontSize: 'var(--fs-display)', fontWeight: 800, color: '#001E40', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+              <h3 style={{ fontSize: 'var(--fs-display)', fontWeight: 800, color: 'var(--text-heading)', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
                 {t('login.selamat_datang')}
               </h3>
               <p style={{ fontSize: 'var(--fs-body)', color: 'var(--color-secondary)', margin: 0 }}>
@@ -274,7 +274,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
-                color: '#991B1B',
+                color: 'var(--fg-danger-deep)',
                 fontSize: '12.5px',
                 lineHeight: 1.4
               }}>
@@ -289,7 +289,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               aria-label="Pilih peran pengguna"
               style={{
                 display: 'flex',
-                backgroundColor: '#F1F5F9',
+                backgroundColor: 'var(--bg-subtle)',
                 padding: '4px',
                 borderRadius: 'var(--radius-eight)',
                 marginBottom: 'var(--space-4)',
@@ -318,7 +318,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       backgroundColor: aktif ? '#FFFFFF' : 'transparent',
-                      color: aktif ? 'var(--color-primary)' : '#475569',
+                      color: aktif ? 'var(--color-primary)' : 'var(--text-body)',
                       boxShadow: aktif ? '0 2px 6px rgba(0,51,102,0.12)' : 'none',
                       outline: aktif ? '1px solid rgba(0, 51, 102, 0.25)' : 'none',
                       outlineOffset: aktif ? '-1px' : 0,
@@ -423,7 +423,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   onChange={(e) => setRememberDevice(e.target.checked)}
                   style={{ width: '18px', height: '18px', accentColor: 'var(--color-primary)', cursor: 'pointer', margin: 0, flexShrink: 0 }}
                 />
-                <span style={{ fontSize: 'var(--fs-sm)', color: '#475569' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-body)' }}>
                   {t('login.ingat_saya')}
                 </span>
               </label>
@@ -499,7 +499,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <div className="card-premium animate-fade-in" style={{
             maxWidth: '520px',
             width: '100%',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--color-surface)',
             padding: '28px',
             borderRadius: '12px',
             position: 'relative'
@@ -548,16 +548,16 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             {registerSuccess && (
               <div style={{
                 padding: '12px 16px',
-                backgroundColor: '#ECFDF5',
+                backgroundColor: 'var(--bg-green-soft)',
                 border: '1px solid #A7F3D0',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
                 marginBottom: '16px',
-                color: '#065F46'
+                color: 'var(--fg-success-deeper)'
               }}>
-                <CheckCircle size={20} color="#059669" />
+                <CheckCircle size={20} color="var(--fg-success-deep)" />
                 <div style={{ fontSize: '12px' }}>
                   <div style={{ fontWeight: 700 }}>Pengajuan Akses Berhasil Dikirim!</div>
                   <div>Tim IT PT. SBS Banjarmasin akan memverifikasi permohonan dalam 1x24 jam.</div>

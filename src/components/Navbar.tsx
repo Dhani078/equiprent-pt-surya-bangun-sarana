@@ -134,7 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: 'var(--space-2)',
-            background: 'var(--color-surface-hover, #F1F5F9)',
+            background: 'var(--color-surface-hover, var(--bg-subtle))',
             padding: '4px 10px',
             borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
@@ -176,7 +176,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
             />
             <div style={{ textAlign: 'left' }} className="hidden sm:block">
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-strong)', lineHeight: 1.2 }}>
                 {currentUser.full_name}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10.5px', color: 'var(--color-secondary)' }}>
@@ -205,7 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onMouseLeave={() => setDropdownOpen(false)}
             >
               <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--color-surface-hover)', marginBottom: '4px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B' }}>{currentUser.full_name}</div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-strong)' }}>{currentUser.full_name}</div>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{currentUser.email}</div>
               </div>
 
@@ -224,7 +224,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   borderRadius: '6px',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: '#DC2626',
+                  color: 'var(--fg-danger)',
                   fontSize: '12.5px',
                   fontWeight: 600,
                   cursor: 'pointer',

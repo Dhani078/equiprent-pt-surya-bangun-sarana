@@ -235,7 +235,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                         style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-border)' }}
                       />
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#1E293B' }}>{u.full_name}</div>
+                        <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-strong)' }}>{u.full_name}</div>
                         <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{u.email}</div>
                       </div>
                     </div>
@@ -338,9 +338,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 gap: '8px',
                 padding: '10px 12px',
                 borderRadius: '8px',
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA',
-                color: '#991B1B',
+                backgroundColor: 'var(--bg-red-soft)',
+                border: '1px solid var(--border-red-soft)',
+                color: 'var(--fg-danger-deep)',
                 fontSize: '12.5px',
                 lineHeight: 1.5,
               }}
@@ -355,8 +355,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               margin: 0,
               padding: '10px 12px',
               borderRadius: '8px',
-              backgroundColor: '#EFF6FF',
-              border: '1px solid #BFDBFE',
+              backgroundColor: 'var(--bg-blue-soft)',
+              border: '1px solid var(--border-blue-soft)',
               color: '#1E40AF',
               fontSize: '12px',
               lineHeight: 1.5,
@@ -386,7 +386,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               style={formErrors.full_name ? { borderColor: '#F87171' } : undefined}
             />
             {formErrors.full_name && (
-              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                 {formErrors.full_name}
               </p>
             )}
@@ -412,7 +412,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 style={formErrors.username ? { borderColor: '#F87171' } : undefined}
               />
               {formErrors.username && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.username}
                 </p>
               )}
@@ -454,7 +454,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 style={formErrors.email ? { borderColor: '#F87171' } : undefined}
               />
               {formErrors.email && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.email}
                 </p>
               )}
@@ -477,7 +477,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 style={formErrors.phone ? { borderColor: '#F87171' } : undefined}
               />
               {formErrors.phone && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.phone}
                 </p>
               )}
@@ -503,7 +503,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               style={formErrors.address ? { borderColor: '#F87171' } : undefined}
             />
             {formErrors.address && (
-              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                 {formErrors.address}
               </p>
             )}

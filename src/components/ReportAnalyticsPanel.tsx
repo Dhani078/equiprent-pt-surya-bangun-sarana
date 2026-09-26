@@ -23,8 +23,8 @@ interface ReportAnalyticsPanelProps {
 
 /** Warna teks ringkasan mengikuti design system: hijau positif, merah negatif. */
 const TONE_COLOR: Record<'positive' | 'negative' | 'neutral', string> = {
-  positive: '#059669',
-  negative: '#dc2626',
+  positive: 'var(--fg-success-deep)',
+  negative: 'var(--fg-danger)',
   neutral: 'var(--color-primary)',
 };
 
@@ -104,7 +104,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
             CARI GLOBAL
           </label>
           <div style={{ position: 'relative' }}>
-            <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <Search size={15} color="var(--text-faint)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             <input
               id="global-search"
               type="text"
@@ -172,7 +172,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
             gap: '12px',
             alignItems: 'flex-end',
             padding: '14px',
-            background: '#F8FAFC',
+            background: 'var(--bg-raised)',
             border: '1px solid var(--color-border)',
             borderRadius: '8px',
           }}
@@ -240,7 +240,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
             background: 'rgba(220, 38, 38, 0.08)',
             border: '1px solid rgba(220, 38, 38, 0.25)',
             borderRadius: '8px',
-            color: '#dc2626',
+            color: 'var(--fg-danger)',
             fontSize: '12.5px',
           }}
         >
@@ -261,7 +261,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
             style={{
               fontSize: '11px',
               background: source === 'API' ? 'rgba(5, 150, 105, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-              color: source === 'API' ? '#059669' : '#B45309',
+              color: source === 'API' ? 'var(--fg-success-deep)' : 'var(--fg-warning-deep)',
             }}
           >
             {source === 'API' ? 'Sumber: Edge API' : 'Sumber: Perhitungan lokal'}
@@ -290,8 +290,8 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <AlertTriangle size={17} color="#dc2626" />
-            <span style={{ fontSize: '13px', color: '#991B1B' }}>{error}</span>
+            <AlertTriangle size={17} color="var(--fg-danger)" />
+            <span style={{ fontSize: '13px', color: 'var(--fg-danger-deep)' }}>{error}</span>
           </div>
           <button
             type="button"
@@ -320,7 +320,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
             textAlign: 'center',
           }}
         >
-          <Inbox size={30} color="#94A3B8" />
+          <Inbox size={30} color="var(--text-faint)" />
           <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: 'var(--color-secondary)' }}>
             Tidak ada data pada periode ini
           </p>
@@ -397,7 +397,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
                 key={s.label}
                 style={{
                   padding: '12px 14px',
-                  background: '#F8FAFC',
+                  background: 'var(--bg-raised)',
                   border: '1px solid var(--color-border)',
                   borderRadius: '8px',
                 }}

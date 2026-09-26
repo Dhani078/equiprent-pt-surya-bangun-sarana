@@ -176,10 +176,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       {dueNotifications.length > 0 && (
         <div
           className="card-premium animate-fade-in"
-          style={{ padding: '16px 18px', borderLeft: `4px solid ${jumlahTerlambat > 0 ? '#DC2626' : '#F59E0B'}` }}
+          style={{ padding: '16px 18px', borderLeft: `4px solid ${jumlahTerlambat > 0 ? 'var(--fg-danger)' : '#F59E0B'}` }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <Bell size={18} color={jumlahTerlambat > 0 ? '#DC2626' : '#F59E0B'} />
+            <Bell size={18} color={jumlahTerlambat > 0 ? 'var(--fg-danger)' : '#F59E0B'} />
             <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
               Notifikasi Jatuh Tempo & Keterlambatan
             </h3>
@@ -191,7 +191,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 padding: '3px 10px',
                 borderRadius: '999px',
                 backgroundColor: jumlahTerlambat > 0 ? '#FEE2E2' : '#FEF3C7',
-                color: jumlahTerlambat > 0 ? '#991B1B' : '#92400E',
+                color: jumlahTerlambat > 0 ? 'var(--fg-danger-deep)' : 'var(--fg-warning-deep)',
               }}
             >
               {jumlahTerlambat} terlambat · {dueNotifications.length - jumlahTerlambat} segera jatuh tempo
@@ -207,9 +207,9 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                   alignItems: 'center',
                   gap: '12px',
                   padding: '10px 12px',
-                  backgroundColor: terlambat ? '#FEF2F2' : '#FFFBEB',
+                  backgroundColor: terlambat ? 'var(--bg-red-soft)' : 'var(--bg-amber-soft)',
                   borderRadius: '8px',
-                  border: `1px solid ${terlambat ? '#FECACA' : '#FDE68A'}`,
+                  border: `1px solid ${terlambat ? 'var(--border-red-soft)' : 'var(--border-amber-soft)'}`,
                   flexWrap: 'wrap',
                 }}
               >
@@ -232,7 +232,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                     fontWeight: 700,
                     padding: '3px 10px',
                     borderRadius: '6px',
-                    backgroundColor: terlambat ? '#DC2626' : '#F59E0B',
+                    backgroundColor: terlambat ? 'var(--fg-danger)' : '#F59E0B',
                     color: '#FFFFFF',
                     whiteSpace: 'nowrap',
                   }}
@@ -246,7 +246,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                     style={{
                       fontSize: '12px',
                       fontWeight: 800,
-                      color: '#991B1B',
+                      color: 'var(--fg-danger-deep)',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -276,7 +276,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 justifyContent: 'space-between',
                 fontSize: '13px',
                 fontWeight: 800,
-                color: '#991B1B',
+                color: 'var(--fg-danger-deep)',
                 flexWrap: 'wrap',
                 gap: '8px',
               }}
@@ -297,7 +297,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             padding: '16px',
             borderRadius: 'var(--radius-eight)',
             border: activeSubTab === 'payments' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeSubTab === 'payments' ? '#EFF6FF' : '#FFFFFF',
+            backgroundColor: activeSubTab === 'payments' ? 'var(--bg-blue-soft)' : '#FFFFFF',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease'
@@ -324,7 +324,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             padding: '16px',
             borderRadius: 'var(--radius-eight)',
             border: activeSubTab === 'rentals' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeSubTab === 'rentals' ? '#EFF6FF' : '#FFFFFF',
+            backgroundColor: activeSubTab === 'rentals' ? 'var(--bg-blue-soft)' : '#FFFFFF',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease'
@@ -348,7 +348,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             padding: '16px',
             borderRadius: 'var(--radius-eight)',
             border: activeSubTab === 'contracts' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeSubTab === 'contracts' ? '#EFF6FF' : '#FFFFFF',
+            backgroundColor: activeSubTab === 'contracts' ? 'var(--bg-blue-soft)' : '#FFFFFF',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease'
@@ -411,15 +411,15 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 padding: '10px 14px',
                 marginBottom: '14px',
                 borderRadius: '8px',
-                backgroundColor: '#FFFBEB',
-                border: '1px solid #FDE68A',
+                backgroundColor: 'var(--bg-amber-soft)',
+                border: '1px solid var(--border-amber-soft)',
                 fontSize: '12.5px',
               }}
             >
-              <span style={{ color: '#92400E', fontWeight: 600 }}>
+              <span style={{ color: 'var(--fg-warning-deep)', fontWeight: 600 }}>
                 Nilai tagihan menunggu verifikasi
               </span>
-              <span className="serial-code" style={{ fontWeight: 800, color: '#92400E' }} title={formatRupiah(antrean.pendingAmount)}>
+              <span className="serial-code" style={{ fontWeight: 800, color: 'var(--fg-warning-deep)' }} title={formatRupiah(antrean.pendingAmount)}>
                 {formatRupiahRingkas(antrean.pendingAmount).ringkas}
               </span>
             </div>
@@ -481,7 +481,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                               <span>Lihat Bukti</span>
                             </button>
                           ) : (
-                            <span style={{ fontSize: '11.5px', color: '#92400E', fontWeight: 600 }}>
+                            <span style={{ fontSize: '11.5px', color: 'var(--fg-warning-deep)', fontWeight: 600 }}>
                               Belum dilampirkan
                             </span>
                           )}
@@ -523,7 +523,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                                   )
                                 }
                                 className="btn-secondary"
-                                style={{ padding: '5px 12px', fontSize: '12px', color: '#DC2626' }}
+                                style={{ padding: '5px 12px', fontSize: '12px', color: 'var(--fg-danger)' }}
                                 aria-label={`Tolak bukti transfer ${p.payment_code}`}
                               >
                                 <X size={13} />
@@ -531,7 +531,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                               </button>
                             </div>
                           ) : p.status === 'PENDING_VERIFICATION' ? (
-                            <span style={{ fontSize: '11.5px', color: '#92400E', fontWeight: 600 }}>
+                            <span style={{ fontSize: '11.5px', color: 'var(--fg-warning-deep)', fontWeight: 600 }}>
                               Menunggu bukti klien
                             </span>
                           ) : (
@@ -628,7 +628,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                             </button>
                           </div>
                         ) : (
-                          <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
+                          <span style={{ fontSize: '12px', color: 'var(--fg-success-deep)', fontWeight: 600 }}>
                             {r.status} ✓
                           </span>
                         )}
@@ -665,7 +665,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           title={`Bukti Transfer: ${viewingPaymentProof.payment_code}`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12.5px' }}>
+            <div style={{ padding: '12px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12.5px' }}>
               <div>Klien: <strong>{viewingPaymentProof.customer_name || 'Pelanggan'}</strong></div>
               <div>Jumlah: <strong style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatRupiah(Number(viewingPaymentProof.amount))}</strong></div>
               <div>Kontrak: <strong>{viewingPaymentProof.contract_code || '—'}</strong></div>
@@ -714,7 +714,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                       )
                     }
                     className="btn-secondary"
-                    style={{ color: '#DC2626', opacity: processingId === viewingPaymentProof.id ? 0.6 : 1 }}
+                    style={{ color: 'var(--fg-danger)', opacity: processingId === viewingPaymentProof.id ? 0.6 : 1 }}
                     aria-label={`Tolak bukti transfer ${viewingPaymentProof.payment_code}`}
                   >
                     <X size={14} />

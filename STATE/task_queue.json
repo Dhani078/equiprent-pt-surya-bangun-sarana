@@ -623,5 +623,11 @@
     "priority": "P2",
     "status": "DONE",
     "phase": "GOD-MODE"
+  },
+  {
+    "id": "T-0076",
+    "title": "Sweep token tema: ~400 hex hardcoded -> var() + badge dark override + fix judul EN Inventaris",
+    "status": "DONE",
+    "priority": "P1"
   }
 ]

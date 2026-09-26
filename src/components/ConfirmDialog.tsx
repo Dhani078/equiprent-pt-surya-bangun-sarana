@@ -88,8 +88,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!open) return null;
 
   const isDanger = tone === 'danger';
-  const iconColor = isDanger ? '#DC2626' : '#D97706';
-  const confirmBg = isDanger ? '#DC2626' : '#D97706';
+  const iconColor = isDanger ? 'var(--fg-danger)' : 'var(--fg-amber)';
+  const confirmBg = isDanger ? 'var(--fg-danger)' : 'var(--fg-amber)';
   const Icon = isDanger ? AlertTriangle : AlertCircle;
 
   return (
@@ -116,7 +116,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         aria-describedby="confirm-dialog-desc"
         className="animate-fade-in"
         style={{
-          background: '#FFFFFF',
+          background: 'var(--color-surface)',
           borderRadius: '12px',
           padding: '28px 24px 20px',
           maxWidth: '420px',
@@ -166,7 +166,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <div>
             <h3
               id="confirm-dialog-title"
-              style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: '0 0 6px 0' }}
+              style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-strong)', margin: '0 0 6px 0' }}
             >
               {title}
             </h3>

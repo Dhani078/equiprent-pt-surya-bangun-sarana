@@ -17,9 +17,9 @@ import { getServiceStatus, SERVICE_INTERVAL_HM } from '../lib/businessRules';
 type Tone = 'safe' | 'warn' | 'due';
 
 const TONE_COLOR: Record<Tone, string> = {
-  safe: '#059669',
-  warn: '#D97706',
-  due: '#DC2626',
+  safe: 'var(--fg-success-deep)',
+  warn: 'var(--fg-amber)',
+  due: 'var(--fg-danger)',
 };
 
 const TONE_LABEL: Record<Tone, string> = {

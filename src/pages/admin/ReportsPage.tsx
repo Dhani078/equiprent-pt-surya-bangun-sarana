@@ -229,10 +229,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Print header — hanya tampil saat cetak */}
-      <div className="print-only" style={{ display: 'none', marginBottom: '16px', borderBottom: '2px solid #003366', paddingBottom: '10px' }}>
-        <div style={{ fontSize: '14pt', fontWeight: 800, color: '#003366' }}>PT. SURYA BANGUN SARANA BANJARMASIN</div>
+      <div className="print-only" style={{ display: 'none', marginBottom: '16px', borderBottom: '2px solid var(--color-primary)', paddingBottom: '10px' }}>
+        <div style={{ fontSize: '14pt', fontWeight: 800, color: 'var(--color-primary)' }}>PT. SURYA BANGUN SARANA BANJARMASIN</div>
         <div style={{ fontSize: '11pt', fontWeight: 600, marginTop: '4px' }} id="print-report-title">Laporan Operasional</div>
-        <div style={{ fontSize: '9pt', color: '#475569', marginTop: '2px' }}>
+        <div style={{ fontSize: '9pt', color: 'var(--text-body)', marginTop: '2px' }}>
           Dicetak: {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </div>
@@ -256,7 +256,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
       }}>
         <div className="card-premium" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(5, 150, 105, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Wallet size={20} color="#059669" />
+            <Wallet size={20} color="var(--fg-success-deep)" />
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600 }}>PENDAPATAN KOTOR</p>
@@ -268,13 +268,13 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
 
         <div className="card-premium" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(220, 38, 38, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <AlertCircle size={20} color="#dc2626" />
+            <AlertCircle size={20} color="var(--fg-danger)" />
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600 }}>
               DENDA KETERLAMBATAN (Rp {getLatePenaltyPerDay().toLocaleString('id-ID')}/HARI)
             </p>
-            <p style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#dc2626' }}>
+            <p style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: 'var(--fg-danger)' }}>
               {formatRupiah(ringkasan.totalDenda)}
             </p>
           </div>
@@ -322,7 +322,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
             background: 'rgba(220, 38, 38, 0.08)',
             border: '1px solid rgba(220, 38, 38, 0.25)',
             borderRadius: '8px',
-            color: '#dc2626',
+            color: 'var(--fg-danger)',
             fontSize: '13px',
           }}
         >
@@ -441,18 +441,18 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
           <div style={{
             padding: '24px',
             backgroundColor: '#FAFAFA',
-            border: '2px solid #E2E8F0',
+            border: '2px solid var(--color-border)',
             borderRadius: '8px',
             fontFamily: 'serif',
-            color: '#1E293B',
+            color: 'var(--text-strong)',
             lineHeight: 1.6
           }}>
             {/* Kop Surat PT SBS */}
-            <div style={{ textAlign: 'center', borderBottom: '3px double #003366', paddingBottom: '16px', marginBottom: '20px' }}>
+            <div style={{ textAlign: 'center', borderBottom: '3px double var(--color-primary)', paddingBottom: '16px', marginBottom: '20px' }}>
               <h2 style={{ fontFamily: 'var(--font-primary)', fontSize: '18px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
                 PT. SURYA BANGUN SARANA BANJARMASIN
               </h2>
-              <p style={{ fontFamily: 'var(--font-primary)', fontSize: '12px', color: '#475569', margin: '4px 0 0 0' }}>
+              <p style={{ fontFamily: 'var(--font-primary)', fontSize: '12px', color: 'var(--text-body)', margin: '4px 0 0 0' }}>
                 Heavy Equipment Rental, Earthmoving Contractor & Fleet Monitoring System<br />
                 Jl. Ahmad Yani KM 5, Banjarmasin, Kalimantan Selatan &bull; Telp: (0511) 7890123
               </p>
@@ -463,7 +463,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
               <h3 style={{ fontSize: '15px', fontWeight: 700, textDecoration: 'underline', margin: 0, textTransform: 'uppercase' }}>
                 {selectedReport.report_type.replace(/_/g, ' ')}
               </h3>
-              <span style={{ fontSize: '12px', color: '#64748B', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                 Nomor: {selectedReport.report_code}
               </span>
             </div>
@@ -489,7 +489,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
                   </tr>
                   <tr>
                     <td style={{ fontWeight: 600 }}>Status Integritas:</td>
-                    <td style={{ color: '#059669', fontWeight: 700 }}>VALID & TERCATAT PADA DATABASE TIDB CLOUD</td>
+                    <td style={{ color: 'var(--fg-success-deep)', fontWeight: 700 }}>VALID & TERCATAT PADA DATABASE TIDB CLOUD</td>
                   </tr>
                 </tbody>
               </table>
@@ -504,15 +504,15 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
                 <div>Pihak Penyewa / Rekanan</div>
                 <div style={{ height: '50px' }} />
                 <div style={{ fontWeight: 700 }}>( .................................... )</div>
-                <div style={{ fontSize: '11px', color: '#64748B' }}>Pimpinan Proyek Lapangan</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Pimpinan Proyek Lapangan</div>
               </div>
               <div>
                 <div>PT. Surya Bangun Sarana</div>
                 <div style={{ height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShieldCheck size={36} color="#003366" />
+                  <ShieldCheck size={36} color="var(--color-primary)" />
                 </div>
                 <div style={{ fontWeight: 700 }}>( Hendra Wijaya )</div>
-                <div style={{ fontSize: '11px', color: '#64748B' }}>Staf Operasional & Logistik</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Staf Operasional & Logistik</div>
               </div>
             </div>
           </div>
