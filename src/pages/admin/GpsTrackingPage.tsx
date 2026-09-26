@@ -630,7 +630,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                         ? 'var(--bg-red-soft)'
                         : isSelected
                           ? 'var(--bg-blue-soft)'
-                          : '#FFFFFF',
+                          : 'var(--color-surface)',
                       cursor: 'pointer',
                       textAlign: 'left',
                       transition: 'var(--transition-base)'

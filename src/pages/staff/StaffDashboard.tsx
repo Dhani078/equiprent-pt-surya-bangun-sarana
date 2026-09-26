@@ -297,7 +297,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             padding: '16px',
             borderRadius: 'var(--radius-eight)',
             border: activeSubTab === 'payments' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeSubTab === 'payments' ? 'var(--bg-blue-soft)' : '#FFFFFF',
+            backgroundColor: activeSubTab === 'payments' ? 'var(--bg-blue-soft)' : 'var(--color-surface)',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease'
@@ -324,7 +324,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             padding: '16px',
             borderRadius: 'var(--radius-eight)',
             border: activeSubTab === 'rentals' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeSubTab === 'rentals' ? 'var(--bg-blue-soft)' : '#FFFFFF',
+            backgroundColor: activeSubTab === 'rentals' ? 'var(--bg-blue-soft)' : 'var(--color-surface)',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease'
@@ -348,7 +348,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             padding: '16px',
             borderRadius: 'var(--radius-eight)',
             border: activeSubTab === 'contracts' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeSubTab === 'contracts' ? 'var(--bg-blue-soft)' : '#FFFFFF',
+            backgroundColor: activeSubTab === 'contracts' ? 'var(--bg-blue-soft)' : 'var(--color-surface)',
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 0.2s ease'

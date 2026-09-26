@@ -621,6 +621,10 @@ table.data-table tbody tr:hover {
   --shadow-lg:   0 10px 15px -3px rgba(0,0,0,0.6), 0 4px 6px -2px rgba(0,0,0,0.3);
 }
 
+:root { color-scheme: light; }
+
+[data-theme="dark"] { color-scheme: dark; }
+
 [data-theme="dark"] body {
   background-color: #0F172A;
   color: #E2E8F0;
