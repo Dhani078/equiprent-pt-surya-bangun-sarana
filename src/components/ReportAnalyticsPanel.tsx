@@ -264,7 +264,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
               color: source === 'API' ? 'var(--fg-success-deep)' : 'var(--fg-warning-deep)',
             }}
           >
-            {source === 'API' ? 'Sumber: Edge API' : 'Sumber: Perhitungan lokal'}
+            {source === 'API' ? 'Dihitung langsung oleh server' : 'Dihitung dari salinan data di perangkat'}
           </span>
         </div>
       )}

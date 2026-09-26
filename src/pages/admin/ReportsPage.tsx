@@ -489,7 +489,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
                   </tr>
                   <tr>
                     <td style={{ fontWeight: 600 }}>Status Integritas:</td>
-                    <td style={{ color: 'var(--fg-success-deep)', fontWeight: 700 }}>VALID & TERCATAT PADA DATABASE TIDB CLOUD</td>
+                    <td style={{ color: 'var(--fg-success-deep)', fontWeight: 700 }}>VALID & TERCATAT PADA SISTEM</td>
                   </tr>
                 </tbody>
               </table>

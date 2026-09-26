@@ -219,7 +219,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             className="btn-secondary"
             style={{ fontSize: 'var(--fs-body)', padding: '8px 14px' }}
             aria-label={t('dashboard.muat_ulang_aria')}
-            title={source === 'API' ? 'Sumber data: Edge API' : 'Sumber data: perhitungan lokal (edge API tidak terjangkau)'}
+            title={source === 'API' ? 'Dihitung langsung oleh server' : 'Dihitung dari salinan data di perangkat (server tidak terjangkau)'}
           >
             <RefreshCw size={15} />
             <span>{t('dashboard.muat_ulang')}</span>

@@ -241,7 +241,7 @@ t('kode transaksi tercetak', html.includes(rental.rental_code));
 t('nama pelanggan tercetak', html.includes(String(rental.customer_name)));
 t('nilai sewa tercetak dalam Rupiah', /Rp\s[\d.]+/.test(html));
 t('bagian tanda tangan ada', html.includes('tanda-tangan'));
-t('footer mencantumkan TiDB Cloud', html.includes('TiDB Cloud'));
+t('footer menyebut catatan legal resmi', html.includes('sistem resmi'));
 t('media print menyesuaikan warna', html.includes('@media print'));
 t('setiap baris rincian tercetak sebagai <tr>',
   (html.match(/<tr>/g) ?? []).length === bastOut.fields.length);
