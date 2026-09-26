@@ -48,7 +48,7 @@ Berkas konfigurasi utama `wrangler.jsonc` mengatur proses kompilasi dan penyajia
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "equiprent-pt-surya-bangun-sarana",
   "main": "src/server/index.ts",
-  "compatibility_date": "2025-09-04",
+  "compatibility_date": "2024-09-23",
   "compatibility_flags": [
     "nodejs_compat"
   ],
@@ -57,7 +57,8 @@ Berkas konfigurasi utama `wrangler.jsonc` mengatur proses kompilasi dan penyajia
   },
   "assets": {
     "directory": "./dist",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
   },
   "observability": {
     "enabled": true
@@ -68,6 +69,8 @@ Berkas konfigurasi utama `wrangler.jsonc` mengatur proses kompilasi dan penyajia
 ### Poin Penting:
 - `"build": { "command": "npm run build" }`: Memastikan TypeScript dikompilasi oleh `tsc` dan aset di-bundle oleh `vite build` sebelum worker diunggah.
 - `"assets": { "directory": "./dist" }`: Cloudflare secara otomatis menyajikan file HTML, JS, dan CSS hasil build melalui CDN global.
+- `"not_found_handling": "single-page-application"`: Rute React (mis. `/admin/rentals`) dijawab dengan `index.html` sehingga *client-side routing* tidak pecah saat halaman dibuka langsung atau dimuat ulang.
+- `"compatibility_flags": ["nodejs_compat"]`: Wajib karena `@tidbcloud/serverless` memakai API Node yang butuh shim compat Workers.
 
 ---
 
@@ -78,15 +81,40 @@ Untuk menjaga keamanan kredensial database agar tidak bocor di GitHub, kredensia
 1. Buka **Cloudflare Dashboard** &rarr; **Compute (Workers & Pages)**.
 2. Pilih Worker **equiprent-pt-surya-bangun-sarana**.
 3. Buka tab **Settings** &rarr; **Variables and Secrets**.
-4. Tambahkan variabel berikut:
+4. Tambahkan variabel berikut. Daftar lengkap lihat `.env.example` §4.
 
-| Nama Variabel | Tipe | Nilai Contoh |
-| :--- | :--- | :--- |
-| `TIDB_HOST` | Plaintext | `gateway01.ap-southeast-1.prod.aws.tidbcloud.com` |
-| `TIDB_PORT` | Plaintext | `4000` |
-| `TIDB_USER` | Plaintext | `3ajUHv8otax7qCG.root` |
-| `TIDB_PASSWORD` | **Secret (Encrypted)** | *(Password database TiDB Anda)* |
-| `TIDB_DATABASE` | Plaintext | `test` |
+| Nama Variabel | Tipe | Wajib? | Keterangan |
+| :--- | :--- | :--- | :--- |
+| `DATABASE_URL` | **Secret (Encrypted)** | **YA** | String koneksi TiDB Cloud Serverless lengkap dengan parameter SSL. Format: `mysql://<user>:<password>@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/<database>?ssl={"rejectUnauthorized":true}`. Ini satu-satunya variabel database yang benar-benar dibaca Worker (`src/lib/db.ts`). |
+| `SESSION_SECRET` | **Secret (Encrypted)** | **YA** | Kunci HMAC-SHA256 untuk menandatangani session token. Minimal 32 karakter acak: `openssl rand -hex 32`. Bila tidak diisi, server memakai kunci acak sementara &rarr; semua sesi gugur setiap isolate dimuat ulang (pengguna harus login ulang tanpa sebab yang jelas). Statusnya dilaporkan oleh `GET /api/health`. |
+| `ALLOWED_ORIGINS` | Plaintext | opsional | Daftar origin yang boleh memanggil API (CORS), dipisah koma. **Kosongkan** bila SPA dan API satu domain (kasus default Worker + static assets). Saat kosong, tidak ada header `Access-Control-Allow-Origin` yang dikirim. |
+| `ALLOW_DEMO_ACCOUNTS` | Plaintext | opsional | Setel `false` di produksi agar login demo (`admin`/`admin`, `staff`/`staff`, `user`/`user`) ditolak. Default `true`. |
+
+### 4.1 Peringatan Keamanan Variabel
+
+- **JANGAN gunakan prefiks `VITE_`** untuk variabel rahasia apa pun. Vite
+  menyuntikkan setiap variabel `VITE_*` ke dalam bundle JavaScript klien yang
+  diunduh browser. Konsekuensinya kredensial database dapat dibaca publik
+  (lihat commit `fix(db): ... fix VITE_DATABASE_URL`). Ini sudah diperbaiki;
+  jangan mengulang.
+- **`.env` tidak dibaca oleh Workers.** Berkas `.env` hanya untuk pengembangan
+  lokal (lapisan PHP & Node). Worker Cloudflare hanya membaca binding/secret
+  yang didaftarkan di dashboard atau `wrangler secret put`.
+- Skema database (`tidb_schema_and_data.sql`, 11 tabel + 13 indeks) harus
+  sudah dijalankan di cluster TiDB sebelum Worker pertama kali menyambung.
+  Selama `DATABASE_URL` belum sah, aplikasi berjalan pada mode
+  `IN_MEMORY_DEMO` yang dilaporkan jujur oleh `GET /api/health`.
+
+### 4.2 Memasang Secret lewat Wrangler CLI
+
+```bash
+# Setiap perintah membuka prompt nilai (nilai tidak tercetak di terminal).
+npx wrangler secret put DATABASE_URL
+npx wrangler secret put SESSION_SECRET
+
+# Verifikasi: daftar nama secret (nilai tidak pernah ditampilkan).
+npx wrangler secret list
+```
 
 ---
 

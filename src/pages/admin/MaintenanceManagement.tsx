@@ -7,6 +7,7 @@ import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
 import { getUnitsDueForService, formatRupiah, formatRupiahRingkas, SERVICE_INTERVAL_HM, predictNextServiceDate } from '../../lib/businessRules';
 import { exportTable } from '../../lib/tableExport';
+import { EmptyState } from '../../components/EmptyState';
 import { StatusBadge } from '../../components/StatusBadge';
 import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
@@ -642,6 +643,37 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
             })}
           </tbody>
         </table>
+        {filteredMaintenance.length === 0 && (
+          <EmptyState
+            pesan={searchTerm || filterStatus !== 'ALL'
+              ? 'Tidak ada jadwal perawatan yang cocok'
+              : 'Belum ada riwayat perawatan unit'}
+            keterangan={searchTerm || filterStatus !== 'ALL'
+              ? 'Ubah kata kunci pencarian atau pilih status lain pada penyaring di atas.'
+              : 'Jadwalkan perawatan pertama agar keadaan unit terpantau.'}
+            ariaLabel="Daftar perawatan kosong"
+            ikon={Wrench}
+            aksi={searchTerm || filterStatus !== 'ALL' ? (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => { setSearchTerm(''); setFilterStatus('ALL'); }}
+                style={{ marginTop: '4px', padding: '7px 14px', fontSize: '12.5px' }}
+              >
+                Reset Penyaring
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setIsModalOpen(true)}
+                style={{ marginTop: '4px', padding: '7px 14px', fontSize: '12.5px' }}
+              >
+                <Plus size={14} /> Jadwalkan Perawatan
+              </button>
+            )}
+          />
+        )}
       </div>
 
       {/* Modal Schedule Maintenance */}

@@ -258,9 +258,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </p>
             </div>
 
-            {/* Error Box */}
+            {/* Error Box — role="alert" agar pembaca layar menyuarakannya
+                segera (keadaan galat adalah umpan balik wajib §5.2). */}
             {errorMsg && (
-              <div style={{
+              <div
+                role="alert"
+                style={{
                 backgroundColor: '#FEE2E2',
                 border: '1px solid #F87171',
                 borderRadius: '8px',

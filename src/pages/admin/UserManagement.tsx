@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, RoleName } from '../../types';
-import { Plus, Search, Shield, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react';
+import { Plus, Search, Shield, ToggleLeft, ToggleRight, AlertCircle, Users as UsersIcon } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { getUserAvatar } from '../../lib/stitchAssets';
@@ -10,6 +10,7 @@ import { Paginator, usePagination } from '../../components/Paginator';
 import { exportTable } from '../../lib/tableExport';
 import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { EmptyState } from '../../components/EmptyState';
 
 const PAGE_SIZE_USERS = 20;
 
@@ -281,6 +282,37 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             })}
           </tbody>
         </table>
+        {filteredUsers.length === 0 && (
+          <EmptyState
+            pesan={searchTerm || filterRole !== 'ALL'
+              ? 'Tidak ada pengguna yang cocok'
+              : 'Belum ada pengguna terdaftar'}
+            keterangan={searchTerm || filterRole !== 'ALL'
+              ? 'Ubah kata kunci pencarian atau pilih hak akses lain pada penyaring di atas.'
+              : 'Tambahkan pengguna pertama untuk mulai mengatur hak akses sistem.'}
+            ariaLabel="Daftar pengguna kosong"
+            ikon={UsersIcon}
+            aksi={searchTerm || filterRole !== 'ALL' ? (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => { setSearchTerm(''); setFilterRole('ALL'); setPage(1); }}
+                style={{ marginTop: '4px', padding: '7px 14px', fontSize: '12.5px' }}
+              >
+                Reset Penyaring
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setIsModalOpen(true)}
+                style={{ marginTop: '4px', padding: '7px 14px', fontSize: '12.5px' }}
+              >
+                <Plus size={14} /> Tambah Pengguna Baru
+              </button>
+            )}
+          />
+        )}
         <Paginator
           total={filteredUsers.length}
           page={page}

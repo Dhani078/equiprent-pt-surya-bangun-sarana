@@ -546,5 +546,40 @@
     "priority": "P2",
     "status": "DONE",
     "phase": "FASE 5"
+  },
+  {
+    "id": "T-0065",
+    "title": "Empty state seragam 5 halaman (Login, Maintenance, Rental, Reports, UserMgmt)",
+    "priority": "P2",
+    "status": "DONE",
+    "phase": "FASE 5"
+  },
+  {
+    "id": "T-0066",
+    "title": "ERD diagram dari tidb_schema_and_data.sql (Mermaid, untuk PANDUAN_SIDANG)",
+    "priority": "P1",
+    "status": "DONE",
+    "phase": "FASE 5"
+  },
+  {
+    "id": "T-0067",
+    "title": "Flowchart alur bisnis inti (sewa→kontrak→pembayaran→BAST) Mermaid",
+    "priority": "P1",
+    "status": "DONE",
+    "phase": "FASE 5"
+  },
+  {
+    "id": "T-0068",
+    "title": ".env.example lengkap + DEPLOYMENT_GUIDE update secret TiDB",
+    "priority": "P2",
+    "status": "DONE",
+    "phase": "FASE 5"
+  },
+  {
+    "id": "T-0069",
+    "title": "Uji keamanan: re-audit RBAC endpoint + SQL injection sweep final",
+    "priority": "P1",
+    "status": "DONE",
+    "phase": "FASE 5"
   }
 ]

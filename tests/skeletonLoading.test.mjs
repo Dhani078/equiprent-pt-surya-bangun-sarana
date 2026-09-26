@@ -157,7 +157,7 @@ html = renderToStaticMarkup(React.createElement(RentalManagement, {
   onSignContract: nopeAsync,
   isLoading: false,
 }));
-t('empty state tampil', html.includes('Tidak ada transaksi yang cocok'));
+t('empty state tampil (belum ada data, tanpa filter)', html.includes('Belum ada transaksi penyewaan'));
 t('skeleton tidak tampil saat kosong', !html.includes('aria-busy="true"'));
 
 console.log(`\n=== HASIL: ${pass} PASS, ${fail} FAIL ===`);
