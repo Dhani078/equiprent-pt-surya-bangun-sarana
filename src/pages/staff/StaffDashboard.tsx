@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Rental, Contract, Payment, Maintenance, User, Equipment } from '../../types';
 import { ClipboardCheck, CreditCard, FileCheck, Check, Eye, Bell, X, Search } from 'lucide-react';
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
@@ -34,6 +34,8 @@ interface StaffDashboardProps {
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
   /** Umpan balik sederhana (sukses / galat) setelah sebuah aksi. */
   onNotify?: (message: string, tone: 'success' | 'error') => void;
+  /** Tab sidebar aktif — sub-tab mengikuti saat user mengklik "Kontrak Sewa Digital" dsb. */
+  activeMenu?: string;
 }
 
 export const StaffDashboard: React.FC<StaffDashboardProps> = ({
@@ -49,9 +51,18 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   onUpdateRentalStatus,
   onCreateContract,
   onSignContract,
-  onNotify
+  onNotify,
+  activeMenu
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'payments' | 'contracts' | 'rentals'>('payments');
+
+  /* Sidebar "Kontrak Sewa Digital"/"Transaksi Penyewaan" kini menggerakkan sub-tab;
+     sebelumnya highlight nav tidak cocok dgn konten (bug audit visual cycle 57). */
+  useEffect(() => {
+    if (activeMenu === 'contracts' || activeMenu === 'rentals' || activeMenu === 'payments') {
+      setActiveSubTab(activeMenu);
+    }
+  }, [activeMenu]);
   const [viewingPaymentProof, setViewingPaymentProof] = useState<Payment | null>(null);
   /** Pencarian pada tabel pembayaran: kode bayar, klien, atau kode kontrak. */
   const [paymentSearch, setPaymentSearch] = useState('');
