@@ -134,6 +134,7 @@ const suites = [
   'auditLog.test.mjs',
   'settingsAndAudit.test.mjs',
   'seedData.test.mjs',
+  'fase5.test.mjs',
 ];
 
 let failed = 0;

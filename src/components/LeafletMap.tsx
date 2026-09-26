@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import type { FleetTelemetryRow } from '../lib/fleetTelemetry';
 import { formatCoordinate, formatSpeed, getMovementLabel } from '../lib/fleetTelemetry';
+import type { SiteZone } from '../lib/geofencing';
+import { formatJarakZona } from '../lib/geofencing';
 
 /**
  * Mengamankan teks sebelum disisipkan ke dalam HTML popup Leaflet.
@@ -37,6 +39,11 @@ interface LeafletMapProps {
   heatmapData?: { latitude: number; longitude: number }[];
   /** Tampilkan overlay heatmap kepadatan atau tidak. */
   showHeatmap?: boolean;
+  /**
+   * Zona site geofencing (T-0060). Digambar sebagai lingkaran batas
+   * operasional; unit di luar semua zona memunculkan marker merah.
+   */
+  siteZones?: readonly SiteZone[];
 }
 
 export const LeafletMap: React.FC<LeafletMapProps> = ({
@@ -45,11 +52,13 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   onSelectUnit,
   heatmapData = [],
   showHeatmap = false,
+  siteZones = [],
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [id: number]: L.Marker }>({});
   const heatLayerRef = useRef<L.LayerGroup | null>(null);
+  const zoneLayerRef = useRef<L.LayerGroup | null>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -116,6 +125,59 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     group.addTo(map);
     heatLayerRef.current = group;
   }, [heatmapData, showHeatmap]);
+
+  // ---------------------------------------------------------------------------
+  // Geofencing (T-0060): gambar batas zona site & laporkan unit keluar zona.
+  //
+  // Perhitungan jarak ada di modul murni `geofencing.ts` — komponen hanya
+  // menggambar & meneruskan hasil. Karena itu angka di peta identik dengan
+  // angka yang dilaporkan edge API.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (zoneLayerRef.current) {
+      zoneLayerRef.current.remove();
+      zoneLayerRef.current = null;
+    }
+
+    if (siteZones.length === 0) return;
+
+    const group = L.layerGroup();
+
+    for (const zona of siteZones) {
+      if (
+        !Number.isFinite(zona.latitude) ||
+        !Number.isFinite(zona.longitude) ||
+        !Number.isFinite(zona.radius_m) ||
+        zona.radius_m <= 0
+      ) {
+        continue;
+      }
+
+      // Lingkaran batas zona: isian sangat transparan, garis putus-putus
+      // agar tidak menutupi marker unit di dalamnya.
+      L.circle([zona.latitude, zona.longitude], {
+        radius: zona.radius_m,
+        color: '#003366',
+        weight: 1.5,
+        dashArray: '6 6',
+        fillOpacity: 0.04,
+      })
+        .addTo(group)
+        .bindTooltip(
+          `<div style="font-family: 'Hanken Grotesk', sans-serif; padding: 2px 4px;">
+             <div style="font-size: 12px; font-weight: 700; color: #003366;">${escapeHtml(zona.nama)}</div>
+             <div style="font-size: 10.5px; color: #475569;">Zona ${escapeHtml(zona.kind)} · radius ${escapeHtml(formatJarakZona(zona.radius_m))}</div>
+           </div>`,
+          { direction: 'top', sticky: true }
+        );
+    }
+
+    group.addTo(map);
+    zoneLayerRef.current = group;
+  }, [siteZones]);
 
   // Update Markers
   useEffect(() => {

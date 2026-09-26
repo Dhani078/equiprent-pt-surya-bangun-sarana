@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Suspense, lazy } from 'react';
 import { Equipment, Rental, Contract, Payment, User, GpsTracking } from '../../types';
 import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle, MapPin, Crosshair } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { ContractPanel } from '../../components/ContractPanel';
-import { LeafletMap } from '../../components/LeafletMap';
+// Lazy: Leaflet berat (~140KB), hanya dipakai di tab pelacakan — jangan masuk bundle awal
+const LeafletMap = lazy(() => import('../../components/LeafletMap').then((m) => ({ default: m.LeafletMap })));
 import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
 import { formatRupiah, formatRupiahRingkas, formatWaktu } from '../../lib/businessRules';
 import { getPaymentStatusLabel, isPaymentFinal, validatePaymentProofPath } from '../../lib/paymentWorkflow';
@@ -983,11 +984,13 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
               <div className="card-premium" style={{ padding: '12px' }}>
+                <Suspense fallback={<div style={{ height: '400px', display: 'grid', placeItems: 'center', color: 'var(--color-secondary)', fontSize: '13px' }}>Memuat peta…</div>}>
                 <LeafletMap
                   trackingData={lacakView.rows}
                   selectedUnitId={selectedTrackedUnit}
                   onSelectUnit={setSelectedTrackedUnit}
                 />
+                </Suspense>
               </div>
 
               <div className="card-premium" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
