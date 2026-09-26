@@ -608,7 +608,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         </div>
                       </td>
                       <td style={{ fontSize: '12px' }}>
-                        {r.start_date} s/d {r.end_date} ({r.total_days} hari)
+                        {formatTanggal(r.start_date)} s/d {formatTanggal(r.end_date)} ({r.total_days} hari)
                       </td>
                       <td className="serial-code" style={{ textAlign: 'right', fontWeight: 700 }} title={formatRupiah(Number(r.subtotal))}>
                         {formatRupiahRingkas(Number(r.subtotal)).ringkas}
