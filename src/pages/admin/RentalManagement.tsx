@@ -56,11 +56,11 @@ const SUB_TABS: readonly { id: SubTab; label: string }[] = [
 
 /** Warna badge mengikuti design system §7 (hijau=aktif, kuning=pending, dst). */
 const TONE_STYLE: Record<string, { backgroundColor: string; color: string; borderColor: string }> = {
-  success: { backgroundColor: '#ECFDF5', color: '#065F46', borderColor: '#A7F3D0' },
-  info: { backgroundColor: '#EFF6FF', color: '#1D4ED8', borderColor: '#BFDBFE' },
-  warning: { backgroundColor: '#FFFBEB', color: '#92400E', borderColor: '#FDE68A' },
-  danger: { backgroundColor: '#FEF2F2', color: '#991B1B', borderColor: '#FECACA' },
-  neutral: { backgroundColor: '#F1F5F9', color: '#475569', borderColor: '#E2E8F0' },
+  success: { backgroundColor: 'var(--bg-green-soft)', color: 'var(--fg-success-deeper)', borderColor: '#A7F3D0' },
+  info: { backgroundColor: 'var(--bg-blue-soft)', color: 'var(--fg-info-deep)', borderColor: 'var(--border-blue-soft)' },
+  warning: { backgroundColor: 'var(--bg-amber-soft)', color: 'var(--fg-warning-deep)', borderColor: 'var(--border-amber-soft)' },
+  danger: { backgroundColor: 'var(--bg-red-soft)', color: 'var(--fg-danger-deep)', borderColor: 'var(--border-red-soft)' },
+  neutral: { backgroundColor: 'var(--bg-subtle)', color: 'var(--text-body)', borderColor: 'var(--color-border)' },
 };
 
 /** Label & ikon untuk tombol aksi — mengikuti matriks transisi terpusat. */
@@ -73,7 +73,7 @@ const ACTION_META: Record<string, { label: string; tone: 'success' | 'danger' | 
 
 const TOMBOL_STYLE: Record<string, React.CSSProperties> = {
   success: { backgroundColor: '#10B981', borderColor: '#10B981', color: '#FFFFFF' },
-  danger: { backgroundColor: '#FFFFFF', borderColor: '#FECACA', color: '#EF4444' },
+  danger: { backgroundColor: 'var(--color-surface)', borderColor: 'var(--border-red-soft)', color: '#EF4444' },
   info: { backgroundColor: 'var(--color-primary)', borderColor: 'var(--color-primary)', color: '#FFFFFF' },
   neutral: {},
 };
@@ -260,7 +260,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           style={{
             fontSize: '12px',
             fontWeight: 600,
-            color: r.status === 'COMPLETED' ? '#059669' : 'var(--color-secondary)',
+            color: r.status === 'COMPLETED' ? 'var(--fg-success-deep)' : 'var(--color-secondary)',
           }}
         >
           {r.status === 'COMPLETED' ? 'Tuntas ✓' : 'Ditolak'}
@@ -317,7 +317,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           <div
             role="tablist"
             aria-label="Bagian halaman transaksi penyewaan"
-            style={{ display: 'inline-flex', gap: '4px', padding: '4px', borderRadius: '8px', backgroundColor: '#F1F5F9' }}
+            style={{ display: 'inline-flex', gap: '4px', padding: '4px', borderRadius: '8px', backgroundColor: 'var(--bg-subtle)' }}
           >
             {SUB_TABS.map((tab) => (
               <button
@@ -398,7 +398,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
             marginLeft: 'auto',
             fontSize: '15px',
             fontFamily: 'monospace',
-            color: dendaBerjalan.penaltyTotal > 0 ? '#B91C1C' : '#059669',
+            color: dendaBerjalan.penaltyTotal > 0 ? 'var(--fg-danger-deep)' : 'var(--fg-success-deep)',
           }}
         >
           {formatRupiah(dendaBerjalan.penaltyTotal)}
@@ -519,20 +519,20 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                     <div>Mulai: <strong>{formatTanggal(r.start_date)}</strong></div>
                     <div>Selesai: <strong>{formatTanggal(r.end_date)}</strong></div>
                     {denda && denda.isLate && (
-                      <div style={{ marginTop: '4px', fontSize: '11.5px', color: '#B91C1C', fontWeight: 600 }}>
+                      <div style={{ marginTop: '4px', fontSize: '11.5px', color: 'var(--fg-danger-deep)', fontWeight: 600 }}>
                         Terlambat {denda.lateDays} hari
                       </div>
                     )}
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <div className="serial-code" style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A' }}>
+                    <div className="serial-code" style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-strong)' }}>
                       {formatRupiah(Number(r.subtotal))}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
                       {r.total_days} hari operasional
                     </div>
                     {denda && denda.isLate && (
-                      <div style={{ fontSize: '11px', color: '#B91C1C', fontWeight: 600 }}>
+                      <div style={{ fontSize: '11px', color: 'var(--fg-danger-deep)', fontWeight: 600 }}>
                         Denda {formatRupiah(denda.penalty)}
                       </div>
                     )}
@@ -606,7 +606,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
       >
         {pendingConfirm && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <p style={{ margin: 0, fontSize: '13.5px', lineHeight: 1.6, color: '#1E293B' }}>
+            <p style={{ margin: 0, fontSize: '13.5px', lineHeight: 1.6, color: 'var(--text-strong)' }}>
               Ubah status transaksi{' '}
               <strong className="serial-code">{pendingConfirm.rental.rental_code}</strong> dari{' '}
               <strong>{getRentalStatusLabel(pendingConfirm.rental.status)}</strong> menjadi{' '}
@@ -626,7 +626,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
             )}
 
             {pendingConfirm.next === 'REJECTED' && (
-              <p style={{ margin: 0, fontSize: '12.5px', color: '#991B1B', lineHeight: 1.6 }}>
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--fg-danger-deep)', lineHeight: 1.6 }}>
                 Penolakan bersifat <strong>final</strong> — transaksi tidak dapat diproses kembali.
               </p>
             )}
@@ -643,9 +643,9 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                     gap: '8px',
                     padding: '10px 12px',
                     borderRadius: '8px',
-                    backgroundColor: '#FEF2F2',
-                    border: '1px solid #FECACA',
-                    color: '#991B1B',
+                    backgroundColor: 'var(--bg-red-soft)',
+                    border: '1px solid var(--border-red-soft)',
+                    color: 'var(--fg-danger-deep)',
                     fontSize: '12.5px',
                     lineHeight: 1.5,
                   }}
@@ -775,9 +775,9 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                 gap: '8px',
                 padding: '10px 12px',
                 borderRadius: '8px',
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA',
-                color: '#991B1B',
+                backgroundColor: 'var(--bg-red-soft)',
+                border: '1px solid var(--border-red-soft)',
+                color: 'var(--fg-danger-deep)',
                 fontSize: '12.5px',
                 lineHeight: 1.5,
               }}
@@ -807,9 +807,9 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
               style={{
                 padding: '10px 12px',
                 borderRadius: '8px',
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA',
-                color: '#991B1B',
+                backgroundColor: 'var(--bg-red-soft)',
+                border: '1px solid var(--border-red-soft)',
+                color: 'var(--fg-danger-deep)',
                 fontSize: '12.5px',
               }}
             >

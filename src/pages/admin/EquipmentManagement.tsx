@@ -282,7 +282,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
-            Equipment Inventory & Fleet Monitoring
+            Inventaris Alat Berat &amp; Pemantauan Armada
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--color-secondary)', margin: '4px 0 0 0' }}>
             Kelola dan pantau status seluruh unit alat berat PT. Surya Bangun Sarana Banjarmasin.
@@ -356,10 +356,10 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
         </div>
 
         <div className="card-premium" style={{ padding: '16px' }}>
-          <p style={{ fontSize: '11px', color: '#059669', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
+          <p style={{ fontSize: '11px', color: 'var(--fg-success-deep)', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
             Tersedia
           </p>
-          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: '#059669' }}>
+          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: 'var(--fg-success-deep)' }}>
             {availableUnit} Unit
           </div>
         </div>
@@ -374,10 +374,10 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
         </div>
 
         <div className="card-premium" style={{ padding: '16px' }}>
-          <p style={{ fontSize: '11px', color: '#D97706', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
+          <p style={{ fontSize: '11px', color: 'var(--fg-amber)', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
             Maintenance
           </p>
-          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: '#D97706' }}>
+          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: 'var(--fg-amber)' }}>
             {maintenanceUnit} Unit
           </div>
         </div>
@@ -480,7 +480,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                   gap: '10px',
                   padding: '14px',
                   cursor: 'default',
-                  borderColor: svc.isDue ? '#FECACA' : undefined,
+                  borderColor: svc.isDue ? 'var(--border-red-soft)' : undefined,
                 }}
               >
                 {/* Header kartu: badge status + ringkasan identitas (T-0048) */}
@@ -494,7 +494,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                       height: '72px',
                       borderRadius: '10px',
                       objectFit: 'cover',
-                      backgroundColor: '#E2E8F0',
+                      backgroundColor: 'var(--color-border)',
                       border: '1px solid var(--color-border)',
                       flexShrink: 0,
                     }}
@@ -531,7 +531,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                     <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
                       Tarif / Hari
                     </div>
-                    <div className="serial-code" style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>
+                    <div className="serial-code" style={{ fontWeight: 800, fontSize: '14px', color: 'var(--text-strong)' }}>
                       {formatRupiah(Number(eq.rental_price_per_day))}
                     </div>
                     <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -566,8 +566,8 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                         padding: '8px 10px',
                         fontSize: '12px',
                         gap: '6px',
-                        color: svc.isDue ? '#DC2626' : '#B45309',
-                        borderColor: svc.isDue ? '#FECACA' : '#FDE68A',
+                        color: svc.isDue ? 'var(--fg-danger)' : 'var(--fg-warning-deep)',
+                        borderColor: svc.isDue ? 'var(--border-red-soft)' : 'var(--border-amber-soft)',
                         opacity: busy ? 0.6 : 1,
                         cursor: busy ? 'wait' : 'pointer',
                       }}
@@ -613,13 +613,13 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                           height: '44px',
                           borderRadius: '8px',
                           objectFit: 'cover',
-                          backgroundColor: '#E2E8F0',
+                          backgroundColor: 'var(--color-border)',
                           border: '1px solid var(--color-border)',
                           flexShrink: 0
                         }}
                       />
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#1E293B' }}>{eq.name}</div>
+                        <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-strong)' }}>{eq.name}</div>
                         <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)' }}>
                           {eq.brand} &bull; {eq.model}
                         </div>
@@ -635,7 +635,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                       <span>{Number(eq.hour_meter).toFixed(2)} jam</span>
                     </div>
                   </td>
-                  <td className="serial-code" style={{ fontWeight: 700, color: '#0F172A', fontSize: '13.5px', textAlign: 'right' }} title={formatRupiah(Number(eq.rental_price_per_day))}>
+                  <td className="serial-code" style={{ fontWeight: 700, color: 'var(--text-strong)', fontSize: '13.5px', textAlign: 'right' }} title={formatRupiah(Number(eq.rental_price_per_day))}>
                     {formatRupiahRingkas(Number(eq.rental_price_per_day)).ringkas}
                   </td>
                   <td style={{ textAlign: 'center' }}>
@@ -704,9 +704,9 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 gap: '8px',
                 padding: '10px 12px',
                 borderRadius: '8px',
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA',
-                color: '#991B1B',
+                backgroundColor: 'var(--bg-red-soft)',
+                border: '1px solid var(--border-red-soft)',
+                color: 'var(--fg-danger-deep)',
                 fontSize: '12.5px',
                 lineHeight: 1.5,
               }}
@@ -735,7 +735,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 style={formErrors.equipment_code ? { borderColor: '#F87171' } : undefined}
               />
               {formErrors.equipment_code && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.equipment_code}
                 </p>
               )}
@@ -760,7 +760,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 ))}
               </select>
               {formErrors.type && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.type}
                 </p>
               )}
@@ -786,7 +786,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
               style={formErrors.name ? { borderColor: '#F87171' } : undefined}
             />
             {formErrors.name && (
-              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                 {formErrors.name}
               </p>
             )}
@@ -812,7 +812,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 style={formErrors.brand ? { borderColor: '#F87171' } : undefined}
               />
               {formErrors.brand && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.brand}
                 </p>
               )}
@@ -836,7 +836,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 style={formErrors.model ? { borderColor: '#F87171' } : undefined}
               />
               {formErrors.model && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.model}
                 </p>
               )}
@@ -864,7 +864,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 style={formErrors.hour_meter ? { borderColor: '#F87171' } : undefined}
               />
               {formErrors.hour_meter && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.hour_meter}
                 </p>
               )}
@@ -889,7 +889,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 style={formErrors.rental_price_per_day ? { borderColor: '#F87171' } : undefined}
               />
               {formErrors.rental_price_per_day && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.rental_price_per_day}
                 </p>
               )}
@@ -929,7 +929,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
                 style={formErrors.last_maintenance_date ? { borderColor: '#F87171' } : undefined}
               />
               {formErrors.last_maintenance_date && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.last_maintenance_date}
                 </p>
               )}

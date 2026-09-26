@@ -25,8 +25,8 @@ import type { ContractPreview } from '../lib/contracts';
 
 /** Warna badge status mengikuti design system §7. */
 const TONE_STYLE: Record<string, { backgroundColor: string; color: string; borderColor: string }> = {
-  success: { backgroundColor: '#ECFDF5', color: '#065F46', borderColor: '#A7F3D0' },
-  warning: { backgroundColor: '#FFFBEB', color: '#92400E', borderColor: '#FDE68A' },
+  success: { backgroundColor: 'var(--bg-green-soft)', color: 'var(--fg-success-deeper)', borderColor: '#A7F3D0' },
+  warning: { backgroundColor: 'var(--bg-amber-soft)', color: 'var(--fg-warning-deep)', borderColor: 'var(--border-amber-soft)' },
 };
 
 export interface ContractViewerProps {
@@ -73,7 +73,7 @@ const SignatureBlock: React.FC<{ label: string; name: string; role: string; sign
     <div style={{ marginTop: '6px', fontWeight: 700, textDecoration: 'underline' }}>{name}</div>
     <div style={{ color: 'var(--color-secondary)', fontSize: '10.5px' }}>{role}</div>
     {signedAtLabel !== null && signedAtLabel !== undefined && (
-      <div style={{ color: '#94A3B8', fontSize: '10px', marginTop: '2px' }}>{signedAtLabel}</div>
+      <div style={{ color: 'var(--text-faint)', fontSize: '10px', marginTop: '2px' }}>{signedAtLabel}</div>
     )}
   </div>
 );
@@ -98,7 +98,7 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
   return (
     <div
       style={{
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'var(--color-surface)',
         border: '1px solid var(--color-border)',
         borderRadius: '8px',
         padding: '20px',
@@ -111,7 +111,7 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
       <div
         style={{
           textAlign: 'center',
-          borderBottom: '3px double #003366',
+          borderBottom: '3px double var(--color-primary)',
           paddingBottom: '12px',
         }}
       >
@@ -121,15 +121,15 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
             fontSize: '15px',
             fontWeight: 800,
             letterSpacing: '0.02em',
-            color: '#003366',
+            color: 'var(--color-primary)',
           }}
         >
           PT. SURYA BANGUN SARANA BANJARMASIN
         </p>
-        <p style={{ margin: '3px 0 0 0', fontSize: '10.5px', fontWeight: 600, color: '#475569' }}>
+        <p style={{ margin: '3px 0 0 0', fontSize: '10.5px', fontWeight: 600, color: 'var(--text-body)' }}>
           Heavy Equipment Rental, Earthmoving Contractor &amp; Fleet Monitoring System
         </p>
-        <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#64748B' }}>
+        <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: 'var(--text-muted)' }}>
           Jl. Ahmad Yani KM 5, Banjarmasin, Kalimantan Selatan &bull; Telp: (0511) 7890123
         </p>
       </div>
@@ -143,7 +143,7 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
             fontWeight: 800,
             textTransform: 'uppercase',
             textDecoration: 'underline',
-            color: '#003366',
+            color: 'var(--color-primary)',
           }}
         >
           {preview.title}
@@ -153,7 +153,7 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
             marginTop: '6px',
             fontFamily: 'monospace',
             fontSize: '11px',
-            color: '#64748B',
+            color: 'var(--text-muted)',
           }}
         >
           Nomor: {preview.code}
@@ -186,7 +186,7 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
             margin: '0 0 8px 0',
             fontSize: '11.5px',
             fontWeight: 800,
-            color: '#003366',
+            color: 'var(--color-primary)',
             textTransform: 'uppercase',
           }}
         >
@@ -196,10 +196,10 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
           <tbody>
             {preview.fields.map((field) => (
               <tr key={field.label}>
-                <td style={{ width: '38%', padding: '5px 0', color: '#475569', verticalAlign: 'top' }}>
+                <td style={{ width: '38%', padding: '5px 0', color: 'var(--text-body)', verticalAlign: 'top' }}>
                   {field.label}
                 </td>
-                <td style={{ width: '2%', padding: '5px 0', color: '#475569' }}>:</td>
+                <td style={{ width: '2%', padding: '5px 0', color: 'var(--text-body)' }}>:</td>
                 <td
                   style={{
                     padding: '5px 0',
@@ -222,7 +222,7 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
             margin: '0 0 8px 0',
             fontSize: '11.5px',
             fontWeight: 800,
-            color: '#003366',
+            color: 'var(--color-primary)',
             textTransform: 'uppercase',
           }}
         >
@@ -242,8 +242,8 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
         style={{
           margin: 0,
           padding: '10px 12px',
-          backgroundColor: '#F1F5F9',
-          borderLeft: '3px solid #003366',
+          backgroundColor: 'var(--bg-subtle)',
+          borderLeft: '3px solid var(--color-primary)',
           fontSize: '11px',
           color: '#334155',
           lineHeight: 1.6,
@@ -264,9 +264,9 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
           style={{
             padding: '10px 12px',
             borderRadius: '8px',
-            backgroundColor: '#FEF2F2',
-            border: '1px solid #FECACA',
-            color: '#B91C1C',
+            backgroundColor: 'var(--bg-red-soft)',
+            border: '1px solid var(--border-red-soft)',
+            color: 'var(--fg-danger-deep)',
             fontSize: '11.5px',
           }}
         >
@@ -296,10 +296,10 @@ export const ContractViewer: React.FC<ContractViewerProps> = ({ preview, showPri
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          borderTop: '1px solid #E2E8F0',
+          borderTop: '1px solid var(--color-border)',
           paddingTop: '10px',
           fontSize: '10px',
-          color: '#94A3B8',
+          color: 'var(--text-faint)',
         }}
       >
         <FileSignature size={13} />

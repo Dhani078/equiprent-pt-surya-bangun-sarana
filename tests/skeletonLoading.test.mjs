@@ -104,9 +104,9 @@ t('aria-label tooltip dapat diakses', html.includes('aria-label'));
 const tooltip = buildHmTooltip(svcStatus);
 t('tooltip menyebut target servis', tooltip.includes('Target servis berikutnya'));
 t('tooltip menyebut sisa HM', /Sisa \d|Lewat \d/.test(tooltip));
-// Warna konsisten dengan status: hijau aman / kuning mendekati / merah lewat.
-const tone = svcStatus.isDue ? '#DC2626' : svcStatus.isApproaching ? '#D97706' : '#059669';
-t(`bar berwarna sesuai status (${tone})`, html.includes(tone.toLowerCase()));
+// Warna konsisten dengan status — token tema sejak sweep T-0076.
+const tone = svcStatus.isDue ? 'var(--fg-danger)' : svcStatus.isApproaching ? 'var(--fg-amber)' : 'var(--fg-success-deep)';
+t(`bar berwarna sesuai status (${tone})`, html.includes(tone));
 
 
 // ---------------------------------------------------------------------------

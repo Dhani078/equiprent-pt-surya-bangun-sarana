@@ -48,7 +48,7 @@ function Badge({ count, tone }: { count: number; tone: 'error' | 'warning' }) {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: tone === 'error' ? '#DC2626' : '#F59E0B',
+        backgroundColor: tone === 'error' ? 'var(--fg-danger)' : '#F59E0B',
         color: '#FFFFFF',
         lineHeight: 1,
         flexShrink: 0,
@@ -153,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-surface-hover, #F1F5F9)';
+                    e.currentTarget.style.backgroundColor = 'var(--color-surface-hover, var(--bg-subtle))';
                     e.currentTarget.style.color = 'var(--color-primary)';
                   }
                 }}

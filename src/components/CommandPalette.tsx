@@ -126,7 +126,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ role, open, onCl
 				style={{
 					width: '560px',
 					maxWidth: 'calc(100vw - 32px)',
-					backgroundColor: '#FFFFFF',
+					backgroundColor: 'var(--color-surface)',
 					borderRadius: '12px',
 					boxShadow: 'var(--shadow-lg)',
 					overflow: 'hidden',

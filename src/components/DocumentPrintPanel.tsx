@@ -132,7 +132,7 @@ export const DocumentPrintPanel: React.FC<DocumentPrintPanelProps> = ({
             textAlign: 'center',
           }}
         >
-          <Inbox size={28} color="#94A3B8" />
+          <Inbox size={28} color="var(--text-faint)" />
           <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: 'var(--color-secondary)' }}>
             Belum ada transaksi siap terbit
           </p>
@@ -210,7 +210,7 @@ export const DocumentPrintPanel: React.FC<DocumentPrintPanelProps> = ({
                 flexWrap: 'wrap',
                 gap: '10px 24px',
                 padding: '14px',
-                background: '#F8FAFC',
+                background: 'var(--bg-raised)',
                 border: '1px solid var(--color-border)',
                 borderRadius: '8px',
                 fontSize: '12.5px',
@@ -243,7 +243,7 @@ export const DocumentPrintPanel: React.FC<DocumentPrintPanelProps> = ({
                 background: 'rgba(220, 38, 38, 0.08)',
                 border: '1px solid rgba(220, 38, 38, 0.25)',
                 borderRadius: '8px',
-                color: '#dc2626',
+                color: 'var(--fg-danger)',
                 fontSize: '12.5px',
               }}
             >

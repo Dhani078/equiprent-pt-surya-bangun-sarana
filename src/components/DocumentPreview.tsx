@@ -20,10 +20,10 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ doc }) => {
     <div
       style={{
         padding: '24px',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'var(--color-surface)',
         border: '1px solid var(--color-border)',
         borderRadius: '8px',
-        color: '#1E293B',
+        color: 'var(--text-strong)',
         lineHeight: 1.6,
       }}
     >
@@ -31,7 +31,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ doc }) => {
       <div
         style={{
           textAlign: 'center',
-          borderBottom: '3px double #003366',
+          borderBottom: '3px double var(--color-primary)',
           paddingBottom: '14px',
         }}
       >
@@ -114,7 +114,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ doc }) => {
                   padding: '5px 0',
                   verticalAlign: 'top',
                   fontWeight: 600,
-                  color: '#1E293B',
+                  color: 'var(--text-strong)',
                 }}
               >
                 {field.value}
@@ -130,7 +130,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ doc }) => {
             margin: '14px 0 0 0',
             fontSize: '12.5px',
             fontWeight: 700,
-            color: '#dc2626',
+            color: 'var(--fg-danger)',
           }}
         >
           Denda keterlambatan {doc.lateDays} hari: {formatRupiah(doc.penalty)}
@@ -141,7 +141,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ doc }) => {
         style={{
           margin: '16px 0 0 0',
           padding: '10px 14px',
-          background: '#F1F5F9',
+          background: 'var(--bg-subtle)',
           borderLeft: '3px solid var(--color-primary)',
           fontSize: '12.5px',
           color: '#334155',
@@ -179,7 +179,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ doc }) => {
               justifyContent: 'center',
             }}
           >
-            <ShieldCheck size={34} color="#003366" />
+            <ShieldCheck size={34} color="var(--color-primary)" />
           </div>
           <div style={{ fontWeight: 700 }}>( {doc.signatures.right.name} )</div>
           <div style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>

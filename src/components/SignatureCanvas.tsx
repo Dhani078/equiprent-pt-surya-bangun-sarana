@@ -89,7 +89,7 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
     ctx.lineWidth = 2.4;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#001E40';
+    ctx.strokeStyle = 'var(--text-heading)';
 
     // Kanvas sengaja dibiarkan transparan (tidak diisi putih) agar
     // tanda tangan menyatu dengan latar dokumen saat dicetak.
@@ -225,7 +225,7 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
     image.src = previous;
   }, [emit, handleClear]);
 
-  const borderColor = disabled ? '#CBD5E1' : hasSignature ? '#003366' : '#94A3B8';
+  const borderColor = disabled ? '#CBD5E1' : hasSignature ? 'var(--color-primary)' : 'var(--text-faint)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -236,7 +236,7 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
           maxWidth: `${width}px`,
           border: `2px dashed ${borderColor}`,
           borderRadius: '8px',
-          backgroundColor: disabled ? '#F1F5F9' : '#FAFAFA',
+          backgroundColor: disabled ? 'var(--bg-subtle)' : '#FAFAFA',
           overflow: 'hidden',
         }}
       >
@@ -269,7 +269,7 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              color: '#94A3B8',
+              color: 'var(--text-faint)',
               fontSize: '12.5px',
               pointerEvents: 'none',
             }}
@@ -312,7 +312,7 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
             style={{
               padding: '6px 10px',
               fontSize: '12px',
-              color: '#B91C1C',
+              color: 'var(--fg-danger-deep)',
               opacity: disabled || !hasSignature ? 0.5 : 1,
               cursor: disabled || !hasSignature ? 'not-allowed' : 'pointer',
             }}

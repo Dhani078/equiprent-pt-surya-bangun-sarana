@@ -57,9 +57,9 @@ const GAYA_GALAT: React.CSSProperties = {
 	margin: '0 0 14px 0',
 	padding: '10px 14px 10px 30px',
 	borderRadius: '7px',
-	backgroundColor: '#FEF2F2',
-	border: '1px solid #FECACA',
-	color: '#991B1B',
+	backgroundColor: 'var(--bg-red-soft)',
+	border: '1px solid var(--border-red-soft)',
+	color: 'var(--fg-danger-deep)',
 	fontSize: '12.5px',
 	fontWeight: 600,
 }
@@ -322,7 +322,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 					</div>
 					<div>
 						<strong>Mode data:</strong>{' '}
-						<span style={{ color: modeData === 'TIDB' ? '#047857' : '#B45309', fontWeight: 700 }}>
+						<span style={{ color: modeData === 'TIDB' ? 'var(--fg-success-deeper)' : 'var(--fg-warning-deep)', fontWeight: 700 }}>
 							{modeData === 'TIDB' ? 'Tersambung (data resmi)' : 'Data contoh (demo)'}
 						</span>
 					</div>
@@ -332,7 +332,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 				</div>
 
 				{modeData !== 'TIDB' && (
-					<p style={{ margin: '12px 0 0 0', fontSize: '12px', color: '#B45309', fontWeight: 600, lineHeight: 1.6 }}>
+					<p style={{ margin: '12px 0 0 0', fontSize: '12px', color: 'var(--fg-warning-deep)', fontWeight: 600, lineHeight: 1.6 }}>
 						Mode data contoh aktif karena <code>DATABASE_URL</code> belum diisi. Perubahan yang Anda simpan hanya
 						bertahan selama sesi peramban ini.
 					</p>

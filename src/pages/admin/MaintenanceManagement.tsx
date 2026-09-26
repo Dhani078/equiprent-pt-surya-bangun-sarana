@@ -215,11 +215,11 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
           className="card-premium animate-fade-in"
           style={{
             padding: '16px 18px',
-            borderLeft: `4px solid ${overdueCount > 0 ? '#DC2626' : '#F59E0B'}`,
+            borderLeft: `4px solid ${overdueCount > 0 ? 'var(--fg-danger)' : '#F59E0B'}`,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <AlertTriangle size={18} color={overdueCount > 0 ? '#DC2626' : '#F59E0B'} />
+            <AlertTriangle size={18} color={overdueCount > 0 ? 'var(--fg-danger)' : '#F59E0B'} />
             <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
               Peringatan Servis Preventif (interval {SERVICE_INTERVAL_HM} HM)
             </h3>
@@ -231,7 +231,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                 padding: '3px 10px',
                 borderRadius: '999px',
                 backgroundColor: overdueCount > 0 ? '#FEE2E2' : '#FEF3C7',
-                color: overdueCount > 0 ? '#991B1B' : '#92400E',
+                color: overdueCount > 0 ? 'var(--fg-danger-deep)' : 'var(--fg-warning-deep)',
               }}
             >
               {overdueCount} unit jatuh tempo · {serviceAlerts.length - overdueCount} unit mendekati
@@ -247,7 +247,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                   alignItems: 'center',
                   gap: '12px',
                   padding: '10px 12px',
-                  backgroundColor: '#F8FAFC',
+                  backgroundColor: 'var(--bg-raised)',
                   borderRadius: '8px',
                   border: '1px solid var(--color-border)',
                   flexWrap: 'wrap',
@@ -291,7 +291,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                     fontWeight: 700,
                     padding: '3px 10px',
                     borderRadius: '6px',
-                    backgroundColor: status.isDue ? '#DC2626' : '#F59E0B',
+                    backgroundColor: status.isDue ? 'var(--fg-danger)' : '#F59E0B',
                     color: '#FFFFFF',
                     whiteSpace: 'nowrap',
                   }}
@@ -378,14 +378,14 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                     alignItems: 'center',
                     gap: '12px',
                     padding: '10px 12px',
-                    backgroundColor: '#FFFBEB',
+                    backgroundColor: 'var(--bg-amber-soft)',
                     borderRadius: '8px',
-                    border: '1px solid #FDE68A',
+                    border: '1px solid var(--border-amber-soft)',
                     flexWrap: 'wrap',
                   }}
                 >
-                  <AlertTriangle size={15} color="#D97706" style={{ flexShrink: 0 }} />
-                  <div style={{ flex: '1 1 180px', fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>
+                  <AlertTriangle size={15} color="var(--fg-amber)" style={{ flexShrink: 0 }} />
+                  <div style={{ flex: '1 1 180px', fontSize: '13px', fontWeight: 600, color: 'var(--text-strong)' }}>
                     {nama}
                   </div>
                   <div style={{ flex: '1 1 120px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -399,7 +399,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                     padding: '3px 10px',
                     borderRadius: '999px',
                     backgroundColor: '#FEF3C7',
-                    color: '#92400E',
+                    color: 'var(--fg-warning-deep)',
                     whiteSpace: 'nowrap',
                   }}>
                     {count}× dipakai
@@ -466,7 +466,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                   key={item.label}
                   style={{
                     padding: '10px 12px',
-                    backgroundColor: '#F8FAFC',
+                    backgroundColor: 'var(--bg-raised)',
                     borderRadius: '8px',
                     border: '1px solid var(--color-border)',
                   }}
@@ -632,7 +632,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                   <td style={{ fontSize: '12.5px' }}>
                     <strong>{m.technician_name || 'Ahmad Ridwan (Mekanik)'}</strong>
                   </td>
-                  <td className="serial-code" style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A' }} title={formatRupiah(Number(m.cost))}>
+                  <td className="serial-code" style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-strong)' }} title={formatRupiah(Number(m.cost))}>
                     {formatRupiahRingkas(Number(m.cost)).ringkas}
                   </td>
                   <td style={{ textAlign: 'center' }}>

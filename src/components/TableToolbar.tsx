@@ -178,7 +178,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
 					aria-label={t('toolbar.excel_judul')}
 					style={{ padding: '8px 11px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
 				>
-					<FileSpreadsheet size={13} color="#047857" aria-hidden="true" /> Excel
+					<FileSpreadsheet size={13} color="var(--fg-success-deeper)" aria-hidden="true" /> Excel
 				</button>
 				<button
 					type="button"

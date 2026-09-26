@@ -31,10 +31,10 @@ import type { Contract, Equipment, Rental, User } from '../types';
 
 /** Warna badge status mengikuti design system §7. */
 const TONE_STYLE: Record<string, { backgroundColor: string; color: string; borderColor: string }> = {
-  success: { backgroundColor: '#ECFDF5', color: '#065F46', borderColor: '#A7F3D0' },
-  warning: { backgroundColor: '#FFFBEB', color: '#92400E', borderColor: '#FDE68A' },
-  info: { backgroundColor: '#EFF6FF', color: '#1D4ED8', borderColor: '#BFDBFE' },
-  neutral: { backgroundColor: '#F1F5F9', color: '#475569', borderColor: '#E2E8F0' },
+  success: { backgroundColor: 'var(--bg-green-soft)', color: 'var(--fg-success-deeper)', borderColor: '#A7F3D0' },
+  warning: { backgroundColor: 'var(--bg-amber-soft)', color: 'var(--fg-warning-deep)', borderColor: 'var(--border-amber-soft)' },
+  info: { backgroundColor: 'var(--bg-blue-soft)', color: 'var(--fg-info-deep)', borderColor: 'var(--border-blue-soft)' },
+  neutral: { backgroundColor: 'var(--bg-subtle)', color: 'var(--text-body)', borderColor: 'var(--color-border)' },
 };
 
 export interface ContractPanelProps {
@@ -247,7 +247,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
           </h2>
           <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: 'var(--color-secondary)' }}>
             {contracts.length} kontrak tercatat &bull;{' '}
-            <strong style={{ color: jumlahMenunggu > 0 ? '#92400E' : '#065F46' }}>
+            <strong style={{ color: jumlahMenunggu > 0 ? 'var(--fg-warning-deep)' : 'var(--fg-success-deeper)' }}>
               {jumlahMenunggu} menunggu tanda tangan
             </strong>
           </p>
@@ -288,7 +288,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
               left: '10px',
               top: '50%',
               transform: 'translateY(-50%)',
-              color: '#94A3B8',
+              color: 'var(--text-faint)',
             }}
           />
           <input
@@ -323,7 +323,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
             textAlign: 'center',
             border: '1px dashed var(--color-border)',
             borderRadius: '8px',
-            backgroundColor: '#F8FAFC',
+            backgroundColor: 'var(--bg-raised)',
           }}
         >
           <FileText size={30} style={{ color: '#CBD5E1', marginBottom: '10px' }} />
@@ -441,7 +441,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
             <div
               style={{
                 padding: '12px 14px',
-                backgroundColor: '#F8FAFC',
+                backgroundColor: 'var(--bg-raised)',
                 borderRadius: '8px',
                 border: '1px solid var(--color-border)',
                 fontSize: '12px',
@@ -477,11 +477,11 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
                 aria-describedby={formErrors.signerName !== undefined ? 'signer-name-error' : undefined}
                 style={{
                   width: '100%',
-                  borderColor: formErrors.signerName !== undefined ? '#DC2626' : undefined,
+                  borderColor: formErrors.signerName !== undefined ? 'var(--fg-danger)' : undefined,
                 }}
               />
               {formErrors.signerName !== undefined && (
-                <p id="signer-name-error" style={{ margin: '5px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p id="signer-name-error" style={{ margin: '5px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.signerName}
                 </p>
               )}
@@ -496,7 +496,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
                 ariaLabel="Kanvas tanda tangan elektronik kontrak"
               />
               {formErrors.signature !== undefined && (
-                <p style={{ margin: '5px 0 0 0', fontSize: '11.5px', color: '#DC2626' }}>
+                <p style={{ margin: '5px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
                   {formErrors.signature}
                 </p>
               )}
@@ -508,9 +508,9 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
                 style={{
                   padding: '10px 12px',
                   borderRadius: '8px',
-                  backgroundColor: '#FEF2F2',
-                  border: '1px solid #FECACA',
-                  color: '#B91C1C',
+                  backgroundColor: 'var(--bg-red-soft)',
+                  border: '1px solid var(--border-red-soft)',
+                  color: 'var(--fg-danger-deep)',
                   fontSize: '12px',
                 }}
               >
@@ -548,7 +548,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
                   textAlign: 'center',
                   border: '1px dashed var(--color-border)',
                   borderRadius: '8px',
-                  backgroundColor: '#F8FAFC',
+                  backgroundColor: 'var(--bg-raised)',
                 }}
               >
                 <CheckCircle2 size={28} style={{ color: '#CBD5E1', marginBottom: '8px' }} />
@@ -594,9 +594,9 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
                 style={{
                   padding: '10px 12px',
                   borderRadius: '8px',
-                  backgroundColor: '#FEF2F2',
-                  border: '1px solid #FECACA',
-                  color: '#B91C1C',
+                  backgroundColor: 'var(--bg-red-soft)',
+                  border: '1px solid var(--border-red-soft)',
+                  color: 'var(--fg-danger-deep)',
                   fontSize: '12px',
                 }}
               >

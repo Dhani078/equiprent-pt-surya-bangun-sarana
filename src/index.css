@@ -14,6 +14,28 @@
   --tile-danger-bg: #FEF2F2;  --tile-danger-fg: #B91C1C;
   --tile-neutral-bg: #F1F5F9; --tile-neutral-fg: var(--color-primary);
   --banner-danger-bg: #FEF2F2; --banner-danger-border: #FECACA; --banner-danger-fg: #7F1D1D; --banner-danger-icon: #991B1B;
+  /* Token semantik hasil sweep hex (T-0076) */
+  --text-strong: #1E293B;
+  --text-heading: #001E40;
+  --text-body: #475569;
+  --text-muted: #64748B;
+  --text-faint: #94A3B8;
+  --fg-danger: #DC2626;
+  --fg-danger-deep: #B91C1C;
+  --fg-success-deep: #059669;
+  --fg-success-deeper: #047857;
+  --fg-warning-deep: #92400E;
+  --fg-amber: #D97706;
+  --fg-info-deep: #1D4ED8;
+  --bg-subtle: #F1F5F9;
+  --bg-raised: #F8FAFC;
+  --bg-blue-soft: #EFF6FF;
+  --bg-red-soft: #FEF2F2;
+  --bg-green-soft: #ECFDF5;
+  --bg-amber-soft: #FFFBEB;
+  --border-red-soft: #FECACA;
+  --border-blue-soft: #BFDBFE;
+  --border-amber-soft: #FDE68A;
   /* Brand Colors */
   --color-primary: #003366;          /* Deep Industrial Blue */
   --color-primary-dark: #002244;     /* Darker shade */
@@ -362,6 +384,18 @@ body {
 .badge-sem-warning { background-color: #FFFBEB; color: #92400E;  border: 1px solid #FDE68A; }
 .badge-sem-neutral { background-color: #F1F5F9; color: #475569;  border: 1px solid #E2E8F0; }
 
+/* Nada semantik saat gelap: latar transparan tertint + teks terang. */
+[data-theme="dark"] .badge-sem-danger  { background-color: rgba(220,38,38,0.16);  color: #FCA5A5; border-color: rgba(248,113,113,0.4); }
+[data-theme="dark"] .badge-sem-success { background-color: rgba(5,150,105,0.16);  color: #6EE7B7; border-color: rgba(52,211,153,0.4); }
+[data-theme="dark"] .badge-sem-info    { background-color: rgba(74,144,217,0.16); color: #93C5FD; border-color: rgba(124,185,232,0.4); }
+[data-theme="dark"] .badge-sem-warning { background-color: rgba(217,119,6,0.18);  color: #FCD34D; border-color: rgba(251,191,36,0.4); }
+[data-theme="dark"] .badge-sem-neutral { background-color: #243450;               color: #CBD5E1; border-color: #2D3F55; }
+[data-theme="dark"] .badge-available, [data-theme="dark"] .badge-paid, [data-theme="dark"] .badge-active, [data-theme="dark"] .badge-completed { background-color: rgba(5,150,105,0.16); color: #6EE7B7; border-color: rgba(52,211,153,0.4); }
+[data-theme="dark"] .badge-rented, [data-theme="dark"] .badge-ongoing, [data-theme="dark"] .badge-approved { background-color: rgba(74,144,217,0.16); color: #93C5FD; border-color: rgba(124,185,232,0.4); }
+[data-theme="dark"] .badge-maintenance, [data-theme="dark"] .badge-pending, [data-theme="dark"] .badge-scheduled, [data-theme="dark"] .badge-in_progress { background-color: rgba(217,119,6,0.18); color: #FCD34D; border-color: rgba(251,191,36,0.4); }
+[data-theme="dark"] .badge-unavailable, [data-theme="dark"] .badge-rejected, [data-theme="dark"] .badge-suspended, [data-theme="dark"] .badge-failed, [data-theme="dark"] .badge-important { background-color: rgba(220,38,38,0.16); color: #FCA5A5; border-color: rgba(248,113,113,0.4); }
+[data-theme="dark"] .badge-neutral { background-color: #243450; color: #CBD5E1; border-color: #2D3F55; }
+
 /* Alias nada semantik untuk StatCard (badgeType).
    STATUS (success/info/warning/danger) = solid terisi; ENTITAS (neutral) =
    outline; SEVERITY (rendah/utilisasi) = aksen amber gelap. Pemisahan ini
@@ -370,7 +404,7 @@ body {
 .badge-info    { background-color: #1D4ED8; color: #FFFFFF; border: 1px solid #1D4ED8; }
 .badge-warning { background-color: #B45309; color: #FFFFFF; border: 1px solid #B45309; }
 .badge-error, .badge-danger { background-color: #B91C1C; color: #FFFFFF; border: 1px solid #B91C1C; }
-.badge-neutral { background-color: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; }
+.badge-neutral { background-color: var(--bg-subtle); color: var(--text-body); border: 1px solid var(--color-border); }
 
 /* Tile ikon StatCard — warna dibedakan per jenis/tingkat keparahan agar
    tidak semua seragam biru (sesuai audit visual). */
@@ -553,6 +587,27 @@ table.data-table tbody tr:hover {
   --banner-danger-border:    rgba(248, 113, 113, 0.35);
   --banner-danger-fg:        #FCA5A5;
   --banner-danger-icon:      #F87171;
+  --text-strong:             #E2E8F0;
+  --text-heading:            #7CB9E8;
+  --text-body:               #A9B6C8;
+  --text-muted:              #8294AC;
+  --text-faint:              #64748B;
+  --fg-danger:               #F87171;
+  --fg-danger-deep:          #FCA5A5;
+  --fg-success-deep:         #34D399;
+  --fg-success-deeper:       #6EE7B7;
+  --fg-warning-deep:         #FCD34D;
+  --fg-amber:                #FBBF24;
+  --fg-info-deep:            #7CB9E8;
+  --bg-subtle:               #243450;
+  --bg-raised:               #243450;
+  --bg-blue-soft:            rgba(74, 144, 217, 0.14);
+  --bg-red-soft:             rgba(220, 38, 38, 0.14);
+  --bg-green-soft:           rgba(5, 150, 105, 0.14);
+  --bg-amber-soft:           rgba(217, 119, 6, 0.16);
+  --border-red-soft:         rgba(248, 113, 113, 0.35);
+  --border-blue-soft:        rgba(124, 185, 232, 0.35);
+  --border-amber-soft:       rgba(251, 191, 36, 0.35);
   --color-skeleton-from:     #243450;
   --color-skeleton-via:      #334155;
   --shadow-sm:   0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);

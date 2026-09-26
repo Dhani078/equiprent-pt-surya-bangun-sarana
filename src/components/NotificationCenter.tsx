@@ -12,9 +12,9 @@ interface NotificationCenterProps {
 
 /** Warna per tingkat urgensi. */
 const WARNA: Record<NotificationTone, { teks: string; latar: string; tepi: string }> = {
-	danger: { teks: '#991B1B', latar: '#FEF2F2', tepi: '#FECACA' },
-	warning: { teks: '#92400E', latar: '#FFFBEB', tepi: '#FDE68A' },
-	info: { teks: '#1E40AF', latar: '#EFF6FF', tepi: '#BFDBFE' },
+	danger: { teks: 'var(--fg-danger-deep)', latar: 'var(--bg-red-soft)', tepi: 'var(--border-red-soft)' },
+	warning: { teks: 'var(--fg-warning-deep)', latar: 'var(--bg-amber-soft)', tepi: 'var(--border-amber-soft)' },
+	info: { teks: '#1E40AF', latar: 'var(--bg-blue-soft)', tepi: 'var(--border-blue-soft)' },
 }
 
 /** Ikon per tingkat urgensi. */
@@ -82,7 +82,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ items, o
 							height: '19px',
 							padding: '0 5px',
 							borderRadius: '999px',
-							backgroundColor: mendesak > 0 ? '#DC2626' : '#F59E0B',
+							backgroundColor: mendesak > 0 ? 'var(--fg-danger)' : '#F59E0B',
 							color: '#FFFFFF',
 							fontSize: '10.5px',
 							fontWeight: 800,
@@ -109,7 +109,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ items, o
 						top: '44px',
 						width: '360px',
 						maxWidth: 'calc(100vw - 32px)',
-						backgroundColor: '#FFFFFF',
+						backgroundColor: 'var(--color-surface)',
 						borderRadius: 'var(--radius-eight)',
 						border: '1px solid var(--color-border)',
 						boxShadow: 'var(--shadow-lg)',

@@ -160,7 +160,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       // agar tidak menutupi marker unit di dalamnya.
       L.circle([zona.latitude, zona.longitude], {
         radius: zona.radius_m,
-        color: '#003366',
+        color: 'var(--color-primary)',
         weight: 1.5,
         dashArray: '6 6',
         fillOpacity: 0.04,
@@ -168,8 +168,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         .addTo(group)
         .bindTooltip(
           `<div style="font-family: 'Hanken Grotesk', sans-serif; padding: 2px 4px;">
-             <div style="font-size: 12px; font-weight: 700; color: #003366;">${escapeHtml(zona.nama)}</div>
-             <div style="font-size: 10.5px; color: #475569;">Zona ${escapeHtml(zona.kind)} · radius ${escapeHtml(formatJarakZona(zona.radius_m))}</div>
+             <div style="font-size: 12px; font-weight: 700; color: var(--color-primary);">${escapeHtml(zona.nama)}</div>
+             <div style="font-size: 10.5px; color: var(--text-body);">Zona ${escapeHtml(zona.kind)} · radius ${escapeHtml(formatJarakZona(zona.radius_m))}</div>
            </div>`,
           { direction: 'top', sticky: true }
         );
@@ -197,7 +197,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         className: 'custom-map-pin',
         html: `
           <div style="
-            background: ${isEngineOn ? '#003366' : '#64748B'};
+            background: ${isEngineOn ? 'var(--color-primary)' : 'var(--text-muted)'};
             color: #FFFFFF;
             width: ${isSelected ? '36px' : '28px'};
             height: ${isSelected ? '36px' : '28px'};
@@ -222,28 +222,28 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         .addTo(map)
         .bindPopup(`
           <div style="font-family: 'Hanken Grotesk', sans-serif; padding: 4px;">
-            <div style="font-size: 13px; font-weight: 700; color: #003366; margin-bottom: 4px;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--color-primary); margin-bottom: 4px;">
               ${escapeHtml(item.equipmentName)}
             </div>
-            <div style="font-size: 11px; color: #475569; margin-bottom: 2px;">
+            <div style="font-size: 11px; color: var(--text-body); margin-bottom: 2px;">
               Kode: <strong>${escapeHtml(item.equipmentCode)}</strong>
             </div>
-            <div style="font-size: 11px; color: #475569; margin-bottom: 2px;">
+            <div style="font-size: 11px; color: var(--text-body); margin-bottom: 2px;">
               Mesin: <span style="font-weight: 700; color: ${isEngineOn ? '#10B981' : '#EF4444'}">${escapeHtml(item.engineStatus)}</span>
             </div>
-            <div style="font-size: 11px; color: #475569; margin-bottom: 2px;">
+            <div style="font-size: 11px; color: var(--text-body); margin-bottom: 2px;">
               Kecepatan: <strong>${escapeHtml(formatSpeed(item.speed))}</strong>
             </div>
-            <div style="font-size: 11px; color: #475569; margin-bottom: 2px;">
+            <div style="font-size: 11px; color: var(--text-body); margin-bottom: 2px;">
               Bahan Bakar: <strong>${escapeHtml(String(item.fuelLevelPercent))}%</strong>
             </div>
-            <div style="font-size: 11px; color: #475569; margin-bottom: 4px;">
+            <div style="font-size: 11px; color: var(--text-body); margin-bottom: 4px;">
               Status: <strong>${escapeHtml(getMovementLabel(item.movement))}</strong>
             </div>
-            <div style="font-family: monospace; font-size: 10px; color: #64748B;">
+            <div style="font-family: monospace; font-size: 10px; color: var(--text-muted);">
               ${escapeHtml(formatCoordinate(item.latitude))}, ${escapeHtml(formatCoordinate(item.longitude))}
             </div>
-            <div style="font-size: 10px; color: #64748B; margin-top: 3px;">
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px;">
               Direkam: ${escapeHtml(item.recordedAt)}
             </div>
           </div>
