@@ -1,4 +1,4 @@
-import React, { useState, useMemo, Suspense, lazy } from 'react';
+import React, { useEffect, useState, useMemo, Suspense, lazy } from 'react';
 import { Equipment, Rental, Contract, Payment, User, GpsTracking } from '../../types';
 import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle, MapPin, Crosshair } from 'lucide-react';
 import { Modal } from '../../components/Modal';
@@ -44,6 +44,8 @@ interface CustomerPortalProps {
   onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<void>;
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
   onUploadPaymentProof: (paymentId: number, proofPath: string) => Promise<void>;
+  /** Tab menu sidebar — sinkronkan konten portal saat user klik nav. */
+  activeMenu?: string;
 }
 
 export const CustomerPortal: React.FC<CustomerPortalProps> = ({
@@ -55,9 +57,19 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   trackingData,
   onAddRental,
   onSignContract,
-  onUploadPaymentProof
+  onUploadPaymentProof,
+  activeMenu
 }) => {
   const [activeTab, setActiveTab] = useState<'catalog' | 'my_rentals' | 'contracts' | 'payments' | 'tracking'>('catalog');
+
+  /* Nav sidebar "Penyewaan Saya"/"Kontrak Digital Saya"/dst dulu hanya highlight
+     tanpa mengubah konten (temuan audit cycle 58) — kini sinkron. */
+  useEffect(() => {
+    const map: Record<string, 'catalog' | 'my_rentals' | 'contracts' | 'payments' | 'tracking'> = {
+      dashboard: 'catalog', rentals: 'my_rentals', contracts: 'contracts', payments: 'payments', tracking: 'tracking'
+    };
+    if (activeMenu && map[activeMenu]) setActiveTab(map[activeMenu]);
+  }, [activeMenu]);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [isRentModalOpen, setIsRentModalOpen] = useState(false);
 

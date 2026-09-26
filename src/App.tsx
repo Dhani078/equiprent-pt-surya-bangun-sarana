@@ -445,6 +445,7 @@ export const App: React.FC = () => {
             <>
               <CustomerPortal
                 currentUser={currentUser}
+                activeMenu={activeTab}
                 equipments={equipments}
                 rentals={rentals}
                 contracts={contracts}
