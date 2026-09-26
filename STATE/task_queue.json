@@ -641,5 +641,11 @@
     "title": "Audit visual GPS/Pengguna/Laporan/Penyewaan dark + sweep bocoran istilah teknis UI",
     "status": "DONE",
     "priority": "P1"
+  },
+  {
+    "id": "T-0079",
+    "title": "Audit visual Staff+Customer dark: fix kartu quick-nav putih, color-scheme native control, tanggal ISO Staff",
+    "status": "DONE",
+    "priority": "P1"
   }
 ]
