@@ -12,6 +12,7 @@ import { printDocument } from '../../lib/documentPrinter';
 import { DocumentPreview } from '../../components/DocumentPreview';
 import { exportTable } from '../../lib/tableExport';
 import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
+import { EmptyState } from '../../components/EmptyState';
 
 interface ReportsPageProps {
   reports: ReportItem[];
@@ -420,6 +421,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
             ))}
           </tbody>
         </table>
+        {reports.length === 0 && (
+          <EmptyState
+            pesan="Belum ada dokumen laporan diterbitkan"
+            keterangan="Dokumen BAST, Surat Jalan, dan ringkasan finansial akan tercatat di sini setelah transaksi selesai dan dicetak."
+            ariaLabel="Daftar dokumen laporan kosong"
+            ikon={FileText}
+          />
+        )}
       </div>
 
       {/* Official Document Preview Modal */}

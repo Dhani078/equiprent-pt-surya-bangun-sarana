@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Rental, Equipment, User, Contract } from '../../types';
 import { ContractPanel } from '../../components/ContractPanel';
-import { Plus, Search, CheckCircle, XCircle, Truck, CircleCheck, TriangleAlert, Hourglass } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, Truck, CircleCheck, TriangleAlert, Hourglass, ClipboardList } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
 import { formatRupiah, formatTanggal, getLatePenaltyPerDay } from '../../lib/businessRules';
@@ -20,6 +20,7 @@ import {
 import type { RentalStatus } from '../../lib/rentalWorkflow';
 import { Paginator, usePagination } from '../../components/Paginator';
 import { SkeletonRows } from '../../components/Skeleton';
+import { EmptyState } from '../../components/EmptyState';
 import { exportTable } from '../../lib/tableExport';
 import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
@@ -560,21 +561,26 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
         />
 
         {filteredRentals.length === 0 && (
-          <div
-            style={{
-              padding: '40px 24px',
-              textAlign: 'center',
-              color: 'var(--color-secondary)',
-              fontSize: '13px',
-            }}
-          >
-            <p style={{ margin: '0 0 6px 0', fontWeight: 600, color: '#1E293B' }}>
-              Tidak ada transaksi yang cocok
-            </p>
-            <p style={{ margin: 0 }}>
-              Ubah kata kunci pencarian atau pilih status lain pada penyaring di atas.
-            </p>
-          </div>
+          <EmptyState
+            pesan={searchTerm || filterStatus !== 'ALL'
+              ? 'Tidak ada transaksi yang cocok'
+              : 'Belum ada transaksi penyewaan'}
+            keterangan={searchTerm || filterStatus !== 'ALL'
+              ? 'Ubah kata kunci pencarian atau pilih status lain pada penyaring di atas.'
+              : 'Transaksi baru akan muncul di sini setelah pelanggan mengajukan sewa.'}
+            ariaLabel="Daftar transaksi penyewaan kosong"
+            ikon={ClipboardList}
+            aksi={searchTerm || filterStatus !== 'ALL' ? (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => { setSearchTerm(''); setFilterStatus('ALL'); }}
+                style={{ marginTop: '4px', padding: '7px 14px', fontSize: '12.5px' }}
+              >
+                Reset Penyaring
+              </button>
+            ) : undefined}
+          />
         )}
         </>
         )}

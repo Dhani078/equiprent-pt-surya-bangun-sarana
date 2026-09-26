@@ -10,7 +10,6 @@ import {
   Clock,
   AlertTriangle,
   RefreshCw,
-  Inbox,
   Hourglass,
   Gauge,
   Trophy,
@@ -24,6 +23,7 @@ import type { DashboardSource } from '../../lib/dashboardClient';
 import { stateStore } from '../../lib/db';
 import { Skeleton } from '../../components/Skeleton';
 import { TrendChart, ringkasAngka } from '../../components/TrendChart';
+import { EmptyState } from '../../components/EmptyState';
 import { StatusBadge } from '../../components/StatusBadge';
 import {
   buildOperationalAnalytics,
@@ -910,33 +910,3 @@ const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data 
 // Komponen kecil pendukung
 // ---------------------------------------------------------------------------
 
-interface EmptyStateProps {
-  pesan: string;
-  keterangan: string;
-  ariaLabel: string;
-}
-
-/** Keadaan kosong seragam untuk panel dashboard. */
-const EmptyState: React.FC<EmptyStateProps> = ({ pesan, keterangan, ariaLabel }) => (
-  <div
-    style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '36px 18px',
-      border: '1px dashed var(--color-border)',
-      borderRadius: 'var(--radius-eight)',
-      textAlign: 'center',
-    }}
-    aria-label={ariaLabel}
-  >
-    <Inbox size={28} color="#94A3B8" />
-    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: 'var(--color-secondary)' }}>
-      {pesan}
-    </p>
-    <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-secondary-light)', maxWidth: '340px' }}>
-      {keterangan}
-    </p>
-  </div>
-);

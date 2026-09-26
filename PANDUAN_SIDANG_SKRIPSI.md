@@ -125,8 +125,16 @@ Alur demonstrasi dirancang runut menggambarkan **siklus hidup penyewaan alat ber
 
 ## 3. DIAGRAM ENTITAS RELASIONAL (ERD) 9 TABEL
 
-Basis data memakai 9 tabel relasional pada TiDB Cloud Serverless (dialek
-MySQL 8.0). Skema lengkap DDL tersedia di `DATABASE_TIDB.md` §3.
+> **Sumber kebenaran diagram:** `docs/DIAGRAM.md` §1 — ERD **11 tabel** lengkap
+> (9 tabel intas + `audit_log` + `settings`) beserta rincian kolom per tabel.
+> Bagian di bawah adalah ringkasan 9 tabel intas untuk hapusan cepat di
+> papan tulis. Diagram di `docs/DIAGRAM.md` selalu disinkronkan dengan
+> `tidb_schema_and_data.sql`; bila ada perbedaan, yang otoritatif adalah
+> `docs/DIAGRAM.md`.
+
+Basis data memakai 9 tabel relasional inti pada TiDB Cloud Serverless (dialek
+MySQL 8.0). Skema lengkap DDL tersedia di `DATABASE_TIDB.md` §3 dan
+`tidb_schema_and_data.sql` (11 tabel + 13 indeks).
 
 ```mermaid
 erDiagram
@@ -174,6 +182,11 @@ erDiagram
 ---
 
 ## 4. FLOWCHART ALUR RENTAL & STATUS TRANSISI
+
+> Diagram versi penuh (6 flowchart: siklus sewa, mesin transisi, verifikasi
+> pembayaran, pendaftaran/login, alur deploy & request edge) ada di
+> `docs/DIAGRAM.md` §2–§6. Semua nama endpoint & kode status di sana
+> diverifikasi terhadap `src/server/index.ts`.
 
 ### 4.1 Siklus Hidup Penyewaan (Business Process)
 
