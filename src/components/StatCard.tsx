@@ -1,5 +1,6 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import { useTerjemahan } from '../lib/i18n';
 
 /** Nada warna ubin ikon — dibedakan per jenis/tingkat keparahan. */
 export type IconTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral';
@@ -39,13 +40,17 @@ export const StatCard: React.FC<StatCardProps> = ({
   onClick,
 }) => {
   const clickable = Boolean(onClick);
+  // T-0074: terjemahkan label bila prop berupa kunci kamus; string biasa
+  // (hasil format dinamis) lolos apa adanya karena `t` fallback ke input.
+  const { t } = useTerjemahan();
+  const judul = t(title);
   return (
     <div
-      className="card-premium"
+      className={clickable ? 'card-premium focus-ring' : 'card-premium'}
       onClick={onClick}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
-      aria-label={clickable ? `Buka detail ${title}` : undefined}
+      aria-label={clickable ? `${t('statcard.buka_detail')} ${judul}` : undefined}
       onKeyDown={
         clickable && onClick
           ? (e) => {
@@ -66,7 +71,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-secondary)' }}>
-          {title}
+          {judul}
         </span>
         <div
           className={TILE_CLASS[iconTone]}
@@ -100,12 +105,12 @@ export const StatCard: React.FC<StatCardProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)', marginTop: '2px' }}>
         {subtitle && (
           <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-secondary)' }}>
-            {subtitle}
+            {t(subtitle)}
           </span>
         )}
         {badgeText && (
           <span className={`badge badge-${badgeType}`} style={{ fontSize: '11px', padding: '2px 8px', flexShrink: 0 }}>
-            {badgeText}
+            {t(badgeText)}
           </span>
         )}
       </div>

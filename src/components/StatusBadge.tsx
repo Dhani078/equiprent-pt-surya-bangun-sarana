@@ -98,11 +98,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ kind, status, fontSize
     : (meta?.label ?? status);
   const tone = meta?.tone ?? 'neutral';
   const full = meta?.label ?? status;
+  // T-0073: `title` tidak sampai ke pembaca layar — sediakan nama lengkap
+  // yang dapat diakses (aria-label) saat label dipersingkat.
   return (
     <span
       className={`badge ${TONE_CLASS[tone]}`}
       style={fontSize !== 11 ? { fontSize: `${fontSize}px` } : undefined}
       title={short && full !== label ? full : undefined}
+      aria-label={short && full !== label ? full : undefined}
     >
       {label}
     </span>

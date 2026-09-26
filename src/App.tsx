@@ -20,6 +20,7 @@ import { AccountSettings } from './pages/AccountSettings';
 import type { ProfilePatch } from './pages/AccountSettings';
 import { buildNotifications } from './lib/notifications';
 import { CommandPalette } from './components/CommandPalette';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const App: React.FC = () => {
   // Default to null so the user always enters via the authentic Login Screen
@@ -277,6 +278,10 @@ export const App: React.FC = () => {
         />
 
         <main style={{ flex: 1, padding: '24px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+          {/* T-0072: boundary per-rute — crash satu halaman hanya mengganti
+              area kontennya, navbar/sidebar tetap hidup. Ganti rute/tab
+              otomatis me-reset boundary (resetKey). */}
+          <ErrorBoundary resetKey={`${currentUser.role_name}:${activeTab}`}>
           {/* Notifikasi galat pemuatan data awal — bisa dicoba ulang. */}
           {dataError && !dataLoading && (
             <div
@@ -450,6 +455,7 @@ export const App: React.FC = () => {
               />
             </>
           )}
+          </ErrorBoundary>
         </main>
       </div>
 

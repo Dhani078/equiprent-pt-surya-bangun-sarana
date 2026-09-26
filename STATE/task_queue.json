@@ -581,5 +581,47 @@
     "priority": "P1",
     "status": "DONE",
     "phase": "FASE 5"
+  },
+  {
+    "id": "T-0070",
+    "title": "PWA icon nyata — VERIFIED ada (192+512 png valid, bukan gap)",
+    "priority": "P1",
+    "status": "DONE",
+    "phase": "GOD-MODE"
+  },
+  {
+    "id": "T-0071",
+    "title": "Focus-visible ring global (aksesi keyboard) — index.css 0 aturan :focus-visible",
+    "priority": "P1",
+    "status": "DONE",
+    "phase": "GOD-MODE"
+  },
+  {
+    "id": "T-0072",
+    "title": "ErrorBoundary React — 0 ada di src/, crash komponen = layar putih",
+    "priority": "P1",
+    "status": "DONE",
+    "phase": "GOD-MODE"
+  },
+  {
+    "id": "T-0073",
+    "title": "a11y sweep komponen: Modal (role=dialog+focus trap), TableToolbar, DocumentPreview, StatusBadge",
+    "priority": "P2",
+    "status": "DONE",
+    "phase": "GOD-MODE"
+  },
+  {
+    "id": "T-0074",
+    "title": "Terjemahkan dashboard+login ke t() via useTerjemahan (i18n saat ini cuma Navbar)",
+    "priority": "P2",
+    "status": "DONE",
+    "phase": "GOD-MODE"
+  },
+  {
+    "id": "T-0075",
+    "title": "Polish visual final: dark-mode audit semua halaman, print CSS dokumen, hover state konsisten",
+    "priority": "P2",
+    "status": "DONE",
+    "phase": "GOD-MODE"
   }
 ]

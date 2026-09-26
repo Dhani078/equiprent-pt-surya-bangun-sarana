@@ -1,3 +1,11 @@
+## Cycle 52 — God-mode polish T-0071..T-0075 (2026-09-26)
+- T-0071 fokus ring global `:focus-visible` (light + dark varian).
+- T-0072 `ErrorBoundary.tsx` (getDerivedStateFromError + fallback card + Muat Ulang) dibungkus di App.tsx.
+- T-0073 a11y: Modal role=dialog+aria-modal+focus trap+Escape, TableToolbar aria-label, StatusBadge role.
+- T-0074 i18n dipakai nyata di Login + AdminDashboard (semua judul/subtitle/pill/tabel/panel via t()); kunci baru servis alert; terbukti live: toggle EN → "Administrator Executive Dashboard".
+- T-0075 dark mode: token tema (--color-surface-hover, --tile-*, --banner-danger-*) → Sidebar, Navbar, banner servis, icon tile StatCard ikut gelap (sebelumnya putih; audit vision 5/10 → themed semua). Kontras teks muted dinaikkan #94A3B8→#A9B6C8.
+- BUG FIX (ditemukan via audit Chrome): kolom Pelanggan & Korporasi di tabel Rental KOSONG — seed rental tidak membawa customer_name; join via users sekarang dilengkapi (rentalsLengkap). Kode sewa & tanggal nowrap, warna nama → var(--color-primary).
+- Gate: type-check 0, 29/29 suite, build OK. Verifikasi visual via CDP screenshot (dark3, rental_fix).
 ## [CYCLE 51] 2026-09-26 - T-0065..T-0069 — EMPTY STATE + DIAGRAM + AUDIT KEAMANAN — DONE
 **Perubahan:**
 - `src/components/EmptyState.tsx` (BARU): komponen empty state terpusat (ikon + pesan + keterangan + CTA) — dipasang di RentalManagement, MaintenanceManagement, UserManagement, ReportsPage; Login pakai `role=alert` (pola tepat untuk form)

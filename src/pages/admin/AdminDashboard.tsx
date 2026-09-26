@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StatCard } from '../../components/StatCard';
+import { useTerjemahan } from '../../lib/i18n';
 import {
   DollarSign,
   Truck,
@@ -62,6 +63,7 @@ function gabungKode(kode: readonly string[]): string {
  * angka buatan (mock) di halaman ini.
  */
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
+  const { t } = useTerjemahan();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -184,10 +186,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           onClick={handleRetry}
           className="btn-primary"
           style={{ padding: '9px 16px', fontSize: '13px' }}
-          aria-label="Coba muat ulang ringkasan dashboard"
+          aria-label={t('dashboard.coba_ulang_aria')}
         >
           <RefreshCw size={15} />
-          <span>Coba Ulang</span>
+          <span>{t('dashboard.coba_ulang')}</span>
         </button>
       </div>
     );
@@ -204,10 +206,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
         <div>
           <h2 style={{ fontSize: 'var(--fs-display)', fontWeight: 800, color: 'var(--color-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-            Dashboard Eksekutif Administrator
+            {t('dashboard.judul')}
           </h2>
           <p style={{ fontSize: 'var(--fs-body)', color: 'var(--color-secondary)', margin: '4px 0 0 0' }}>
-            Pemantauan performa finansial, utilisasi armada alat berat, dan agenda pemeliharaan PT. SBS Banjarmasin.
+            {t('dashboard.subtitle')}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -216,19 +218,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             onClick={handleRetry}
             className="btn-secondary"
             style={{ fontSize: 'var(--fs-body)', padding: '8px 14px' }}
-            aria-label="Muat ulang ringkasan dashboard"
+            aria-label={t('dashboard.muat_ulang_aria')}
             title={source === 'API' ? 'Sumber data: Edge API' : 'Sumber data: perhitungan lokal (edge API tidak terjangkau)'}
           >
             <RefreshCw size={15} />
-            <span>Muat Ulang</span>
+            <span>{t('dashboard.muat_ulang')}</span>
           </button>
           <button onClick={() => onNavigate('equipment')} className="btn-primary" style={{ fontSize: 'var(--fs-body)', padding: '8px 14px' }}>
             <Truck size={15} />
-            <span>Kelola Unit</span>
+            <span>{t('dashboard.kelola_unit')}</span>
           </button>
           <button onClick={() => onNavigate('tracking')} className="btn-secondary" style={{ fontSize: 'var(--fs-body)', padding: '8px 14px' }}>
             <MapPin size={15} />
-            <span>Peta GPS Langsung</span>
+            <span>{t('dashboard.peta_gps')}</span>
             <ArrowUpRight size={15} />
           </button>
         </div>
@@ -245,22 +247,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           style={{
             padding: '14px 18px',
             borderRadius: '14px',
-            border: '1px solid #FECACA',
-            background: '#FEF2F2',
+            border: '1px solid var(--banner-danger-border)',
+            background: 'var(--banner-danger-bg)',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
             flexWrap: 'wrap',
           }}
         >
-          <AlertTriangle size={20} color="#991B1B" />
+          <AlertTriangle size={20} color="var(--banner-danger-icon)" />
           <div style={{ flex: 1, minWidth: '240px' }}>
-            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#7F1D1D' }}>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--banner-danger-fg)' }}>
               {stats.serviceDueCount + stats.serviceApproachingCount} unit perlu perhatian
               {stats.serviceDueCount > 0 ? `: ${stats.serviceDueCount} telat jadwal servis` : ''}
               {stats.serviceApproachingCount > 0 ? `, ${stats.serviceApproachingCount} mendekati 250 HM` : ''}
             </p>
-            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#7F1D1D' }}>
+            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--banner-danger-fg)' }}>
               {stats.serviceDueCount > 0
                 ? `Telat: ${gabungKode(stats.serviceDueCodes)}`
                 : 'Belum ada unit yang melewati jadwal — jadwalkan inspeksi sebelum jatuh tempo.'}
@@ -293,10 +295,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           return (
             <>
               <StatCard
-                title="Total Pendapatan Terbayar"
+                title={t('dashboard.total_pendapatan')}
                 value={totalRevenue.ringkas}
                 valueTitle={totalRevenue.full}
-                subtitle="Akumulasi pembayaran sewa lunas"
+                subtitle={t('dashboard.pendapatan_sub')}
                 icon={DollarSign}
                 iconTone="success"
                 badgeText="Lunas"
@@ -304,12 +306,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 onClick={() => onNavigate('reports')}
               />
               <StatCard
-                title="Total Armada Alat Berat"
-                value={`${stats.totalEquipments} Unit`}
+                title={t('dashboard.total_armada')}
+                value={t('dashboard.unit', { n: stats.totalEquipments })}
                 subtitle={
                   stats.maintenanceEquipments + stats.unavailableEquipments > 0
-                    ? `${stats.availableEquipments} siap sewa, ${stats.rentedEquipments} tersewa, ${stats.maintenanceEquipments + stats.unavailableEquipments} dalam servis`
-                    : `${stats.availableEquipments} siap sewa, ${stats.rentedEquipments} tersewa`
+                    ? t('dashboard.armada_sub', { siap: stats.availableEquipments, tersewa: stats.rentedEquipments, servis: stats.maintenanceEquipments + stats.unavailableEquipments })
+                    : t('dashboard.armada_subsimpel', { siap: stats.availableEquipments, tersewa: stats.rentedEquipments })
                 }
                 icon={Truck}
                 iconTone="info"
@@ -318,66 +320,66 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 onClick={() => onNavigate('equipment')}
               />
               <StatCard
-                title="Transaksi Sewa Aktif"
-                value={`${stats.activeRentals} Kontrak`}
-                subtitle="Kontrak aktif untuk unit di lapangan"
+                title={t('dashboard.sewa_aktif')}
+                value={t('dashboard.sewa_aktif_value', { n: stats.activeRentals })}
+                subtitle={t('dashboard.sewa_aktif_sub')}
                 icon={ClipboardList}
                 iconTone="info"
-                badgeText="Sedang Berjalan"
+                badgeText={t('dashboard.badge_berjalan')}
                 badgeType="info"
                 onClick={() => onNavigate('rentals')}
               />
               <StatCard
-                title="Jadwal Servis Mendesak"
-                value={`${stats.serviceDueCount + stats.serviceApproachingCount} Unit`}
+                title={t('dashboard.servis_mendesak')}
+                value={t('dashboard.unit', { n: stats.serviceDueCount + stats.serviceApproachingCount })}
                 subtitle={
                   stats.serviceDueCount > 0
-                    ? `${stats.serviceDueCount} telat + ${stats.serviceApproachingCount} mendekati 250 HM`
+                    ? t('dashboard.servis_alert_kombinasi', { telat: stats.serviceDueCount, mendekat: stats.serviceApproachingCount })
                     : stats.serviceApproachingCount > 0
-                      ? `${stats.serviceApproachingCount} unit mendekati 250 HM`
-                      : 'Perlu inspeksi teknisi mekanik'
+                      ? t('dashboard.servis_mendekat_sub', { n: stats.serviceApproachingCount })
+                      : t('dashboard.servis_perlu_inspeksi')
                 }
                 icon={Wrench}
                 iconTone={stats.serviceDueCount > 0 ? 'danger' : 'warning'}
-                badgeText={stats.serviceDueCount > 0 ? 'Telat' : 'Mendesak'}
+                badgeText={stats.serviceDueCount > 0 ? t('dashboard.badge_telat') : t('dashboard.badge_mendesak')}
                 badgeType={stats.serviceDueCount > 0 ? 'danger' : 'warning'}
                 onClick={() => onNavigate('maintenance')}
               />
               <StatCard
-                title="Menunggu Verifikasi"
+                title={t('dashboard.menunggu_verifikasi')}
                 value={menunggu.ringkas}
                 valueTitle={menunggu.full}
-                subtitle={`${stats.pendingPaymentCount} pembayaran belum diverifikasi`}
+                subtitle={t('dashboard.verifikasi_sub', { n: stats.pendingPaymentCount })}
                 icon={Hourglass}
                 iconTone="warning"
-                badgeText="Pembayaran"
+                badgeText={t('dashboard.badge_pembayaran')}
                 badgeType="neutral"
                 onClick={() => onNavigate('rentals')}
               />
               <StatCard
-                title="Pelanggan Terdaftar"
-                value={`${stats.totalCustomers} Akun`}
-                subtitle="Perusahaan penyewa aktif"
+                title={t('dashboard.pelanggan_terdaftar')}
+                value={t('dashboard.pelanggan_value', { n: stats.totalCustomers })}
+                subtitle={t('dashboard.pelanggan_sub')}
                 icon={Users}
                 iconTone="neutral"
-                badgeText="Pelanggan"
+                badgeText={t('dashboard.badge_pelanggan')}
                 badgeType="neutral"
                 onClick={() => onNavigate('users')}
               />
               <StatCard
-                title="Pengajuan Masuk"
-                value={`${stats.pendingRentals} Pengajuan`}
-                subtitle="Menunggu persetujuan staf"
+                title={t('dashboard.pengajuan_masuk')}
+                value={t('dashboard.pengajuan_value', { n: stats.pendingRentals })}
+                subtitle={t('dashboard.pengajuan_sub')}
                 icon={ClipboardList}
                 iconTone="warning"
-                badgeText="Pengajuan"
+                badgeText={t('dashboard.badge_pengajuan')}
                 badgeType="neutral"
                 onClick={() => onNavigate('rentals')}
               />
               <StatCard
-                title="Tingkat Utilisasi Armada"
+                title={t('dashboard.utilisasi')}
                 value={`${persenUtilisasi}%`}
-                subtitle={`${stats.rentedEquipments} dari ${stats.totalEquipments} unit tersewa`}
+                subtitle={t('dashboard.utilisasi_sub', { tersewa: stats.rentedEquipments, total: stats.totalEquipments })}
                 icon={Gauge}
                 iconTone={persenUtilisasi >= 60 ? 'success' : 'warning'}
                 badgeText={persenUtilisasi >= 60 ? 'Tinggi' : 'Rendah'}
@@ -394,8 +396,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           agar sebagian besar grafik terlihat tanpa menggulir. */}
       {stats.revenueTrend.length > 0 && (
         <TrendChart
-          title="Tren Pendapatan 12 Bulan Terakhir"
-          subtitle="Arahkan kursor ke titik untuk melihat nilai per bulan — hanya pembayaran berstatus Lunas"
+          title={t('dashboard.tren_judul')}
+          subtitle={t('dashboard.tren_sub')}
           data={stats.revenueTrend.map((d) => ({ label: d.label, value: d.amount }))}
           formatValue={formatRupiah}
           formatAxisValue={ringkasAngka}
@@ -422,32 +424,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Clock size={18} color="var(--color-primary)" />
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-                Transaksi Penyewaan Terbaru
+                {t('dashboard.transaksi_terbaru')}
               </h3>
             </div>
             <button
               onClick={() => onNavigate('rentals')}
               style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
             >
-              Lihat Semua Transaksi &rarr;
+              {t('dashboard.lihat_semua_transaksi')}
             </button>
           </div>
 
           {stats.recentRentals.length === 0 ? (
             <EmptyState
-              pesan="Belum ada transaksi penyewaan"
-              keterangan="Transaksi akan muncul di sini setelah pelanggan mengajukan sewa."
-              ariaLabel="Belum ada transaksi penyewaan"
+              pesan={t('dashboard.kosong_transaksi')}
+              keterangan={t('dashboard.kosong_transaksi_sub')}
+              ariaLabel={t('dashboard.kosong_transaksi')}
             />
           ) : (
             <div className="table-container">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={{ padding: '10px 10px' }}>Kode Sewa</th>
-                    <th style={{ padding: '10px 8px' }}>Klien</th>
-                    <th style={{ padding: '10px 10px' }}>Subtotal</th>
-                    <th style={{ padding: '10px 8px' }}>Status</th>
+                    <th style={{ padding: '10px 10px' }}>{t('dashboard.kolom_kode')}</th>
+                    <th style={{ padding: '10px 8px' }}>{t('dashboard.kolom_klien')}</th>
+                    <th style={{ padding: '10px 10px' }}>{t('dashboard.kolom_subtotal')}</th>
+                    <th style={{ padding: '10px 8px' }}>{t('dashboard.kolom_status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -483,7 +485,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertTriangle size={18} color="#F59E0B" />
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-                  Antrean Servis & Pemeliharaan
+                  {t('dashboard.antrean_servis')}
                 </h3>
               </div>
               <button
@@ -496,8 +498,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
             {stats.serviceQueue.length === 0 ? (
               <EmptyState
-                pesan="Tidak ada antrean servis"
-                keterangan="Semua unit tercatat dalam kondisi baik. Jadwalkan servis bila diperlukan."
+                pesan={t('dashboard.kosong_antrean')}
+                keterangan={t('dashboard.kosong_antrean_sub')}
                 ariaLabel="Tidak ada antrean servis"
               />
             ) : (
@@ -534,7 +536,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                           {LABEL_JENIS_SERVIS[m.maintenance_type] ?? m.maintenance_type}
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-secondary)', marginTop: '2px' }}>
-                          <span>HM: <strong>{m.hour_meter_at_maintenance} jam</strong></span>
+                          <span>HM: <strong>{m.hour_meter_at_maintenance} {t('dashboard.hm_jam')}</strong></span>
                           <span>Tgl: {formatTanggal(m.scheduled_date)}</span>
                         </div>
                       </div>
@@ -562,14 +564,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           >
             <div>
               <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                GPS Telemetri Aktif Kalimantan Selatan
+                {t('dashboard.telemetri_judul')}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
-                Pelabuhan Trisakti, Banjarbaru, Tabalong
+                {t('dashboard.telemetri_lokasi')}
               </div>
             </div>
             <button onClick={() => onNavigate('tracking')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11.5px' }}>
-              Buka Peta
+              {t('dashboard.buka_peta')}
             </button>
           </div>
         </div>
@@ -580,7 +582,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Trophy size={18} color="#F59E0B" />
             <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-              Top 5 Unit Paling Sering Disewa
+              {t('dashboard.top_unit')}
             </h3>
           </div>
           <button
@@ -593,8 +595,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
         {stats.topEquipments.length === 0 ? (
           <EmptyState
-            pesan="Belum ada data penyewaan"
-            keterangan="Peringkat unit akan muncul setelah ada transaksi sewa yang tercatat."
+            pesan={t('dashboard.kosong_top')}
+            keterangan={t('dashboard.kosong_top_sub')}
             ariaLabel="Belum ada data top unit tersewa"
           />
         ) : (
@@ -653,7 +655,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                         {item.equipment_name}
                       </span>
                       <span style={{ fontWeight: 800, fontSize: '13px', color: 'var(--color-primary)', flexShrink: 0 }}>
-                        {item.rental_count}× sewa
+                        {t('dashboard.sewa_kali', { n: item.rental_count })}
                       </span>
                     </div>
                     <span className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
@@ -698,6 +700,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
  * dengan TrendChart agar gaya visualnya konsisten (tanpa pustaka chart).
  */
 const PanelUtilisasiBulanan: React.FC<{ data: readonly import('../../lib/analytics').UtilisasiBulananItem[] }> = ({ data }) => {
+  const { t } = useTerjemahan();
   if (data.length === 0) {
     return (
       <div className="card-premium" style={{ padding: '20px' }}>
@@ -705,8 +708,8 @@ const PanelUtilisasiBulanan: React.FC<{ data: readonly import('../../lib/analyti
           Utilisasi Armada per Bulan
         </h3>
         <EmptyState
-          pesan="Belum ada data penyewaan"
-          keterangan="Grafik utilisasi akan terisi setelah ada transaksi sewa yang tercatat."
+          pesan={t('dashboard.kosong_top')}
+          keterangan={t('dashboard.kosong_utilisasi_sub')}
           ariaLabel="Belum ada data utilisasi armada"
         />
       </div>
@@ -732,7 +735,7 @@ const PanelUtilisasiBulanan: React.FC<{ data: readonly import('../../lib/analyti
           <Gauge size={18} color="var(--color-primary)" />
           <div>
             <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-              Utilisasi Armada per Bulan
+              {t('dashboard.utilisasi_bulanan')}
             </h3>
             <p style={{ fontSize: '11.5px', color: 'var(--color-secondary)', margin: '2px 0 0 0' }}>
               Unit disewa ÷ total armada — 12 bulan terakhir
@@ -750,7 +753,7 @@ const PanelUtilisasiBulanan: React.FC<{ data: readonly import('../../lib/analyti
             borderRadius: '6px',
           }}
         >
-          Puncak: {puncak}%
+          {t('dashboard.puncak', { n: puncak })}
         </span>
       </div>
 
@@ -802,13 +805,15 @@ const PanelUtilisasiBulanan: React.FC<{ data: readonly import('../../lib/analyti
 };
 
 /** Daftar 5 pelanggan teratas berdasarkan nilai penyewaan. */
-const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data }) => (
+const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data }) => {
+  const { t } = useTerjemahan();
+  return (
   <div className="card-premium animate-fade-in" style={{ padding: '20px' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
       <Users size={18} color="var(--color-primary)" />
       <div>
         <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-          Top 5 Pelanggan
+          {t('dashboard.top_customer')}
         </h3>
         <p style={{ fontSize: '11.5px', color: 'var(--color-secondary)', margin: '2px 0 0 0' }}>
           Berdasarkan total nilai penyewaan
@@ -818,8 +823,8 @@ const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data 
 
     {data.length === 0 ? (
       <EmptyState
-        pesan="Belum ada pelanggan menyewa"
-        keterangan="Daftar pelanggan teratas akan muncul setelah ada transaksi sewa."
+        pesan={t('dashboard.kosong_top')}
+        keterangan={t('dashboard.kosong_top_sub')}
         ariaLabel="Belum ada data pelanggan"
       />
     ) : (
@@ -876,7 +881,7 @@ const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data 
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: '5px' }}>
                   <span style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
-                    {item.jumlahRental}× sewa{item.company_name ? ` · ${item.company_name}` : ''}
+                    {t('dashboard.sewa_kali', { n: item.jumlahRental })}{item.company_name ? ` · ${item.company_name}` : ''}
                   </span>
                   <div
                     style={{ height: '4px', width: '38%', backgroundColor: '#E2E8F0', borderRadius: '2px', overflow: 'hidden' }}
@@ -904,7 +909,8 @@ const PanelTopCustomer: React.FC<{ data: readonly TopCustomerRow[] }> = ({ data 
       </div>
     )}
   </div>
-);
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Komponen kecil pendukung
