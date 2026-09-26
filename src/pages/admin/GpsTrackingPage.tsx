@@ -353,7 +353,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                   alignItems: 'center',
                   gap: '10px',
                   fontSize: '12px',
-                  color: '#7F1D1D',
+                  color: 'var(--banner-danger-fg)',
                   flexWrap: 'wrap',
                 }}
               >

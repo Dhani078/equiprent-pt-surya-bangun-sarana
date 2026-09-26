@@ -787,7 +787,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                 <strong>Unit tidak dapat dipesan.</strong>{' '}
                 {describeBlockedReason(selectedAvailability)}
                 {selectedAvailability.conflicts.length > 0 && (
-                  <div style={{ marginTop: '6px', fontSize: '11.5px', color: '#7F1D1D' }}>
+                  <div style={{ marginTop: '6px', fontSize: '11.5px', color: 'var(--banner-danger-fg)' }}>
                     Bentrok dengan:{' '}
                     {selectedAvailability.conflicts
                       .map(c => `${c.rentalCode} (${c.startDate} s.d. ${c.endDate})`)
