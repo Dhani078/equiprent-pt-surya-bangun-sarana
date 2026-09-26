@@ -53,6 +53,11 @@ import {
 } from '../lib/reports';
 import type { ReportDataSource } from '../lib/reports';
 import { buildDashboardStats } from '../lib/dashboard';
+import {
+  buildOperationalAnalytics,
+  buildTopCustomers,
+  buildUtilisasiBulanan,
+} from '../lib/analytics';
 import { auditLog, getAuditLog, auditActor, hydrateAuditLog } from '../lib/auditLog';
 import type { AuditEntry } from '../lib/auditLog';
 import { warmSettings } from '../lib/db';
@@ -456,6 +461,40 @@ app.get('/api/dashboard/stats', async (c) => {
   const stats = buildDashboardStats({ equipments, rentals, maintenance, payments, users });
 
   return c.json({ success: true, data: stats });
+});
+
+/**
+ * Endpoint Analytics Operasional (T-0061).
+ *
+ * RBAC: path `/api/dashboard` hanya boleh diakses ADMIN & STAFF (lihat
+ * RBAC_MATRIX di src/lib/auth.ts) — data per pelanggan adalah informasi
+ * komersial yang tidak boleh dilihat sesama pelanggan.
+ *
+ * Mengembalikan dua agregat:
+ *   - utilisasiBulanan: unit disewa ÷ total unit per bulan (12 bulan)
+ *   - topCustomers     : 5 pelanggan teratas berdasarkan nilai penyewaan
+ *
+ * Mesin murni `src/lib/analytics.ts` dipakai bersama oleh klien sehingga
+ * angka di layar tidak bisa menyimpang dari angka server.
+ */
+app.get('/api/dashboard/analytics', async (c) => {
+  const [rentals, equipments, users] = await Promise.all([
+    db.getRentals(),
+    db.getEquipments(),
+    db.getUsers(),
+  ]);
+
+  const analytics = buildOperationalAnalytics({ rentals, equipments, users });
+
+  return c.json({
+    success: true,
+    data: analytics,
+    meta: {
+      jumlahBulan: analytics.utilisasiBulanan.length,
+      jumlahPelanggan: analytics.topCustomers.length,
+      scope: 'ANALYTICS_OPERASIONAL',
+    },
+  });
 });
 
 /**

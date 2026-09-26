@@ -1,6 +1,18 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, Suspense, lazy } from 'react';
 import { GpsTracking } from '../../types';
-import { LeafletMap } from '../../components/LeafletMap';
+
+/**
+ * Peta Leaflet dimuat MALAMU (T-0064).
+ *
+ * Leaflet ~150 kB hanya dipakai di halaman ini; memuatnya statis membuat
+ * seluruh aplikasi (termasuk Login) ikut berat. `React.lazy` memisahkannya
+ * ke chunk terpisah yang baru diunduh saat halaman pelacakan dibuka.
+ *
+ * Tipe props diimpor terpisah agar tetap tersedia di modul ini tanpa
+ * menarik Leaflet ke dalam bundel awal.
+ */
+const LeafletMap = lazy(() => import('../../components/LeafletMap').then((m) => ({ default: m.LeafletMap })));
+
 import {
   MapPin,
   Navigation,
@@ -14,6 +26,7 @@ import {
   Gauge,
   RefreshCw,
   Layers,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   DEFAULT_FLEET_FILTER,
@@ -29,6 +42,22 @@ import type {
   FleetTelemetryRow,
   FleetTelemetrySummary,
 } from '../../lib/fleetTelemetry';
+import {
+  DEFAULT_SITE_ZONES,
+  detectGeofenceBreaches,
+  formatJarakZona,
+  summarizeGeofence,
+} from '../../lib/geofencing';
+import type { GeofenceBreach, SiteZone } from '../../lib/geofencing';
+
+/**
+ * Zona site yang dipakai halaman ini.
+ *
+ * ponytail: masih konstanta modul. Migrasi ke tabel `site_zones` &
+ * UI manajemen zona bila pengelolaan radius per site menjadi kebutuhan
+ * harian; mesin `geofencing.ts` menerima zona apa pun sebagai parameter.
+ */
+const SITE_ZONES: readonly SiteZone[] = DEFAULT_SITE_ZONES;
 
 interface GpsTrackingPageProps {
   trackingData: GpsTracking[];
@@ -156,6 +185,27 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
   const selectedUnit = rows.find(r => r.equipmentId === selectedUnitId) ?? rows[0];
   const [showHeatmap, setShowHeatmap] = useState(false);
 
+  /**
+   * Pelanggaran geofencing (T-0060).
+   *
+   * Dihitung dengan `useMemo` dari baris telemetri + zona site sehingga
+   * banner alert selalu sinkron dengan data yang sedang tampil — unit
+   * yang tersaring hidup tidak pernah memunculkan false positive.
+   */
+  const alertZona = useMemo(
+    () => detectGeofenceBreaches(rows, SITE_ZONES),
+    [rows]
+  );
+  const ringkasanZona = useMemo(
+    () => summarizeGeofence(alertZona, SITE_ZONES),
+    [alertZona]
+  );
+  const zonaBreachMap = useMemo(() => {
+    const peta = new Map<number, GeofenceBreach>();
+    for (const b of alertZona) peta.set(b.equipmentId, b);
+    return peta;
+  }, [alertZona]);
+
   const ubahFilter = useCallback(
     (perubahan: Partial<FleetTelemetryFilter>) => setFilter((lama) => ({ ...lama, ...perubahan })),
     []
@@ -250,7 +300,81 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
           tone={summary.staleCount > 0 ? 'warning' : 'neutral'}
           icon={<Clock size={12} color="#D97706" />}
         />
+        <SummaryCard
+          label="Keluar Zona Site"
+          value={`${ringkasanZona.jumlahBreach} Unit`}
+          tone={ringkasanZona.jumlahBreach > 0 ? 'danger' : 'success'}
+          icon={<ShieldAlert size={12} color={ringkasanZona.jumlahBreach > 0 ? '#DC2626' : '#059669'} />}
+        />
       </div>
+
+      {/* Banner alert geofencing (T-0060).
+          Hanya tampil saat ada unit di luar semua zona site; daftar lengkap
+          unit beserta jaraknya ditampilkan agar operator bisa langsung
+          menindaklanjuti tanpa membuka panel lain. */}
+      {alertZona.length > 0 && (
+        <div
+          role="alert"
+          aria-label={`${alertZona.length} unit terdeteksi di luar zona site`}
+          className="card-premium animate-fade-in"
+          style={{
+            padding: '14px 16px',
+            borderLeft: '4px solid #DC2626',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <AlertTriangle size={16} color="#DC2626" />
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#991B1B', flex: '1 1 260px' }}>
+              {alertZona.length} unit terdeteksi di luar zona site operasional
+            </span>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#991B1B',
+                backgroundColor: '#FEF2F2',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                border: '1px solid #FECACA',
+              }}
+            >
+              Pelanggaran terjauh: {formatJarakZona(ringkasanZona.jarakTerjauhMeter)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {alertZona.slice(0, 5).map((b) => (
+              <div
+                key={b.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontSize: '12px',
+                  color: '#7F1D1D',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span className="serial-code" style={{ fontWeight: 700, color: '#991B1B' }}>
+                  {b.equipmentCode}
+                </span>
+                <span style={{ fontWeight: 600, flex: '1 1 180px' }}>{b.equipmentName}</span>
+                <span>Zona terdekat: <strong>{b.zonaTerdekat}</strong></span>
+                <span style={{ fontWeight: 800 }}>
+                  {formatJarakZona(b.jarakMeter)} di luar batas
+                </span>
+              </div>
+            ))}
+          </div>
+          {alertZona.length > 5 && (
+            <div style={{ fontSize: '11px', color: '#B91C1C', fontWeight: 600 }}>
+              + {alertZona.length - 5} unit lainnya juga di luar zona.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Panel Penyaringan */}
       <div className="card-premium" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -400,6 +524,25 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                     Titik Usang
                   </span>
                 )}
+                {/* Unit di luar semua zona site (T-0060). */}
+                {zonaBreachMap.has(selectedUnit.equipmentId) && (
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      backgroundColor: '#FEF2F2',
+                      color: '#991B1B',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <ShieldAlert size={10} />
+                    Keluar Zona
+                  </span>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
@@ -464,12 +607,13 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {rows.map((item) => {
                 const isSelected = selectedUnit?.equipmentId === item.equipmentId;
+                const diLuarZona = zonaBreachMap.has(item.equipmentId);
                 return (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setSelectedUnitId(item.equipmentId)}
-                    aria-label={`Pilih unit ${item.equipmentCode} ${item.equipmentName}`}
+                    aria-label={`Pilih unit ${item.equipmentCode} ${item.equipmentName}${diLuarZona ? ' — di luar zona site' : ''}`}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -477,15 +621,23 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                       gap: '8px',
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                      backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                      border: diLuarZona
+                        ? '2px solid #DC2626'
+                        : isSelected
+                          ? '2px solid var(--color-primary)'
+                          : '1px solid var(--color-border)',
+                      backgroundColor: diLuarZona
+                        ? '#FEF2F2'
+                        : isSelected
+                          ? '#EFF6FF'
+                          : '#FFFFFF',
                       cursor: 'pointer',
                       textAlign: 'left',
                       transition: 'var(--transition-base)'
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? 'var(--color-primary)' : '#1E293B' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: diLuarZona ? '#991B1B' : isSelected ? 'var(--color-primary)' : '#1E293B' }}>
                         {item.equipmentName}
                       </div>
                       <div className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>
@@ -494,9 +646,25 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
                       <EngineBadge status={item.engineStatus} />
-                      <span style={{ fontSize: '10px', color: 'var(--color-secondary-light)' }}>
-                        {formatSpeed(item.speed)}
-                      </span>
+                      {diLuarZona ? (
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            color: '#991B1B',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          <ShieldAlert size={10} />
+                          Keluar Zona
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '10px', color: 'var(--color-secondary-light)' }}>
+                          {formatSpeed(item.speed)}
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
@@ -521,13 +689,37 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
                 <span>{showHeatmap ? 'Sembunyikan Heatmap' : 'Tampilkan Heatmap'}</span>
               </button>
             </div>
-            <LeafletMap
-              trackingData={rows}
-              selectedUnitId={selectedUnit?.equipmentId ?? null}
-              onSelectUnit={(id) => setSelectedUnitId(id)}
-              heatmapData={trackingData}
-              showHeatmap={showHeatmap}
-            />
+            <Suspense
+              fallback={
+                <div
+                  role="status"
+                  aria-busy="true"
+                  aria-label="Memuat peta pelacakan armada"
+                  className="map-container"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12.5px',
+                    color: 'var(--color-secondary)',
+                    backgroundColor: '#F1F5F9',
+                    gap: '8px',
+                  }}
+                >
+                  <RefreshCw size={14} className="animate-pulse" />
+                  <span>Memuat peta armada…</span>
+                </div>
+              }
+            >
+              <LeafletMap
+                trackingData={rows}
+                selectedUnitId={selectedUnit?.equipmentId ?? null}
+                onSelectUnit={(id) => setSelectedUnitId(id)}
+                heatmapData={trackingData}
+                showHeatmap={showHeatmap}
+                siteZones={SITE_ZONES}
+              />
+            </Suspense>
           </div>
           <div style={{
             display: 'flex',
@@ -544,6 +736,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
           }}>
             <span>Klik marker pin pada peta untuk melihat data telemetri rinci unit.</span>
             <span>Wilayah Operasional: <strong>Kalsel (Banjarmasin - Banjarbaru - Batola - Tanah Bumbu - Tabalong)</strong></span>
+            <span>Zona site: <strong>{ringkasanZona.jumlahZona} zona geofencing aktif</strong></span>
           </div>
         </div>
       </div>

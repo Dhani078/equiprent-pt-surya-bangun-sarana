@@ -1,3 +1,15 @@
+## [CYCLE 50] 2026-09-25 - FASE 5 INOVASI — 5/5 SELESAI
+**Judul:** Geofencing, Analytics, PWA, i18n, Dynamic Import Leaflet
+**Perubahan:**
+- `src/lib/geofencing.ts` (BARU): haversine meter, SiteZone (PROYEK/BENGKEL/DEPO), detectGeofenceBreaches + tolerance 50m, zonaValid, DEFAULT_SITE_ZONES. Zero lib — pure math
+- `src/lib/analytics.ts` (BARU): buildUtilisasiBulanan (12 bulan, irisan periode sewa), buildTopCustomers (gabung per customer, skip REJECTED), getTingkatUtilisasi (success/warning/danger)
+- `public/sw.js` (BARU) + `src/main.tsx`: service worker vanilla, cache app shell, register PROD-only. Progressive enhancement — gagal register tidak putus app
+- `src/lib/i18n.tsx` (BARU): kamus ID/EN + React context, zero dependency (no i18next). PenyediaBahasa di root, switcher ID/EN di Navbar
+- `CustomerPortal.tsx` + `GpsTrackingPage.tsx`: React.lazy LeafletMap → bundle awal 708KB → 572KB (-19%), chunk terpisah 154KB
+- `tests/fase5.test.mjs` (BARU): 21 asersi (haversine, breach, zonaValid, top customer, utilisasi tier, kamus i18n)
+**Verifikasi:** type-check 0 error, 29/29 suite (naik dari 28), build sukses, bundle ter-split
+**Catatan:** subagent mati sebelum commit — selesai manual (CustomerPortal static import Ketahuan, i18n ditulis sendiri, test suite dibuat sendiri)
+
 ## [CYCLE 49] 2026-09-24 - RONDE 2+3 DESIGN PREMIUM — DONE
 **Judul:** Audit visual iteratif login + dashboard + chart (ronde 2 & 3)
 **Commit:** cc8c4b0 (ronde 2), 270897a (ronde 3)

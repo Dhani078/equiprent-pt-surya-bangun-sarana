@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { User, RoleName } from '../types';
-import { LogOut, Shield, Moon, Sun, ChevronDown } from 'lucide-react';
+import { LogOut, Shield, Moon, Sun, ChevronDown, Languages } from 'lucide-react';
 import { getUserAvatar } from '../lib/stitchAssets';
+import { useTerjemahan, type Bahasa } from '../lib/i18n';
 import { NotificationCenter } from './NotificationCenter';
 import type { NotificationItem } from '../lib/notifications';
 
@@ -43,6 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dark, setDark] = useState(() => initTheme());
+  const { bahasa, aturBahasa } = useTerjemahan();
   const avatarUrl = getUserAvatar(currentUser.role_name);
 
   useEffect(() => {
@@ -96,6 +98,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Pusat Notifikasi */}
         {onSelectTab && <NotificationCenter items={notifications} onNavigate={onSelectTab} />}
+
+        {/* Pemilih Bahasa (T-0063) */}
+        <button
+          type="button"
+          onClick={() => aturBahasa(bahasa === 'id' ? 'en' : 'id')}
+          className="btn-secondary"
+          title={bahasa === 'id' ? 'Switch to English' : 'Beralih ke Bahasa Indonesia'}
+          aria-label={bahasa === 'id' ? 'Switch to English' : 'Beralih ke Bahasa Indonesia'}
+          style={{ padding: '6px 10px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Languages size={15} />
+          <span style={{ fontSize: '11.5px', fontWeight: 600 }}>{bahasa === 'id' ? 'ID' : 'EN'}</span>
+        </button>
 
         {/* Dark Mode Toggle */}
         <button
