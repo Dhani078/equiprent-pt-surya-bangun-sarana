@@ -404,6 +404,7 @@ export const App: React.FC = () => {
                   onCreateContract={handleCreateContract}
                   onSignContract={handleSignContract}
                   onNotify={notify}
+                  activeMenu={activeTab}
                 />
               )}
               {activeTab === 'maintenance' && (
