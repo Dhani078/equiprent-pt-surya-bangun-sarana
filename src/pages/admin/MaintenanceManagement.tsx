@@ -230,7 +230,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                 fontWeight: 700,
                 padding: '3px 10px',
                 borderRadius: '999px',
-                backgroundColor: overdueCount > 0 ? '#FEE2E2' : '#FEF3C7',
+                backgroundColor: overdueCount > 0 ? 'var(--bg-rose-soft)' : 'var(--bg-cream-soft)',
                 color: overdueCount > 0 ? 'var(--fg-danger-deep)' : 'var(--fg-warning-deep)',
               }}
             >
@@ -277,12 +277,10 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                   );
                   const tgl = predictNextServiceDate(status.currentHM, status.nextServiceTargetHM, selesai);
                   return tgl ? (
-                    <div style={{ fontSize: '11.5px', color: '#0F766E', fontWeight: 600 }}>
+                    <div style={{ fontSize: '11.5px', color: 'var(--fg-teal)', fontWeight: 600 }}>
                       ≈ {tgl.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </div>
-                  ) : (
-                    <div style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>prediksi: —</div>
-                  );
+                  ) : null; /* data servis < 2 titik — jangan tampilkan placeholder kosong */
                 })()}
 
                 <span
@@ -341,7 +339,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
       {/* Panel Notifikasi Suku Cadang Sering Dipakai */}
       <div className="card-premium" style={{ padding: '16px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          <Wrench size={18} color="#0F766E" />
+          <Wrench size={18} color="var(--fg-teal)" />
           <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
             Notifikasi Suku Cadang
           </h3>
@@ -389,7 +387,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                     {nama}
                   </div>
                   <div style={{ flex: '1 1 120px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ flex: 1, height: '6px', borderRadius: '3px', backgroundColor: '#FEF3C7', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: '6px', borderRadius: '3px', backgroundColor: 'var(--bg-cream-soft)', overflow: 'hidden' }}>
                       <div style={{ width: `${persen}%`, height: '100%', backgroundColor: '#F59E0B', borderRadius: '3px', transition: 'width 0.3s' }} />
                     </div>
                   </div>
@@ -398,7 +396,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
                     fontWeight: 700,
                     padding: '3px 10px',
                     borderRadius: '999px',
-                    backgroundColor: '#FEF3C7',
+                    backgroundColor: 'var(--bg-cream-soft)',
                     color: 'var(--fg-warning-deep)',
                     whiteSpace: 'nowrap',
                   }}>
@@ -414,7 +412,7 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
       {/* Panel Riwayat Servis per Unit */}
       <div className="card-premium" style={{ padding: '16px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          <Wrench size={18} color="#0F766E" />
+          <Wrench size={18} color="var(--fg-teal)" />
           <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
             Riwayat Servis per Unit
           </h3>

@@ -266,7 +266,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <div
                 role="alert"
                 style={{
-                backgroundColor: '#FEE2E2',
+                backgroundColor: 'var(--bg-rose-soft)',
                 border: '1px solid #F87171',
                 borderRadius: '8px',
                 padding: '10px 14px',

@@ -1,7 +1,5 @@
-## Cycle 53 — Sweep token tema global T-0076 (2026-09-26)
-- 28 file tsx: hex warna hardcoded (#1E293B,#FEF2F2,#ECFDF5,dst) -> token CSS var (--text-strong, --bg-*-soft, --fg-*-deep, dst). Nilai light IDENTIK dengan hex lama (screenshot light terverifikasi tidak berubah).
-- Token baru didefinisikan di :root + [data-theme=dark] dengan padanan gelap (teks terang, latar tint transparan).
-- Dark override untuk SEMUA family badge: .badge-sem-* (pill StatusBadge) + .badge-available/rented/maintenance/uncovered lama (pill EquipmentManagement). Sebelumnya putih saat dark mode.
-- Fix inkonsistensi bahasa: judul halaman Inventaris "Equipment Inventory & Fleet Monitoring" -> "Inventaris Alat Berat & Pemantauan Armada" (UI lain sudah ID).
-- Verifikasi visual CDP: dashboard+inventaris dark (8/10 -> pills themed), light tidak regresi, DOM computed style cocok.
-- Gate: type-check 0, 29/29 suite (1 asersi warna skeletonLoading diupdate ke token, preseden sama cycle 51), build OK.
+## Cycle 54 — Audit visual Servis (T-0077) (2026-09-26)
+- Hex lolos sweep: #FEE2E2/#FEF3C7/#0F766E (6 file) -> token baru --bg-rose-soft/--bg-cream-soft/--fg-teal dgn padanan gelap (pill "unit jatuh tempo", "Nx dipakai", track bar, tanggal prediksi ikut themed).
+- Placeholder "prediksi: —" (kolom mati, data servis <2 titik) tidak dirender lagi — terverifikasi DOM: /prediksi/ = false.
+- Nitpick ditolak dgn alasan: label toggle "Terang"=target-mode (standar), badge sidebar 7/14 satu komponen sama, input threshold sudah .input-premium themed.
+- Gate: tsc 0, 29/29, build OK. Recheck CDP dark.

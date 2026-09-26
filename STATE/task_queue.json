@@ -629,5 +629,11 @@
     "title": "Sweep token tema: ~400 hex hardcoded -> var() + badge dark override + fix judul EN Inventaris",
     "status": "DONE",
     "priority": "P1"
+  },
+  {
+    "id": "T-0077",
+    "title": "Sapu hex lolos (FEE2E2/FEF3C7/0F766E->token) + hapus placeholder kosong prediksi servis",
+    "status": "DONE",
+    "priority": "P2"
   }
 ]

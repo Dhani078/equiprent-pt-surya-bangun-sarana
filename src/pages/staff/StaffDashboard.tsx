@@ -190,7 +190,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 fontWeight: 700,
                 padding: '3px 10px',
                 borderRadius: '999px',
-                backgroundColor: jumlahTerlambat > 0 ? '#FEE2E2' : '#FEF3C7',
+                backgroundColor: jumlahTerlambat > 0 ? 'var(--bg-rose-soft)' : 'var(--bg-cream-soft)',
                 color: jumlahTerlambat > 0 ? 'var(--fg-danger-deep)' : 'var(--fg-warning-deep)',
               }}
             >
