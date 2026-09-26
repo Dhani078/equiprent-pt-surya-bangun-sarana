@@ -318,7 +318,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 						<strong>Server:</strong> Cloud (Produksi)
 					</div>
 					<div>
-						<strong>Basis data:</strong> MySQL 8.0 (Cloud)
+						<strong>Basis data:</strong> Terpusat (Cloud)
 					</div>
 					<div>
 						<strong>Mode data:</strong>{' '}
@@ -333,7 +333,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 
 				{modeData !== 'TIDB' && (
 					<p style={{ margin: '12px 0 0 0', fontSize: '12px', color: 'var(--fg-warning-deep)', fontWeight: 600, lineHeight: 1.6 }}>
-						Mode data contoh aktif karena <code>DATABASE_URL</code> belum diisi. Perubahan yang Anda simpan hanya
+						Mode data contoh aktif karena koneksi ke basis data resmi belum dijalankan. Perubahan yang Anda simpan saat ini hanya
 						bertahan selama sesi peramban ini.
 					</p>
 				)}
