@@ -647,5 +647,11 @@
     "title": "Audit visual Staff+Customer dark: fix kartu quick-nav putih, color-scheme native control, tanggal ISO Staff",
     "status": "DONE",
     "priority": "P1"
+  },
+  {
+    "id": "T-0080",
+    "title": "Bug fix audit cycle 57: sidebar shrink BAST + nav/konten Staff mismatch",
+    "status": "DONE",
+    "priority": "P1"
   }
 ]
