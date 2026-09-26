@@ -55,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header style={{
       height: '64px',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: 'var(--color-surface)',
       borderBottom: '1px solid var(--color-border)',
       display: 'flex',
       alignItems: 'center',
@@ -134,7 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: 'var(--space-2)',
-            background: '#F1F5F9',
+            background: 'var(--color-surface-hover, #F1F5F9)',
             padding: '4px 10px',
             borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
@@ -159,7 +159,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               padding: '4px 8px',
               borderRadius: '8px',
               border: '1px solid transparent',
-              background: dropdownOpen ? '#F1F5F9' : 'transparent',
+              background: dropdownOpen ? 'var(--color-surface-hover)' : 'transparent',
               cursor: 'pointer',
               transition: 'all 0.2s'
             }}
@@ -195,7 +195,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 right: 0,
                 top: '48px',
                 width: '200px',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--color-surface)',
                 borderRadius: '8px',
                 boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
                 border: '1px solid var(--color-border)',
@@ -204,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               onMouseLeave={() => setDropdownOpen(false)}
             >
-              <div style={{ padding: '8px 10px', borderBottom: '1px solid #F1F5F9', marginBottom: '4px' }}>
+              <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--color-surface-hover)', marginBottom: '4px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B' }}>{currentUser.full_name}</div>
                 <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{currentUser.email}</div>
               </div>
@@ -230,7 +230,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   cursor: 'pointer',
                   textAlign: 'left'
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FEE2E2')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-danger-soft, #FEE2E2)')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <LogOut size={14} />

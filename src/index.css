@@ -4,6 +4,16 @@
  */
 
 :root {
+  /* Tema permukaan (dipakai Sidebar/Navbar/StatCard) */
+  --color-surface-hover: #F1F5F9;
+  --color-danger-soft: #FEE2E2;
+  --color-on-primary: #FFFFFF;
+  --tile-success-bg: #ECFDF5; --tile-success-fg: #047857;
+  --tile-info-bg: #EFF6FF;    --tile-info-fg: #1D4ED8;
+  --tile-warning-bg: #FFFBEB; --tile-warning-fg: #B45309;
+  --tile-danger-bg: #FEF2F2;  --tile-danger-fg: #B91C1C;
+  --tile-neutral-bg: #F1F5F9; --tile-neutral-fg: var(--color-primary);
+  --banner-danger-bg: #FEF2F2; --banner-danger-border: #FECACA; --banner-danger-fg: #7F1D1D; --banner-danger-icon: #991B1B;
   /* Brand Colors */
   --color-primary: #003366;          /* Deep Industrial Blue */
   --color-primary-dark: #002244;     /* Darker shade */
@@ -176,6 +186,48 @@ body {
   outline: none;
 }
 
+/* ==========================================================================
+   T-0071 — Focus ring global (WCAG 2.4.7): navigasi keyboard harus selalu
+   terlihat. Kelas .focus-ring dipakai elemen non-form (kartu klik, baris
+   tabel) yang butuh indikator fokus. Warna kontras di-light-dan-gelap:
+   navy pekat di terang, biru muda + halo gelap di dark mode.
+   ========================================================================== */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Bidang teks: tetap pakai border glow .input-premium — tidak perlu outline. */
+.input-premium:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-primary-glow);
+}
+
+/* Kelas utilitas untuk elemen bukan-form yang dibuat fokusabel via tabIndex. */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+[data-theme="dark"] :focus-visible {
+  outline-color: #6CB2E8;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.85);
+}
+
+/* Pengguna yang sudah menonaktifkan animasi: hormati preferensinya. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -322,11 +374,11 @@ body {
 
 /* Tile ikon StatCard — warna dibedakan per jenis/tingkat keparahan agar
    tidak semua seragam biru (sesuai audit visual). */
-.tile-success { background-color: #ECFDF5; color: #047857; }
-.tile-info    { background-color: #EFF6FF; color: #1D4ED8; }
-.tile-warning { background-color: #FFFBEB; color: #B45309; }
-.tile-danger  { background-color: #FEF2F2; color: #B91C1C; }
-.tile-neutral { background-color: #F1F5F9; color: var(--color-primary); }
+.tile-success { background-color: var(--tile-success-bg); color: var(--tile-success-fg); }
+.tile-info    { background-color: var(--tile-info-bg); color: var(--tile-info-fg); }
+.tile-warning { background-color: var(--tile-warning-bg); color: var(--tile-warning-fg); }
+.tile-danger  { background-color: var(--tile-danger-bg); color: var(--tile-danger-fg); }
+.tile-neutral { background-color: var(--tile-neutral-bg); color: var(--tile-neutral-fg); }
 
 /* Telemetry & Code Typography */
 .telemetry-data,
@@ -335,6 +387,7 @@ body {
 .serial-code {
   font-family: var(--font-mono);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Table Utilities */
@@ -483,11 +536,23 @@ table.data-table tbody tr:hover {
   --color-primary:           #4A90D9;
   --color-primary-dark:      #2E6FAD;
   --color-primary-light:     #5FA8E8;
-  --color-secondary:         #94A3B8;
+  --color-secondary:         #A9B6C8;
   --color-secondary-light:   #CBD5E1;
   --color-background:        #0F172A;
   --color-surface:           #1E293B;
   --color-border:            #2D3F55;
+  --color-surface-hover:     #243450;
+  --color-danger-soft:       rgba(220, 38, 38, 0.18);
+  --color-on-primary:        #FFFFFF;
+  --tile-success-bg:         rgba(5, 150, 105, 0.18);  --tile-success-fg: #34D399;
+  --tile-info-bg:            rgba(74, 144, 217, 0.18); --tile-info-fg: #7CB9E8;
+  --tile-warning-bg:         rgba(217, 119, 6, 0.20);  --tile-warning-fg: #FBBF24;
+  --tile-danger-bg:          rgba(220, 38, 38, 0.18);  --tile-danger-fg: #F87171;
+  --tile-neutral-bg:         #243450;                  --tile-neutral-fg: #7CB9E8;
+  --banner-danger-bg:        rgba(220, 38, 38, 0.12);
+  --banner-danger-border:    rgba(248, 113, 113, 0.35);
+  --banner-danger-fg:        #FCA5A5;
+  --banner-danger-icon:      #F87171;
   --color-skeleton-from:     #243450;
   --color-skeleton-via:      #334155;
   --shadow-sm:   0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);

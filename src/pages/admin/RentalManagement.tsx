@@ -201,7 +201,19 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
     await onUpdateRentalStatus(rental.id, next);
   };
 
-  const filteredRentals = rentals.filter((r) => {
+  /** Rental dari seed/edge tidak selalu membawa nama pelanggan — lengkapi via join users (bug kolom kosong). */
+  const pelangganById = React.useMemo(() => new Map(users.map((u) => [u.id, u] as const)), [users]);
+  const rentalsLengkap = React.useMemo(
+    () =>
+      rentals.map((r) => {
+        if (r.customer_name) return r;
+        const p = pelangganById.get(r.customer_id);
+        return p ? { ...r, customer_name: p.full_name, company_name: r.company_name ?? p.company_name ?? undefined } : r;
+      }),
+    [rentals, pelangganById],
+  );
+
+  const filteredRentals = rentalsLengkap.filter((r) => {
     const matchesSearch = r.rental_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.customer_name && r.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (r.company_name && r.company_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -228,7 +240,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
   const handleExport = (format: ExportFormat) => {
     const hasil = exportTable(format, filteredRentals, kolomEkspor, {
       title: 'Daftar Transaksi Penyewaan',
-      subtitle: `Ditampilkan ${filteredRentals.length} dari ${rentals.length} transaksi`,
+      subtitle: `Ditampilkan ${filteredRentals.length} dari ${rentalsLengkap.length} transaksi`,
       filename: 'transaksi-penyewaan',
     });
     onNotify?.(hasil.message, hasil.ok ? 'success' : 'error');
@@ -491,7 +503,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                     {r.rental_code}
                   </td>
                   <td>
-                    <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#1E293B' }}>{r.company_name || r.customer_name}</div>
+                    <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--color-primary)' }}>{r.company_name || r.customer_name}</div>
                     <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>{r.customer_name}</div>
                   </td>
                   <td>
@@ -503,7 +515,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                       </div>
                     </div>
                   </td>
-                  <td style={{ fontSize: '12px' }}>
+                  <td style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
                     <div>Mulai: <strong>{formatTanggal(r.start_date)}</strong></div>
                     <div>Selesai: <strong>{formatTanggal(r.end_date)}</strong></div>
                     {denda && denda.isLate && (

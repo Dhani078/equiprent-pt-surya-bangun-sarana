@@ -3,12 +3,14 @@ import { RoleName, User } from '../types';
 import { Truck, Shield, Lock, Eye, EyeOff, User as UserIcon, CheckCircle, X, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
 import { db } from '../lib/db';
 import { STITCH_IMAGES } from '../lib/stitchAssets';
+import { useTerjemahan } from '../lib/i18n';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+  const { t } = useTerjemahan();
   const [selectedRole, setSelectedRole] = useState<RoleName>('ADMIN');
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin');
@@ -115,21 +117,21 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   /** Label field statik netral — tidak mengulang nama tab peran yang dipilih. */
-  const LABEL_FIELD = 'Nama Pengguna';
+  const LABEL_FIELD = t('login.nama_pengguna');
 
   const getRoleLabel = () => LABEL_FIELD;
 
   const getRolePlaceholder = () => {
-    if (selectedRole === 'ADMIN') return 'Masukkan nama pengguna admin (contoh: admin)';
-    if (selectedRole === 'STAFF') return 'Masukkan nama pengguna staf (contoh: staff)';
-    return 'Masukkan nama pengguna pelanggan (contoh: user)';
+    if (selectedRole === 'ADMIN') return t('login.placeholder.ADMIN');
+    if (selectedRole === 'STAFF') return t('login.placeholder.STAFF');
+    return t('login.placeholder.CUSTOMER');
   };
 
-  /** Label tab peran dalam Bahasa Indonesia. */
+  /** Label tab peran — mengikuti bahasa aktif. */
   const LABEL_TAB_PERAN: Readonly<Record<RoleName, string>> = {
-    ADMIN: 'Administrator',
-    STAFF: 'Staf',
-    CUSTOMER: 'Pelanggan',
+    ADMIN: t('login.peran.ADMIN'),
+    STAFF: t('login.peran.STAFF'),
+    CUSTOMER: t('login.peran.CUSTOMER'),
   };
 
   return (
@@ -251,10 +253,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             {/* Header Form */}
             <div style={{ marginBottom: 'var(--space-6)' }}>
               <h3 style={{ fontSize: 'var(--fs-display)', fontWeight: 800, color: '#001E40', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
-                Selamat Datang Kembali
+                {t('login.selamat_datang')}
               </h3>
               <p style={{ fontSize: 'var(--fs-body)', color: 'var(--color-secondary)', margin: 0 }}>
-                Pilih peran dan masukkan kredensial untuk masuk ke sistem.
+                {t('login.instruksi')}
               </p>
             </div>
 
@@ -355,14 +357,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-primary)' }}>
-                    Kata Sandi
+                    {t('login.kata_sandi')}
                   </label>
                   <a
                     href="#"
                     onClick={(e) => { e.preventDefault(); alert('Silakan hubungi IT Helpdesk PT. Surya Bangun Sarana Banjarmasin di nomor hotline (0511) 325-SBS atau email support@suryaequipment.co.id untuk pemulihan akses akun.'); }}
                     style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-primary)', fontWeight: 400, textDecoration: 'underline', textUnderlineOffset: '2px' }}
                   >
-                    Lupa Kata Sandi?
+                    {t('login.lupa_sandi')}
                   </a>
                 </div>
                 <div style={{ position: 'relative' }}>
@@ -422,7 +424,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   style={{ width: '18px', height: '18px', accentColor: 'var(--color-primary)', cursor: 'pointer', margin: 0, flexShrink: 0 }}
                 />
                 <span style={{ fontSize: 'var(--fs-sm)', color: '#475569' }}>
-                  Ingat saya di perangkat ini
+                  {t('login.ingat_saya')}
                 </span>
               </label>
 
@@ -448,7 +450,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   <span>Memverifikasi...</span>
                 ) : (
                   <>
-                    <span>Masuk</span>
+                    <span>{t('login.masuk')}</span>
                     <ArrowRight size={16} />
                   </>
                 )}
@@ -458,7 +460,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             {/* Footer Registration Link — satu penekanan saja (bold, tanpa underline) */}
             <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-5)', borderTop: '1px solid var(--color-border)', textAlign: 'center' }}>
               <p style={{ fontSize: 'var(--fs-body)', color: 'var(--color-secondary)', margin: 0 }}>
-                Staf atau pelanggan baru?{' '}
+                {t('login.staf_baru')}{" "}
                 <button
                   type="button"
                   onClick={() => setIsRegisterModalOpen(true)}
@@ -471,7 +473,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     padding: 0
                   }}
                 >
-                  Daftar Akun Pelanggan
+                  {t('login.daftar_pelanggan')}
                 </button>
               </p>
             </div>
@@ -534,7 +536,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </div>
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
-                  Daftar Akun Pelanggan
+                  {t('login.daftar_judul')}
                 </h3>
                 <p style={{ fontSize: '11.5px', color: 'var(--color-secondary)', margin: 0 }}>
                   PT. SURYA BANGUN SARANA BANJARMASIN

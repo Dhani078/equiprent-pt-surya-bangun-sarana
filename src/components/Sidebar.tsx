@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
   return (
     <aside style={{
       width: '260px',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: 'var(--color-surface)',
       borderRight: '1px solid var(--color-border)',
       height: 'calc(100vh - 64px)',
       position: 'sticky',
@@ -145,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
                   fontFamily: 'var(--font-primary)',
                   fontSize: '13.5px',
                   fontWeight: isActive ? 700 : 500,
-                  color: isActive ? '#FFFFFF' : 'var(--color-secondary)',
+                  color: isActive ? 'var(--color-on-primary, #FFFFFF)' : 'var(--color-secondary)',
                   backgroundColor: isActive ? 'var(--color-primary)' : 'transparent',
                   cursor: 'pointer',
                   transition: 'var(--transition-base)',
@@ -153,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.backgroundColor = '#F1F5F9';
+                    e.currentTarget.style.backgroundColor = 'var(--color-surface-hover, #F1F5F9)';
                     e.currentTarget.style.color = 'var(--color-primary)';
                   }
                 }}

@@ -2,13 +2,18 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { PenyediaBahasa } from './lib/i18n';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <PenyediaBahasa>
-      <App />
-    </PenyediaBahasa>
+    {/* T-0072: tangkap galat render di mana pun -> panel pemulihan, bukan
+        layar putih. Boundary dalam (per-rute) ada di App.tsx. */}
+    <ErrorBoundary>
+      <PenyediaBahasa>
+        <App />
+      </PenyediaBahasa>
+    </ErrorBoundary>
   </React.StrictMode>
 );
 
