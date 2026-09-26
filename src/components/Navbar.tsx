@@ -230,7 +230,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   cursor: 'pointer',
                   textAlign: 'left'
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-danger-soft, #FEE2E2)')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-danger-soft, var(--bg-rose-soft))')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <LogOut size={14} />

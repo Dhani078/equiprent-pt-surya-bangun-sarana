@@ -34,6 +34,9 @@
   --bg-green-soft: #ECFDF5;
   --bg-amber-soft: #FFFBEB;
   --border-red-soft: #FECACA;
+  --bg-rose-soft: #FEE2E2;
+  --bg-cream-soft: #FEF3C7;
+  --fg-teal: #0F766E;
   --border-blue-soft: #BFDBFE;
   --border-amber-soft: #FDE68A;
   /* Brand Colors */
@@ -606,6 +609,9 @@ table.data-table tbody tr:hover {
   --bg-green-soft:           rgba(5, 150, 105, 0.14);
   --bg-amber-soft:           rgba(217, 119, 6, 0.16);
   --border-red-soft:         rgba(248, 113, 113, 0.35);
+  --bg-rose-soft:            rgba(220, 38, 38, 0.16);
+  --bg-cream-soft:           rgba(217, 119, 6, 0.18);
+  --fg-teal:                 #5EEAD4;
   --border-blue-soft:        rgba(124, 185, 232, 0.35);
   --border-amber-soft:       rgba(251, 191, 36, 0.35);
   --color-skeleton-from:     #243450;

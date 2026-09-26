@@ -36,9 +36,9 @@ function bacaToken(): string | null {
 
 /** Warna badge aksi sesuai kategori mutasi (design system §7). */
 function warnaAksi(action: string): { bg: string; fg: string } {
-  if (action.startsWith('DELETE') || action.includes('REJECT')) return { bg: '#FEE2E2', fg: 'var(--fg-danger-deep)' };
+  if (action.startsWith('DELETE') || action.includes('REJECT')) return { bg: 'var(--bg-rose-soft)', fg: 'var(--fg-danger-deep)' };
   if (action.includes('VERIFY') || action === 'LOGIN' || action.includes('CREATE')) return { bg: '#D1FAE5', fg: 'var(--fg-success-deeper)' };
-  if (action.includes('UPDATE') || action.includes('CHANGE') || action.includes('TOGGLE')) return { bg: '#FEF3C7', fg: 'var(--fg-warning-deep)' };
+  if (action.includes('UPDATE') || action.includes('CHANGE') || action.includes('TOGGLE')) return { bg: 'var(--bg-cream-soft)', fg: 'var(--fg-warning-deep)' };
   return { bg: '#E0E7FF', fg: '#3730A3' };
 }
 
