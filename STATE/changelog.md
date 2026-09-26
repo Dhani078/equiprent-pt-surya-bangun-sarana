@@ -22,3 +22,8 @@
 - Vision claim BAST "sidebar clipped/table overflow" TIDAK terbukti di DOM (scrollWidth<=clientWidth semua; .table-container sudah overflow-x auto) — JPEG lama, ditolak dgn bukti.
 - Known limitation (bukan bug): foto unit generik per kategori (STITCH_IMAGES) — perlu aset foto asli per unit.
 - Gate: tsc 0, 29/29, build OK. Commits 9befa0f + ini.
+
+## Cycle 57 — Bug fungsional Staff (T-0080) (2026-09-26)
+- Sidebar.tsx: width 260px tanpa flex-shrink -> menyusut 88px di halaman BAST bertabel 1483px (label terpotong, footer crop, tombol konten menindih nav). Fix: flexShrink:0. Verified aside=260px clip=0.
+- StaffDashboard/App: menu "Kontrak Sewa Digital" & "Transaksi Penyewaan" hanya menandai aktif tanpa mengubah konten (selalu payments). Fix: prop activeMenu -> useEffect sinkron activeSubTab. Verified: panel kontrak tampil, 50 baris.
+- Gate: tsc 0, 29/29, build OK. Commits c1bbe26, (staff sync).
