@@ -102,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
   return (
     <aside style={{
       width: '260px',
+      flexShrink: 0, /* cegah menyusut saat halaman bertabel lebar (bug BAST) */
       backgroundColor: 'var(--color-surface)',
       borderRight: '1px solid var(--color-border)',
       height: 'calc(100vh - 64px)',
