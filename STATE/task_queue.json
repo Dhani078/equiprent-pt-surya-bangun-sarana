@@ -635,5 +635,11 @@
     "title": "Sapu hex lolos (FEE2E2/FEF3C7/0F766E->token) + hapus placeholder kosong prediksi servis",
     "status": "DONE",
     "priority": "P2"
+  },
+  {
+    "id": "T-0078",
+    "title": "Audit visual GPS/Pengguna/Laporan/Penyewaan dark + sweep bocoran istilah teknis UI",
+    "status": "DONE",
+    "priority": "P1"
   }
 ]
