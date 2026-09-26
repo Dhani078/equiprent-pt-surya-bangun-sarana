@@ -329,7 +329,7 @@ export const AuditLogPanel: React.FC = () => {
       )}
 
       <div style={{ fontSize: '10.5px', color: 'var(--color-secondary-light)', marginTop: '12px' }}>
-        Catatan disimpan di edge worker (ring buffer 1000 entri, maks 200
+        Catatan disimpan di server (ring buffer 1000 entri, maks 200
         ditampilkan per permintaan). Pada mode IN_MEMORY_DEMO, catatan hilang
         saat isolate worker diganti.
       </div>

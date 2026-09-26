@@ -568,7 +568,7 @@ ${baris}
 
   <footer class="footer">
     Dokumen ini diterbitkan secara digital oleh EquipRent MS pada ${escapeHtml(doc.issuedAtLabel)}
-    dan tercatat pada basis data TiDB Cloud ${escapeHtml(COMPANY.name)}.
+    dan tercatat pada sistem resmi ${escapeHtml(COMPANY.name)}.
   </footer>
 </body>
 </html>`;

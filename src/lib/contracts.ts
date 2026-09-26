@@ -631,7 +631,7 @@ ${tandaTangan(preview.parties.right)}
 
   <footer class="footer">
     Dokumen ini diterbitkan secara digital oleh EquipRent MS pada ${escapeContractHtml(preview.issuedAtLabel)}
-    dan tercatat pada basis data TiDB Cloud ${escapeContractHtml(COMPANY.name)}.
+    dan tercatat pada sistem resmi ${escapeContractHtml(COMPANY.name)}.
   </footer>
 </body>
 </html>`;

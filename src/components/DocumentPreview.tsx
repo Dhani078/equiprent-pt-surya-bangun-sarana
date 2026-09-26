@@ -198,7 +198,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ doc }) => {
           textAlign: 'center',
         }}
       >
-        Diterbitkan secara digital pada {doc.issuedAtLabel} &bull; tercatat pada basis data TiDB
+        Diterbitkan secara digital pada {doc.issuedAtLabel} &bull; tercatat pada sistem resmi
         Cloud.
       </p>
     </div>

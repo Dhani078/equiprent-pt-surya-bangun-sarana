@@ -84,7 +84,7 @@ t('semua kolom tampil di kepala tabel',
   hasil.columns.every((c) => html.includes(c.label)));
 t('periode "Semua periode" tampil', html.includes('Semua periode'));
 t('jumlah baris tampil', html.includes(`${hasil.totalRows} baris data`));
-t('badge sumber API tampil', html.includes('Sumber: Edge API'));
+t('badge sumber API tampil', html.includes('Dihitung langsung oleh server'));
 t('ringkasan tampil', hasil.summaries.every((s) => html.includes(s.label)));
 t('nilai uang terformat Rupiah', /Rp\s/.test(html));
 t('tombol ekspor aktif (tidak disabled pada tombol CSV)', html.includes('Ekspor CSV'));
