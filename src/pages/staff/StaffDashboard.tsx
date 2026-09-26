@@ -223,7 +223,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 </div>
 
                 <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
-                  Jatuh tempo: <strong>{rental.end_date}</strong>
+                  Jatuh tempo: <strong>{formatTanggal(rental.end_date)}</strong>
                 </div>
 
                 <span
