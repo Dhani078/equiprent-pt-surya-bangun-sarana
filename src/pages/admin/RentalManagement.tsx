@@ -334,7 +334,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  backgroundColor: subTab === tab.id ? '#FFFFFF' : 'transparent',
+                  backgroundColor: subTab === tab.id ? 'var(--color-surface)' : 'transparent',
                   color: subTab === tab.id ? 'var(--color-primary)' : 'var(--color-secondary)',
                   boxShadow: subTab === tab.id ? '0 1px 3px rgba(0, 51, 102, 0.12)' : 'none',
                 }}
