@@ -54,3 +54,8 @@
 - BUG PRODUKSI: login 500. wrangler tail: PBKDF2 600000 iterasi ditolak Workers (maks 100000). Fix: konstanta 100k + hash demo regen. 
 - Verified live: /api/health TIDB, session_secret permanen, admin login = baris DB asli, 50 equipment, revenue dari TiDB.
 - Catatan: skema aplikasi ada di DB `test` cluster serverless (bukan sys). DDL di `sys` diblokir flag tapi tidak dipakai.
+
+## Siklus 60 — 2026-09-27
+- Akar: browser tidak pernah bicara API untuk mutasi & 4 halaman 401 senyap.
+- Jembatan penuh login->token->cermin->write-through; RBAC method-aware; /api/gps + PUT profil.
+- Verif production via CDP: 3 role, 401=0, persist UI->TiDB terbukti bolak-balik, tema gelap OK.
