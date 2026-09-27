@@ -61,6 +61,20 @@ if (databaseUrl && !databaseUrl.includes('your_username')) {
   }
 }
 
+/**
+ * Worker TIDAK punya process.env — secret `DATABASE_URL` hanya datang lewat
+ * binding `c.env`. Middleware memanggil ini sekali per cold-start; setelah
+ * tidbClient terbentuk, panggilan berikut no-op.
+ */
+export const configureDatabaseUrl = (url?: string): void => {
+  if (tidbClient || !url || url.includes('your_username')) return;
+  try {
+    tidbClient = connect({ url }) as unknown as TidbClient;
+  } catch {
+    tidbClient = null;
+  }
+};
+
 /** Menandakan apakah aplikasi sedang terhubung ke database sungguhan. */
 export const isDatabaseConnected = (): boolean => tidbClient !== null;
 
