@@ -15,7 +15,7 @@ export interface ProfilePatch {
 interface AccountSettingsProps {
 	currentUser: User
 	onSaveProfile: (patch: ProfilePatch) => Promise<void>
-	onChangePassword: (passwordBaru: string) => Promise<void>
+	onChangePassword: (passwordBaru: string, passwordLama: string) => Promise<void>
 	onNotify: (message: string, tone: 'success' | 'error') => void
 }
 
@@ -84,6 +84,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 	const [galatProfil, setGalatProfil] = useState<string[]>([])
 	const [menyimpanProfil, setMenyimpanProfil] = useState(false)
 
+	const [passwordLama, setPasswordLama] = useState('')
 	const [passwordBaru, setPasswordBaru] = useState('')
 	const [ulangiPassword, setUlangiPassword] = useState('')
 	const [galatPassword, setGalatPassword] = useState<string[]>([])
@@ -126,7 +127,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 		}
 		setMenggantiPassword(true)
 		try {
-			await onChangePassword(passwordBaru)
+			await onChangePassword(passwordBaru, passwordLama)
 			setPasswordBaru('')
 			setUlangiPassword('')
 			onNotify('Password berhasil diganti.', 'success')
@@ -254,6 +255,20 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 				)}
 
 				<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+					<div>
+						<label style={GAYA_LABEL} htmlFor="set-pw-lama">
+							Password Lama
+						</label>
+						<input
+							id="set-pw-lama"
+							type="password"
+							autoComplete="current-password"
+							className="input-premium"
+							style={{ width: '100%' }}
+							value={passwordLama}
+							onChange={(e) => setPasswordLama(e.target.value)}
+						/>
+					</div>
 					<div>
 						<label style={GAYA_LABEL} htmlFor="set-pw-baru">
 							Password Baru

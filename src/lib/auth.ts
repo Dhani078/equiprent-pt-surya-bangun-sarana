@@ -457,11 +457,23 @@ function isSessionPayload(value: unknown): value is SessionPayload {
 // RBAC Helper
 // ---------------------------------------------------------------------------
 
-/** Matriks hak akses: endpoint prefix → role yang diizinkan. */
-const RBAC_MATRIX: ReadonlyArray<{ prefix: string; roles: readonly RoleName[] }> = [
+/** Matriks hak akses: endpoint prefix → role yang diizinkan (per metode). */
+const RBAC_MATRIX: ReadonlyArray<{
+  prefix: string;
+  roles: readonly RoleName[];
+  /** Metode HTTP yang dicakup; default = semua. */
+  methods?: readonly string[];
+}> = [
   // Ganti password diri sendiri boleh dilakukan semua role.
   { prefix: '/api/auth/change-password', roles: ['ADMIN', 'STAFF', 'CUSTOMER'] },
+  // Semua role boleh MEMPERBARUI profil dirinya sendiri (kepemilikan dicek
+  // eksplisit di route PUT /api/users/:id); operasi users lain Admin-only.
+  { prefix: '/api/users', roles: ['ADMIN', 'STAFF', 'CUSTOMER'], methods: ['PUT'] },
   { prefix: '/api/users', roles: ['ADMIN'] },
+  // Katalog unit boleh DIBACA semua role (portal pelanggan menampilkan
+  // katalog & form sewa); tulis tetap wewenang Admin (dicek juga eksplisit
+  // di route-nya — ini lapisan kedua).
+  { prefix: '/api/equipments', roles: ['ADMIN', 'STAFF', 'CUSTOMER'], methods: ['GET'] },
   { prefix: '/api/equipments', roles: ['ADMIN'] },
   { prefix: '/api/audit-log', roles: ['ADMIN'] },
   { prefix: '/api/maintenance', roles: ['ADMIN', 'STAFF'] },
@@ -470,7 +482,14 @@ const RBAC_MATRIX: ReadonlyArray<{ prefix: string; roles: readonly RoleName[] }>
   { prefix: '/api/payments', roles: ['ADMIN', 'STAFF', 'CUSTOMER'] },
   { prefix: '/api/rentals', roles: ['ADMIN', 'STAFF', 'CUSTOMER'] },
   { prefix: '/api/tracking', roles: ['ADMIN', 'STAFF', 'CUSTOMER'] },
-  { prefix: '/api/dashboard', roles: ['ADMIN', 'STAFF', 'CUSTOMER'] },
+  // Titik GPS mentah untuk cermin browser; route-nya mempersempit isi
+  // (CUSTOMER hanya unit sewanya) — daftar ini hanya gerbang role.
+  // Audit RBAC production 2026-09-27: `/api/dashboard/analytics` ternyata
+  // membocorkan topCustomers (nama + nilai kontrak pesaing) ke CUSTOMER,
+  // padahal komentar di route-nya sendiri mensyaratkan ADMIN & STAFF.
+  // Statistik internal bukan konsumsi portal pelanggan.
+  { prefix: '/api/gps', roles: ['ADMIN', 'STAFF', 'CUSTOMER'] },
+  { prefix: '/api/dashboard', roles: ['ADMIN', 'STAFF'] },
 ];
 
 /**
@@ -487,10 +506,15 @@ export const PUBLIC_API_PATHS: readonly string[] = ['/api/health', '/api/auth/lo
  * otomatis terbuka untuk semua role. Sekarang berlaku DEFAULT-DENY: hanya
  * path publik dan path yang terdaftar eksplisit yang diizinkan.
  */
-export function isPathAllowedForRole(path: string, role: RoleName): boolean {
+export function isPathAllowedForRole(
+  path: string,
+  role: RoleName,
+  method: string = 'GET'
+): boolean {
   if (PUBLIC_API_PATHS.includes(path)) return true;
 
   for (const rule of RBAC_MATRIX) {
+    if (rule.methods && !rule.methods.includes(method)) continue;
     if (path === rule.prefix || path.startsWith(`${rule.prefix}/`) || path.startsWith(`${rule.prefix}?`)) {
       return rule.roles.includes(role);
     }

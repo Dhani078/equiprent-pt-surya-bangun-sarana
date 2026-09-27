@@ -1,6 +1,7 @@
 import { connect } from '@tidbcloud/serverless';
-import { User, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from '../types';
-import { hashPassword, isDemoAccount, isStoredPasswordHash, verifyPassword } from './auth';
+import { RoleName, User, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from '../types';
+import { hashPassword, isDemoAccount, isStoredPasswordHash, SESSION_HEADER, verifyPassword } from './auth';
+import { headerSesi } from './authClient';
 import { getTransitionEffect } from './rentalWorkflow';
 import { setLatePenaltyPerDay } from './businessRules';
 import { canChangePaymentStatus, summarizeRentalPayment } from './paymentWorkflow';
@@ -121,6 +122,37 @@ function nextId(daftar: ReadonlyArray<{ id: number }>): number {
 }
 
 /**
+ * Normalisasi nilai DATE/DATETIME dari driver menjadi string.
+ * DATE -> 'YYYY-MM-DD'; DATETIME/timestamp -> 'YYYY-MM-DD HH:MM:SS'.
+ */
+function strTanggal(v: unknown, hanyaTanggal = false): string | null {
+  if (v === null || v === undefined) return null;
+  if (v instanceof Date) {
+    const iso = v.toISOString().replace('T', ' ').replace('Z', '');
+    return hanyaTanggal ? iso.slice(0, 10) : iso.slice(0, 19);
+  }
+  const t = String(v).replace('T', ' ').replace(/Z$/, '').trim();
+  return hanyaTanggal ? t.slice(0, 10) : t;
+}
+
+/**
+ * Write-through: setiap mutasi stateStore ikut ditulis ke TiDB (safer: DB
+ * dulu, baru memori) — temuan audit siklus 59: sebelumnya CRUD hanya hidup
+ * di memori isolate, reload/p isolate lain data hilang.
+ * Menglempar PERSIST_GAGAL agar API jujur melaporkan kegagalan, bukan
+ * berpura-pura sukses lalu datanya lenyap.
+ */
+async function wt(sql: string, params: unknown[], label: string): Promise<void> {
+  if (!tidbClient) return; // IN_MEMORY_DEMO -> tulis memori saja
+  try {
+    await tidbClient.execute(sql, params);
+  } catch (err) {
+    console.error('[persist] gagal menulis', label, err);
+    throw new Error('PERSIST_GAGAL');
+  }
+}
+
+/**
  * Eksekusi Query SQL ke TiDB Cloud Serverless.
  *
  * CATATAN KEAMANAN: Parameter WAJIB dikirim terpisah (parameterized query).
@@ -133,6 +165,100 @@ export async function executeSql<T>(sql: string, params: unknown[] = []): Promis
   }
   // Database belum dikonfigurasi → kembalikan array kosong.
   return [] as T[];
+}
+
+
+// ---------------------------------------------------------------------------
+// Jembatan browser -> Edge API (penyimpanan TERPUSAT, bukan memori tab)
+// ---------------------------------------------------------------------------
+// stateStore di browser hanyalah cermin tampilan; setiap mutasi DIJEMBAT ke
+// Worker (yang sudah write-through ke TiDB). Tanpa ini, dua tab/browser beda
+// tidak pernah saling melihat data, dan reload mengembalikan seed.
+// Mode dev tanpa Worker (404/500 jaringan) -> lempar; pemanggil memutuskan
+// fallback. Mode demo murni (tanpa DATABASE_URL di Worker) tetap jalan karena
+// wt() no-op di sisi Worker.
+
+let tokenBridge: string | null = null;
+
+/** Login ulang senyap ke Edge API; mengembalikan token sesi (atau null). */
+export type LoginUserApi = {
+  id: number; username: string; full_name: string; role: string;
+  role_id: number; email: string; company_name: string | null;
+};
+
+export type LoginHasil =
+  | { ok: true; token: string; user: LoginUserApi }
+  | { ok: false; offline: true }
+  | { ok: false; offline?: undefined; message: string };
+
+/**
+ * Login ke Edge API. Membedakan tiga nasib: token diterima, server menolak
+ * (pesan dari Worker diteruskan), atau Worker tidak terjangkau (dev murni ->
+ * pemanggil boleh memakai verifikasi lokal).
+ */
+export async function loginApi(username: string, password: string): Promise<LoginHasil> {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const body = (await res.json().catch(() => null)) as
+      { token?: string; user?: LoginUserApi; error?: { message?: string } } | null;
+    if (res.ok && body?.token && body.user) return { ok: true, token: body.token, user: body.user };
+    if (res.status >= 400 && res.status < 500 && body?.error?.message) {
+      return { ok: false, message: body.error.message };
+    }
+    return { ok: false, offline: true };
+  } catch {
+    return { ok: false, offline: true };
+  }
+}
+
+/**
+ * Teruskan mutasi stateStore ke Worker. `path` endpoint, `method` HTTP,
+ * `body` payload. Melempar saat Worker menolak — stateStore sudah diubah lebih
+ * dulu oleh pemanggil, jadi pemanggil WAJIB memanggil ini sebelum menaruh
+ * hasil ke UI/refresh (urutan: tulis DB -> cermin memori -> render).
+ */
+async function kirimKeApi(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<unknown> {
+  if (typeof window === 'undefined') return null; // sisi Worker: wt() sudah menulis
+  const res = await fetch(path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...headerSesi(tokenBridge ? { [SESSION_HEADER]: tokenBridge } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!res.ok) {
+    const err = (json as { error?: { message?: string } } | null)?.error?.message;
+    throw new Error(err || `Gagal menyimpan ke server (HTTP ${res.status}).`);
+  }
+  return json?.item ?? json?.data ?? json;
+}
+
+/** Token sesi untuk jembatan API — diisi App setelah login. */
+export const setApiBridgeToken = (token: string | null): void => {
+  tokenBridge = token;
+};
+
+/**
+ * Guard jembatan: browser tidak lagi menulis stateStore/wt() sendiri —
+ * mutasi dilempar ke Worker (write-through TiDB), lalu cermin disegarkan.
+ * `paths` koleksi yang disalin ulang dari server setelah sukses.
+ */
+async function lewatJembatan<T>(
+  method: 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body?: unknown
+): Promise<T> {
+  const item = await kirimKeApi(method, path, body);
+  const { sinkronCermin } = await import('./fetchCollection');
+  await sinkronCermin();
+  return item as T;
 }
 
 // CRUD Helpers
@@ -189,16 +315,36 @@ export const db = {
    * menyimpan password, sehingga akun baru tidak bisa login sampai
    * passwordnya disetel lewat jalur ini.
    */
+  /**
+   * Ganti password diri sendiri lewat Edge API — tersedia untuk SEMUA role
+   * (`/api/auth/change-password`), unlike /api/users/:id/password yang
+   * wewenang Admin. Password lama wajib dibuktikan server.
+   */
+  changeOwnPassword: async (oldPassword: string, newPassword: string): Promise<void> => {
+    await kirimKeApi('POST', '/api/auth/change-password', { oldPassword, newPassword });
+  },
   setUserPassword: async (id: number, password: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('POST', `/api/users/${id}/password`, { password });
+    }
     const user = stateStore.users.find(u => u.id === id);
     if (!user) return undefined;
 
-    user.password_hash = await hashPassword(password, user.username);
+    const hash = await hashPassword(password, user.username);
+    await wt('UPDATE `users` SET `password` = ? WHERE `id` = ?', [hash, id], 'setUserPassword');
+    user.password_hash = hash;
     return user;
   },
-
   addUser: async (user: Omit<User, 'id'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('POST', '/api/users', user);
+    }
     const newUser: User = { ...user, id: nextId(stateStore.users) };
+    await wt(
+      'INSERT INTO `users` (`id`, `role_id`, `username`, `password`, `email`, `full_name`, `phone`, `address`, `company_name`, `status`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newUser.id, newUser.role_id, newUser.username, null, newUser.email, newUser.full_name, newUser.phone, newUser.address, newUser.company_name, newUser.status],
+      'addUser'
+    );
     stateStore.users.push(newUser);
     return newUser;
   },
@@ -210,6 +356,9 @@ export const db = {
    * bisa dipakai untuk menaikkan hak akses sendiri.
    */
   updateUser: async (id: number, data: Partial<User>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('PUT', `/api/users/${id}`, data);
+    }
     const user = stateStore.users.find(u => u.id === id);
     if (!user) return undefined;
 
@@ -222,14 +371,25 @@ export const db = {
       aman.company_name = data.company_name;
     }
 
+    const gabungan = { ...user, ...aman };
+    await wt(
+      'UPDATE `users` SET `email` = ?, `full_name` = ?, `phone` = ?, `address` = ?, `company_name` = ? WHERE `id` = ?',
+      [gabungan.email, gabungan.full_name, gabungan.phone, gabungan.address, gabungan.company_name, id],
+      'updateUser'
+    );
     Object.assign(user, aman);
     return user;
   },
 
   toggleUserStatus: async (id: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('POST', `/api/users/${id}/toggle`);
+    }
     const u = stateStore.users.find(x => x.id === id);
     if (u) {
-      u.status = u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+      const baru = u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+      await wt('UPDATE `users` SET `status` = ? WHERE `id` = ?', [baru, id], 'toggleUserStatus');
+      u.status = baru;
     }
     return u;
   },
@@ -238,13 +398,30 @@ export const db = {
   getEquipments: async () => stateStore.equipments,
   getEquipmentById: async (id: number) => stateStore.equipments.find(e => e.id === id),
   addEquipment: async (eq: Omit<Equipment, 'id'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Equipment>('POST', '/api/equipments', eq);
+    }
     const newEq: Equipment = { ...eq, id: nextId(stateStore.equipments) };
+    await wt(
+      'INSERT INTO `equipments` (`id`, `equipment_code`, `name`, `type`, `model`, `brand`, `hour_meter`, `rental_price_per_day`, `status`, `last_maintenance_date`, `thumbnail_url`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newEq.id, newEq.equipment_code, newEq.name, newEq.type, newEq.model, newEq.brand, newEq.hour_meter, newEq.rental_price_per_day, newEq.status, newEq.last_maintenance_date, newEq.thumbnail_url ?? null],
+      'addEquipment'
+    );
     stateStore.equipments.unshift(newEq);
     return newEq;
   },
   updateEquipment: async (id: number, data: Partial<Equipment>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Equipment>('PUT', `/api/equipments/${id}`, data);
+    }
     const eq = stateStore.equipments.find(e => e.id === id);
     if (eq) {
+      const gabungan = { ...eq, ...data };
+      await wt(
+        'UPDATE `equipments` SET `name` = ?, `type` = ?, `model` = ?, `brand` = ?, `hour_meter` = ?, `rental_price_per_day` = ?, `status` = ?, `last_maintenance_date` = ?, `thumbnail_url` = ? WHERE `id` = ?',
+        [gabungan.name, gabungan.type, gabungan.model, gabungan.brand, gabungan.hour_meter, gabungan.rental_price_per_day, gabungan.status, gabungan.last_maintenance_date, gabungan.thumbnail_url ?? null, id],
+        'updateEquipment'
+      );
       Object.assign(eq, data);
     }
     return eq;
@@ -256,11 +433,16 @@ export const db = {
     // itu kehilangan referensi (nama/kode unit hilang dari riwayat & cetakan).
     // Lapisan API sudah memblokir unit dalam sewa AKTIF; ini menjaga
     // RIWAYAT (COMPLETED/REJECTED) yang sah ada.
+    if (typeof window !== 'undefined') {
+      await lewatJembatan('DELETE', `/api/equipments/${id}`);
+      return true;
+    }
     const punyaRiwayat = stateStore.rentals.some((r) => r.equipment_id === id);
     if (punyaRiwayat) return false;
 
     const idx = stateStore.equipments.findIndex(e => e.id === id);
     if (idx !== -1) {
+      await wt('DELETE FROM `equipments` WHERE `id` = ?', [id], 'deleteEquipment');
       stateStore.equipments.splice(idx, 1);
       return true;
     }
@@ -270,6 +452,9 @@ export const db = {
   // Rentals
   getRentals: async () => stateStore.rentals,
   addRental: async (rental: Omit<Rental, 'id' | 'rental_code'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Rental>('POST', '/api/rentals', rental);
+    }
     const id = nextId(stateStore.rentals);
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const code = `RNT-SBS-${dateStr}-${String(id).padStart(3, '0')}`;
@@ -280,6 +465,11 @@ export const db = {
       booking_date: new Date().toISOString().replace('T', ' ').slice(0, 19),
       status: 'PENDING'
     };
+    await wt(
+      'INSERT INTO `rentals` (`id`, `rental_code`, `customer_id`, `equipment_id`, `booking_date`, `start_date`, `end_date`, `total_days`, `subtotal`, `status`, `notes`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newRental.id, newRental.rental_code, newRental.customer_id, newRental.equipment_id, newRental.booking_date, newRental.start_date, newRental.end_date, newRental.total_days, newRental.subtotal, newRental.status, newRental.notes ?? null],
+      'addRental'
+    );
     stateStore.rentals.unshift(newRental);
     return newRental;
   },
@@ -301,6 +491,12 @@ export const db = {
     status: Rental['status'],
     options: { overrideUnpaid?: boolean } = {}
   ) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Rental>('PUT', `/api/rentals/${id}/status`, {
+        status,
+        overrideUnpaid: options.overrideUnpaid ?? false,
+      });
+    }
     const r = stateStore.rentals.find(x => x.id === id);
     if (!r) return undefined;
 
@@ -319,13 +515,17 @@ export const db = {
       }
     }
 
+    await wt('UPDATE `rentals` SET `status` = ? WHERE `id` = ?', [status, id], 'updateRentalStatus');
     r.status = status;
 
     const dampak = getTransitionEffect(status);
 
     if (dampak.equipmentStatus === 'RENTED') {
       const eq = stateStore.equipments.find(e => e.id === r.equipment_id);
-      if (eq) eq.status = 'RENTED';
+      if (eq) {
+        await wt('UPDATE `equipments` SET `status` = ? WHERE `id` = ?', ['RENTED', eq.id], 'rentalKunciUnit');
+        eq.status = 'RENTED';
+      }
     } else if (dampak.equipmentStatus === 'AVAILABLE') {
       // Unit hanya dibebaskan bila tidak ada rental lain yang sedang
       // beroperasi (ON_GOING) memakai unit yang sama.
@@ -337,7 +537,10 @@ export const db = {
       );
       if (!masihBeroperasi) {
         const eq = stateStore.equipments.find(e => e.id === r.equipment_id);
-        if (eq) eq.status = 'AVAILABLE';
+        if (eq) {
+          await wt('UPDATE `equipments` SET `status` = ? WHERE `id` = ?', ['AVAILABLE', eq.id], 'rentalBebaskanUnit');
+          eq.status = 'AVAILABLE';
+        }
       }
     }
 
@@ -355,6 +558,9 @@ export const db = {
    * nomor yang tercetak di dokumen selalu identik dengan yang tersimpan.
    */
   createContract: async (rentalId: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Contract>('POST', '/api/contracts', { rentalId });
+    }
     const rental = stateStore.rentals.find(r => r.id === rentalId);
     if (!rental) return undefined;
 
@@ -388,6 +594,11 @@ export const db = {
       signature_data_url: null,
     };
 
+    await wt(
+      'INSERT INTO `contracts` (`id`, `contract_code`, `rental_id`, `customer_id`, `contract_date`, `valid_until`, `terms_conditions`, `is_signed_customer`) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+      [contract.id, contract.contract_code, contract.rental_id, contract.customer_id, contract.contract_date, contract.valid_until, contract.terms_conditions],
+      'createContract'
+    );
     stateStore.contracts.push(contract);
     return contract;
   },
@@ -399,6 +610,9 @@ export const db = {
    * di lapisan API sebelum sampai ke sini.
    */
   signContract: async (contractId: number, signerName: string, signature: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Contract>('POST', `/api/contracts/${contractId}/sign`, { signerName, signature });
+    }
     const c = stateStore.contracts.find(x => x.id === contractId);
     if (!c) return undefined;
 
@@ -408,8 +622,14 @@ export const db = {
       throw new Error('KONTRAK_SUDAH_DITANDATANGANI');
     }
 
+    const signedAt = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    await wt(
+      'UPDATE `contracts` SET `is_signed_customer` = 1, `signed_at` = ?, `signer_name` = ?, `signature_data_url` = ? WHERE `id` = ?',
+      [signedAt, signerName, signature, contractId],
+      'signContract'
+    );
     c.is_signed_customer = 1;
-    c.signed_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    c.signed_at = signedAt;
     c.signer_name = signerName;
     c.signature_data_url = signature;
     return c;
@@ -429,6 +649,9 @@ export const db = {
    * pernah dibayar — pendapatan pada laporan keuangan lalu fiktif.
    */
   verifyPayment: async (paymentId: number, staffUserId: number, staffName: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Payment>('POST', `/api/payments/${paymentId}/verify`, { staffId: staffUserId, staffName });
+    }
     const p = stateStore.payments.find(x => x.id === paymentId);
     if (!p) return undefined;
 
@@ -442,10 +665,16 @@ export const db = {
       throw new Error('BUKTI_TRANSFER_BELUM_ADA');
     }
 
+    const verifiedAt = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    await wt(
+      'UPDATE `payments` SET `status` = ?, `verified_by` = ?, `verified_at` = ? WHERE `id` = ?',
+      ['PAID', staffUserId, verifiedAt, paymentId],
+      'verifyPayment'
+    );
     p.status = 'PAID';
     p.verified_by = staffUserId;
     p.verified_by_name = staffName;
-    p.verified_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    p.verified_at = verifiedAt;
     return p;
   },
 
@@ -460,16 +689,25 @@ export const db = {
    * tidak perlu menambah kolom baru pada skema yang sudah dimigrasi.
    */
   rejectPayment: async (paymentId: number, staffUserId: number, staffName: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Payment>('POST', `/api/payments/${paymentId}/reject`, { staffName });
+    }
     const p = stateStore.payments.find(x => x.id === paymentId);
     if (!p) return undefined;
 
     const transisi = canChangePaymentStatus(p.status, 'FAILED');
     if (!transisi.allowed) throw new Error(transisi.code);
 
+    const verifiedAt = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    await wt(
+      'UPDATE `payments` SET `status` = ?, `verified_by` = ?, `verified_at` = ? WHERE `id` = ?',
+      ['FAILED', staffUserId, verifiedAt, paymentId],
+      'rejectPayment'
+    );
     p.status = 'FAILED';
     p.verified_by = staffUserId;
     p.verified_by_name = staffName;
-    p.verified_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    p.verified_at = verifiedAt;
     return p;
   },
 
@@ -480,6 +718,9 @@ export const db = {
    * lapisan API sebelum sampai ke sini.
    */
   addPaymentProof: async (paymentId: number, proofPath: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Payment>('POST', `/api/payments/${paymentId}/proof`, { paymentProofPath: proofPath });
+    }
     const p = stateStore.payments.find(x => x.id === paymentId);
     if (!p) return undefined;
 
@@ -490,9 +731,15 @@ export const db = {
     // sebelumnya tidak lagi menggambarkan berkas yang sedang ditinjau.
     const buktiBerubah = (p.payment_proof_path ?? '') !== proofPath;
 
+    const bayarPada = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    await wt(
+      'UPDATE `payments` SET `payment_proof_path` = ?, `status` = ?, `payment_date` = ?, `verified_by` = NULL, `verified_at` = NULL WHERE `id` = ?',
+      [proofPath, 'PENDING_VERIFICATION', bayarPada, paymentId],
+      'addPaymentProof'
+    );
     p.payment_proof_path = proofPath;
     p.status = 'PENDING_VERIFICATION';
-    p.payment_date = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    p.payment_date = bayarPada;
 
     if (buktiBerubah) {
       p.verified_by = null;
@@ -505,6 +752,9 @@ export const db = {
   // Maintenance
   getMaintenance: async () => stateStore.maintenance,
   scheduleMaintenance: async (item: Omit<Maintenance, 'id' | 'maintenance_code'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Maintenance>('POST', '/api/maintenance', item);
+    }
     const id = nextId(stateStore.maintenance);
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const code = `MNT-SBS-${dateStr}-${String(id).padStart(3, '0')}`;
@@ -514,9 +764,17 @@ export const db = {
       maintenance_code: code,
       status: 'SCHEDULED'
     };
+    await wt(
+      'INSERT INTO `maintenance` (`id`, `maintenance_code`, `equipment_id`, `scheduled_date`, `maintenance_type`, `hour_meter_at_maintenance`, `description`, `spareparts_replaced`, `cost`, `technician_id`, `status`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newM.id, newM.maintenance_code, newM.equipment_id, newM.scheduled_date, newM.maintenance_type, newM.hour_meter_at_maintenance, newM.description, newM.spareparts_replaced ?? null, newM.cost, newM.technician_id ?? null, newM.status],
+      'scheduleMaintenance'
+    );
     stateStore.maintenance.unshift(newM);
     const eq = stateStore.equipments.find(e => e.id === item.equipment_id);
-    if (eq) eq.status = 'MAINTENANCE';
+    if (eq) {
+      await wt('UPDATE `equipments` SET `status` = ? WHERE `id` = ?', ['MAINTENANCE', eq.id], 'servisKunciUnit');
+      eq.status = 'MAINTENANCE';
+    }
     return newM;
   },
 
@@ -560,4 +818,223 @@ async function muatSettings(): Promise<void> {
 export async function warmSettings(): Promise<void> {
   if (settingsDimuat) return;
   await muatSettings();
+}
+
+// ---------------------------------------------------------------------------
+// Hidrasi stateStore dari TiDB (dipanggil middleware Worker saat cold-start)
+// ---------------------------------------------------------------------------
+// Sebelumnya stateStore selalu berisi seed GENERATED_* — padahal tabel TiDB
+// berisi data produksi. Setelah hidrasi, memori Worker adalah CERMINAN TiDB;
+// write-through menjaga cermin itu tidak menyimpang. Kegagalan hidrasi
+// dibiarkan memakai seed (mode demo) dan dicatat, tanpa mengulang tiap request.
+
+type Row = Record<string, unknown>;
+let hidrasiDimuat = false;
+
+const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v) || 0);
+const str = (v: unknown): string => (v === null || v === undefined ? '' : String(v));
+const strN = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
+
+async function jalankanHidrasi(): Promise<void> {
+  const [roleRows, userRows, eqRows, rentRows, ctrRows, payRows, mntRows, gpsRows, repRows] =
+    await Promise.all([
+      executeSql<Row>('SELECT * FROM `roles`'),
+      executeSql<Row>('SELECT * FROM `users`'),
+      executeSql<Row>('SELECT * FROM `equipments`'),
+      executeSql<Row>('SELECT * FROM `rentals`'),
+      executeSql<Row>('SELECT * FROM `contracts`'),
+      executeSql<Row>('SELECT * FROM `payments`'),
+      executeSql<Row>('SELECT * FROM `maintenance`'),
+      executeSql<Row>('SELECT * FROM `gps_tracking`'),
+      executeSql<Row>('SELECT * FROM `reports`'),
+    ]);
+
+  const roleNameById = new Map<number, RoleName>();
+  for (const r of roleRows) {
+    const nm = str(r.role_name);
+    if (nm === 'ADMIN' || nm === 'STAFF' || nm === 'CUSTOMER') roleNameById.set(num(r.id), nm);
+  }
+
+  const users: User[] = userRows.map((r) => ({
+    id: num(r.id),
+    role_id: num(r.role_id),
+    role_name: roleNameById.get(num(r.role_id)),
+    username: str(r.username),
+    email: str(r.email),
+    full_name: str(r.full_name),
+    phone: str(r.phone),
+    address: str(r.address),
+    company_name: strN(r.company_name),
+    status: str(r.status) === 'SUSPENDED' ? 'SUSPENDED' : 'ACTIVE',
+    created_at: strTanggal(r.created_at) ?? undefined,
+    password_hash: strN(r.password),
+  }));
+
+  const equipments: Equipment[] = eqRows.map((r) => ({
+    id: num(r.id),
+    equipment_code: str(r.equipment_code),
+    name: str(r.name),
+    type: str(r.type),
+    model: str(r.model),
+    brand: str(r.brand),
+    hour_meter: num(r.hour_meter),
+    rental_price_per_day: num(r.rental_price_per_day),
+    status: (['AVAILABLE','RENTED','MAINTENANCE','UNAVAILABLE'].includes(str(r.status)) ? str(r.status) : 'AVAILABLE') as Equipment['status'],
+    last_maintenance_date: strTanggal(r.last_maintenance_date, true),
+    thumbnail_url: strN(r.thumbnail_url) ?? undefined,
+    created_at: strTanggal(r.created_at) ?? undefined,
+  }));
+
+  const usersById = new Map(users.map((u) => [u.id, u]));
+  const eqById = new Map(equipments.map((e) => [e.id, e]));
+
+  const rentals: Rental[] = rentRows.map((r) => {
+    const cust = usersById.get(num(r.customer_id));
+    const eq = eqById.get(num(r.equipment_id));
+    return {
+      id: num(r.id),
+      rental_code: str(r.rental_code),
+      customer_id: num(r.customer_id),
+      customer_name: cust?.full_name,
+      company_name: cust?.company_name ?? undefined,
+      equipment_id: num(r.equipment_id),
+      equipment_name: eq?.name,
+      equipment_code: eq?.equipment_code,
+      booking_date: strTanggal(r.booking_date) ?? '',
+      start_date: strTanggal(r.start_date, true) ?? '',
+      end_date: strTanggal(r.end_date, true) ?? '',
+      total_days: num(r.total_days),
+      subtotal: num(r.subtotal),
+      status: (['PENDING','APPROVED','ON_GOING','COMPLETED','REJECTED'].includes(str(r.status)) ? str(r.status) : 'PENDING') as Rental['status'],
+      notes: strN(r.notes) ?? undefined,
+    };
+  });
+
+  const rentalsById = new Map(rentals.map((r) => [r.id, r]));
+
+  const contracts: Contract[] = ctrRows.map((r) => {
+    const rent = rentalsById.get(num(r.rental_id));
+    const cust = usersById.get(num(r.customer_id));
+    return {
+      id: num(r.id),
+      contract_code: str(r.contract_code),
+      rental_id: num(r.rental_id),
+      rental_code: rent?.rental_code,
+      customer_id: num(r.customer_id),
+      customer_name: cust?.full_name,
+      contract_date: strTanggal(r.contract_date, true) ?? '',
+      valid_until: strTanggal(r.valid_until, true) ?? '',
+      document_path: strN(r.document_path) ?? undefined,
+      terms_conditions: str(r.terms_conditions),
+      is_signed_customer: num(r.is_signed_customer),
+      signed_at: strTanggal(r.signed_at),
+      signer_name: strN(r.signer_name),
+      signature_data_url: strN(r.signature_data_url),
+    };
+  });
+
+  const contractsById = new Map(contracts.map((x) => [x.id, x]));
+
+  const payments: Payment[] = payRows.map((r) => {
+    const ctr = contractsById.get(num(r.contract_id));
+    const cust = usersById.get(num(r.customer_id));
+    const verif = usersById.get(num(r.verified_by));
+    return {
+      id: num(r.id),
+      payment_code: str(r.payment_code),
+      contract_id: num(r.contract_id),
+      contract_code: ctr?.contract_code,
+      customer_id: num(r.customer_id),
+      customer_name: cust?.full_name,
+      amount: num(r.amount),
+      payment_method: str(r.payment_method),
+      payment_proof_path: strN(r.payment_proof_path) ?? undefined,
+      status: (['UNPAID','PENDING_VERIFICATION','PAID','FAILED'].includes(str(r.status)) ? str(r.status) : 'UNPAID') as Payment['status'],
+      payment_date: strTanggal(r.payment_date) ?? '',
+      verified_by: r.verified_by === null || r.verified_by === undefined ? null : num(r.verified_by),
+      verified_by_name: verif?.full_name,
+      verified_at: strTanggal(r.verified_at),
+    };
+  });
+
+  const maintenance: Maintenance[] = mntRows.map((r) => {
+    const eq = eqById.get(num(r.equipment_id));
+    const tek = usersById.get(num(r.technician_id));
+    return {
+      id: num(r.id),
+      maintenance_code: str(r.maintenance_code),
+      equipment_id: num(r.equipment_id),
+      equipment_name: eq?.name,
+      equipment_code: eq?.equipment_code,
+      scheduled_date: strTanggal(r.scheduled_date, true) ?? '',
+      completion_date: strTanggal(r.completion_date, true),
+      maintenance_type: (['PREVENTIVE','CORRECTIVE','OVERHAUL'].includes(str(r.maintenance_type)) ? str(r.maintenance_type) : 'PREVENTIVE') as Maintenance['maintenance_type'],
+      hour_meter_at_maintenance: num(r.hour_meter_at_maintenance),
+      description: str(r.description),
+      spareparts_replaced: strN(r.spareparts_replaced) ?? undefined,
+      cost: num(r.cost),
+      technician_id: r.technician_id === null || r.technician_id === undefined ? null : num(r.technician_id),
+      technician_name: tek?.full_name,
+      status: (['SCHEDULED','IN_PROGRESS','COMPLETED','CANCELLED'].includes(str(r.status)) ? str(r.status) : 'SCHEDULED') as Maintenance['status'],
+    };
+  });
+
+  const gps: GpsTracking[] = gpsRows.map((r) => {
+    const eq = eqById.get(num(r.equipment_id));
+    return {
+      id: num(r.id),
+      equipment_id: num(r.equipment_id),
+      equipment_name: eq?.name,
+      equipment_code: eq?.equipment_code,
+      latitude: num(r.latitude),
+      longitude: num(r.longitude),
+      speed: num(r.speed),
+      engine_status: str(r.engine_status) === 'ON' ? 'ON' : 'OFF',
+      fuel_level_percent: num(r.fuel_level_percent),
+      recorded_at: strTanggal(r.recorded_at) ?? '',
+    };
+  });
+
+  const reports: ReportItem[] = repRows.map((r) => {
+    const rent = rentalsById.get(num(r.rental_id));
+    const gen = usersById.get(num(r.generated_by));
+    return {
+      id: num(r.id),
+      report_code: str(r.report_code),
+      rental_id: r.rental_id === null || r.rental_id === undefined ? null : num(r.rental_id),
+      rental_code: rent?.rental_code,
+      report_type: (['BAST_IN','BAST_OUT','SURAT_JALAN','FINANCIAL_SUMMARY'].includes(str(r.report_type)) ? str(r.report_type) : 'BAST_OUT') as ReportItem['report_type'],
+      generated_by: num(r.generated_by),
+      generated_by_name: gen?.full_name,
+      file_path: str(r.file_path),
+      generated_at: strTanggal(r.generated_at) ?? '',
+    };
+  });
+
+  stateStore.users = users;
+  stateStore.equipments = equipments;
+  stateStore.rentals = rentals;
+  stateStore.contracts = contracts;
+  stateStore.payments = payments;
+  stateStore.maintenance = maintenance;
+  stateStore.gps = gps;
+  stateStore.reports = reports;
+}
+
+/**
+ * Muat Cermin TiDB ke stateStore, sekali per isolate. Dipanggil middleware
+ * sebelum route apa pun menyentuh data. Mode demo (tanpa DATABASE_URL) tidak
+ * pernah masuk fungsi ini.
+ */
+export async function hydrasiDariTiDB(): Promise<void> {
+  if (hidrasiDimuat || !tidbClient) return;
+  hidrasiDimuat = true;
+  try {
+    await jalankanHidrasi();
+  } catch (err) {
+    // Gagal hidrasi: biarkan seed demo melayani (jujur via getDataMode?
+    // mode pelaporan tetap TIDB karena tulis-tembus juga gagal dan meledak
+    // sendiri) — cukup catat di log Worker.
+    console.error('[persist] hidrasi TiDB gagal; state tetap seed demo:', err);
+  }
 }

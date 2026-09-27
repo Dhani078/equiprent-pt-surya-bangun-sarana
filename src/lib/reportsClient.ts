@@ -11,6 +11,7 @@
  * saat demo, sekaligus tetap memakai jalur API di lingkungan produksi.
  */
 
+import { headerSesi } from './authClient';
 import type { DateRangeFilter, ReportId, ReportResult } from '../types';
 import { applyKeywordFilter, buildReport, normalizeKeyword, normalizeRange } from './reports';
 import type { ReportDataSource } from './reports';
@@ -59,7 +60,7 @@ async function fetchFromApi(
   if (normalizeKeyword(keyword) !== '') params.set('q', keyword);
 
   const res = await fetch(`/api/reports/analytics?${params.toString()}`, {
-    headers: { Accept: 'application/json' },
+    headers: headerSesi(),
     signal,
   });
 

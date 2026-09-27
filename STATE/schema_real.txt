@@ -1,0 +1,138 @@
+*************************** 1. row ***************************
+       Table: equipments
+Create Table: CREATE TABLE `equipments` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `equipment_code` varchar(30) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `model` varchar(100) NOT NULL,
+  `brand` varchar(50) NOT NULL,
+  `hour_meter` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `rental_price_per_day` decimal(12,2) NOT NULL,
+  `status` enum('AVAILABLE','RENTED','MAINTENANCE','UNAVAILABLE') DEFAULT 'AVAILABLE',
+  `last_maintenance_date` date DEFAULT NULL,
+  `thumbnail_url` varchar(255) DEFAULT NULL,
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,
+  UNIQUE KEY `equipment_code` (`equipment_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30002
+*************************** 1. row ***************************
+       Table: rentals
+Create Table: CREATE TABLE `rentals` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `rental_code` varchar(30) NOT NULL,
+  `customer_id` int NOT NULL,
+  `equipment_id` int NOT NULL,
+  `booking_date` timestamp DEFAULT CURRENT_TIMESTAMP,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `total_days` int NOT NULL,
+  `subtotal` decimal(12,2) NOT NULL,
+  `status` enum('PENDING','APPROVED','ON_GOING','COMPLETED','REJECTED') DEFAULT 'PENDING',
+  `notes` text DEFAULT NULL,
+  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,
+  UNIQUE KEY `rental_code` (`rental_code`),
+  KEY `fk_1` (`customer_id`),
+  KEY `fk_2` (`equipment_id`),
+  CONSTRAINT `fk_1` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_2` FOREIGN KEY (`equipment_id`) REFERENCES `equipments` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30002
+*************************** 1. row ***************************
+       Table: contracts
+Create Table: CREATE TABLE `contracts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `contract_code` varchar(30) NOT NULL,
+  `rental_id` int NOT NULL,
+  `customer_id` int NOT NULL,
+  `contract_date` date NOT NULL,
+  `valid_until` date NOT NULL,
+  `document_path` varchar(255) DEFAULT NULL,
+  `terms_conditions` text DEFAULT NULL,
+  `is_signed_customer` tinyint(1) DEFAULT '0',
+  `signed_at` timestamp NULL DEFAULT NULL,
+  `signer_name` varchar(120) DEFAULT NULL,
+  `signature_data_url` mediumtext DEFAULT NULL,
+  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,
+  UNIQUE KEY `contract_code` (`contract_code`),
+  UNIQUE KEY `rental_id` (`rental_id`),
+  KEY `fk_2` (`customer_id`),
+  CONSTRAINT `fk_1` FOREIGN KEY (`rental_id`) REFERENCES `rentals` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_2` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30002
+*************************** 1. row ***************************
+       Table: payments
+Create Table: CREATE TABLE `payments` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `payment_code` varchar(30) NOT NULL,
+  `contract_id` int NOT NULL,
+  `customer_id` int NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `payment_method` varchar(50) NOT NULL,
+  `payment_proof_path` varchar(255) DEFAULT NULL,
+  `status` enum('UNPAID','PENDING_VERIFICATION','PAID','FAILED') DEFAULT 'PENDING_VERIFICATION',
+  `payment_date` timestamp DEFAULT CURRENT_TIMESTAMP,
+  `verified_by` int DEFAULT NULL,
+  `verified_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,
+  UNIQUE KEY `payment_code` (`payment_code`),
+  KEY `fk_1` (`contract_id`),
+  KEY `fk_2` (`customer_id`),
+  KEY `fk_3` (`verified_by`),
+  CONSTRAINT `fk_1` FOREIGN KEY (`contract_id`) REFERENCES `contracts` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_2` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_3` FOREIGN KEY (`verified_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30002
+*************************** 1. row ***************************
+       Table: maintenance
+Create Table: CREATE TABLE `maintenance` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `maintenance_code` varchar(30) NOT NULL,
+  `equipment_id` int NOT NULL,
+  `scheduled_date` date NOT NULL,
+  `completion_date` date DEFAULT NULL,
+  `maintenance_type` enum('PREVENTIVE','CORRECTIVE','OVERHAUL') NOT NULL,
+  `hour_meter_at_maintenance` decimal(10,2) NOT NULL,
+  `description` text NOT NULL,
+  `spareparts_replaced` text DEFAULT NULL,
+  `cost` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `technician_id` int DEFAULT NULL,
+  `status` enum('SCHEDULED','IN_PROGRESS','COMPLETED','CANCELLED') DEFAULT 'SCHEDULED',
+  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,
+  UNIQUE KEY `maintenance_code` (`maintenance_code`),
+  KEY `fk_1` (`equipment_id`),
+  KEY `fk_2` (`technician_id`),
+  CONSTRAINT `fk_1` FOREIGN KEY (`equipment_id`) REFERENCES `equipments` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_2` FOREIGN KEY (`technician_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30002
+*************************** 1. row ***************************
+       Table: gps_tracking
+Create Table: CREATE TABLE `gps_tracking` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `equipment_id` int NOT NULL,
+  `latitude` decimal(10,8) NOT NULL,
+  `longitude` decimal(11,8) NOT NULL,
+  `speed` decimal(5,2) DEFAULT '0.00',
+  `engine_status` enum('ON','OFF') DEFAULT 'OFF',
+  `fuel_level_percent` decimal(5,2) DEFAULT '100.00',
+  `recorded_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,
+  KEY `fk_1` (`equipment_id`),
+  CONSTRAINT `fk_1` FOREIGN KEY (`equipment_id`) REFERENCES `equipments` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30002
+*************************** 1. row ***************************
+       Table: reports
+Create Table: CREATE TABLE `reports` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `report_code` varchar(50) NOT NULL,
+  `rental_id` int DEFAULT NULL,
+  `report_type` enum('BAST_IN','BAST_OUT','SURAT_JALAN','FINANCIAL_SUMMARY') NOT NULL,
+  `generated_by` int NOT NULL,
+  `file_path` varchar(255) NOT NULL,
+  `generated_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,
+  UNIQUE KEY `report_code` (`report_code`),
+  KEY `fk_1` (`rental_id`),
+  KEY `fk_2` (`generated_by`),
+  CONSTRAINT `fk_1` FOREIGN KEY (`rental_id`) REFERENCES `rentals` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_2` FOREIGN KEY (`generated_by`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30002

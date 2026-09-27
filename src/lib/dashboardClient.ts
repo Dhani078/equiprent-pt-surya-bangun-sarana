@@ -10,6 +10,7 @@
  * berbeda antara jalur API dan jalur lokal.
  */
 
+import { headerSesi } from './authClient';
 import type { AdminDashboardStats } from '../types';
 import { buildDashboardStats } from './dashboard';
 import type { DashboardDataSource } from './dashboard';
@@ -71,8 +72,7 @@ function isAdminDashboardStats(value: unknown): value is AdminDashboardStats {
 
 /** Mengambil agregat dari edge API. Melempar bila gagal. */
 async function fetchFromApi(signal: AbortSignal): Promise<AdminDashboardStats> {
-  const res = await fetch('/api/dashboard/stats', {
-    headers: { Accept: 'application/json' },
+  const res = await fetch('/api/dashboard/stats', {    headers: headerSesi(),
     signal,
   });
 

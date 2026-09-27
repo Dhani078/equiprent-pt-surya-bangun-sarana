@@ -24,11 +24,11 @@ interface AuditEntry {
   detail: string;
 }
 
-const SESSION_KEY = 'sbs_session_token';
+import { bacaTokenSesi } from '../lib/authClient';
 
 function bacaToken(): string | null {
   try {
-    return sessionStorage.getItem(SESSION_KEY);
+    return bacaTokenSesi();
   } catch {
     return null;
   }

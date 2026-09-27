@@ -1,0 +1,182 @@
+[
+ {
+  "ep": "/api/users",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/users",
+  "role": "STAFF",
+  "status": 403,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/users",
+  "role": "CUSTOMER",
+  "status": 403,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/equipments",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/equipments",
+  "role": "STAFF",
+  "status": 403,
+  "verdict": "PEMBUKARAN!"
+ },
+ {
+  "ep": "/api/equipments",
+  "role": "CUSTOMER",
+  "status": 403,
+  "verdict": "PEMBUKARAN!"
+ },
+ {
+  "ep": "/api/rentals",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/rentals",
+  "role": "STAFF",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/rentals",
+  "role": "CUSTOMER",
+  "status": 200,
+  "verdict": "PEMBUKARAN!"
+ },
+ {
+  "ep": "/api/contracts",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/contracts",
+  "role": "STAFF",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/contracts",
+  "role": "CUSTOMER",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/payments",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/payments",
+  "role": "STAFF",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/payments",
+  "role": "CUSTOMER",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/maintenance",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/maintenance",
+  "role": "STAFF",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/maintenance",
+  "role": "CUSTOMER",
+  "status": 403,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/tracking",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/tracking",
+  "role": "STAFF",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/tracking",
+  "role": "CUSTOMER",
+  "status": 200,
+  "verdict": "PEMBUKARAN!"
+ },
+ {
+  "ep": "/api/audit-log",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/audit-log",
+  "role": "STAFF",
+  "status": 403,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/audit-log",
+  "role": "CUSTOMER",
+  "status": 403,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/reports",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/reports",
+  "role": "STAFF",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/reports",
+  "role": "CUSTOMER",
+  "status": 403,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/dashboard/stats",
+  "role": "ADMIN",
+  "status": 200,
+  "verdict": "OK"
+ },
+ {
+  "ep": "/api/dashboard/stats",
+  "role": "STAFF",
+  "status": 200,
+  "verdict": "PEMBUKARAN!"
+ },
+ {
+  "ep": "/api/dashboard/stats",
+  "role": "CUSTOMER",
+  "status": 200,
+  "verdict": "PEMBUKARAN!"
+ }
+]

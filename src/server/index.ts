@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { configureDatabaseUrl, db, getDataMode, isDatabaseConnected } from '../lib/db';
+import { configureDatabaseUrl, db, getDataMode, hydrasiDariTiDB, isDatabaseConnected } from '../lib/db';
 import {
   configureSessionSecret,
   createSessionToken,
@@ -194,6 +194,11 @@ app.use('/api/*', async (c, next) => {
   // sebelum route mana pun membaca data; no-op setelah terhubung.
   configureDatabaseUrl(c.env?.DATABASE_URL);
 
+  // Cermin TiDB -> stateStore sekali per isolate (cold-start), sebelum route
+  // mana pun membaca data; tanpa ini Worker melayani seed demo padahal TiDB
+  // berisi data produksi (temuan audit siklus 59). No-op saat mode demo.
+  await hydrasiDariTiDB();
+
   // Pengaturan aplikasi (tarif denda, dll.) dimuat sekali per isolate dari
   // tabel settings. `warmSettings()` segera kembali bila DB belum terhubung
   // atau pengaturan sudah dimuat — tidak menambah beban tiap permintaan.
@@ -234,7 +239,7 @@ app.use('/api/*', async (c, next) => {
   }
 
   // Otorisasi berbasis role — dicek di server, bukan di client.
-  if (!isPathAllowedForRole(path, role)) {
+  if (!isPathAllowedForRole(path, role, c.req.method)) {
     return c.json(
       {
         success: false,
@@ -1811,6 +1816,71 @@ app.get('/api/tracking', async (c) => {
 });
 
 // Reports API
+/**
+ * Titik GPS mentah untuk cermin browser.
+ *
+ * CUSTOMER hanya menerima titik unit yang sedang/segera ia sewa — cermin
+ * tidak pernah memuat posisi armada orang lain.
+ */
+app.get('/api/gps', async (c) => {
+  const role = c.get('role');
+  const userId = c.get('userId');
+  const points = await db.getGpsTracking();
+
+  if (role === 'CUSTOMER') {
+    const rentals = await db.getRentals();
+    const milikSaya = new Set(
+      rentals
+        .filter((r) => r.customer_id === userId && (r.status === 'ON_GOING' || r.status === 'APPROVED'))
+        .map((r) => r.equipment_id)
+    );
+    return c.json(points.filter((g) => milikSaya.has(g.equipment_id)));
+  }
+
+  return c.json(points);
+});
+
+/** Pembaruan profil sendiri (nama, kontak, perusahaan) oleh pengguna mana pun.
+ *  Field sensitif (role/status/username) dibuang di db.updateUser. */
+app.put('/api/users/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  // Satu orang hanya boleh mengurai profil dirinya sendiri.
+  const userId = c.get('userId');
+  if (userId !== id && c.get('role') !== 'ADMIN') {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Tidak dapat mengubah profil pengguna lain.' } },
+      403
+    );
+  }
+
+  const body = await readJsonBody<Record<string, unknown>>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  const updated = await db.updateUser(id, {
+    full_name: typeof body.full_name === 'string' ? body.full_name : undefined,
+    email: typeof body.email === 'string' ? body.email : undefined,
+    phone: typeof body.phone === 'string' ? body.phone : undefined,
+    address: typeof body.address === 'string' ? body.address : undefined,
+    company_name:
+      body.company_name === null || typeof body.company_name === 'string' ? body.company_name : undefined,
+  } as Partial<User>);
+  if (!updated) {
+    return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pengguna tidak ditemukan.' } }, 404);
+  }
+
+  auditLog({
+    ...auditActor(c),
+    action: 'USER_UPDATE',
+    entity: 'user',
+    entity_id: id,
+    detail: `Profil pengguna ${updated.username} diperbarui`,
+  });
+
+  return c.json({ success: true, item: ringkasUser(updated) });
+});
+
 app.get('/api/reports', async (c) => {
   const items = await db.getReports();
   return c.json(items);
