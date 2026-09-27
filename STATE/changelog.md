@@ -40,3 +40,10 @@
 - Klaim vision "date input putih / tile putih" ditegakkan via computed style (sudah dark; artifact screenshot lama).
 - deleg_8dff4f3a mati (Connection error 322s) sebelum menyentuh tree — dikerjakan manual.
 - Gate: tsc 0, 29/29, build OK. Commits: 666aec4, db879fa, 900aada, (tanggal lokal).
+
+## Cycle 59 — KONEKSI TiDB NYATA (milestone) (2026-09-27)
+- TiDB cluster user: DDL ternyata jalan di schema `test` (9 tabel terisi dari seeding lama) + `sys` diblokir khusus DDL. Lengkapi 11 tabel: tambah `audit_log` + `settings` (seed late_penalty_per_day=50000, company_name) via mysql client -> test.
+- BUG ARSITEKTUR: worker declare binding DATABASE_URL tapi db.ts cuma baca import.meta/process.env -> secret tak pernah terbaca di Workers. Fix: configureDatabaseUrl() dari middleware /api/*.
+- Bukti via wrangler dev lokal (.dev.vars gitignored): /api/health data_mode=TIDB; login admin = hash DB asli; 50 users/50 equipments/55 gps dari TiDB; CRUD equipment probe OK (51->50, delete bersih); audit LOGIN tercatat.
+- Gate: tsc 0, 29/29, build 4.79s. Commit f4b42da.
+- BELUM: deploy production (wrangler login CF expired — perlu user OAuth) + `wrangler secret put DATABASE_URL/SESSION_SECRET`.
