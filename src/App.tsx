@@ -1,7 +1,9 @@
+import { bacaTokenSesi, hapusTokenSesi } from './lib/authClient';
+import { setApiBridgeToken } from './lib/db';
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, RoleName, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from './types';
 import { db, stateStore } from './lib/db';
-import { fetchCollectionOrLocal } from './lib/fetchCollection';
+import { sinkronCermin } from './lib/fetchCollection';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import type { SidebarBadges } from './components/Sidebar';
@@ -83,15 +85,16 @@ export const App: React.FC = () => {
       setDataLoading(true);
       setDataError(null);
       try {
-        const [eq, rn] = await Promise.all([
-          fetchCollectionOrLocal('equipments', controller.signal),
-          fetchCollectionOrLocal('rentals', controller.signal),
-        ]);
+        // Cermin PENUH dari Worker (users/equipments/rentals/contracts/
+        // payments/maintenance/gps/reports) — bukan hanya dua koleksi lama,
+        // supaya kontrak/pembayaran/servis ikut tersimpan permanen.
+        setApiBridgeToken(bacaTokenSesi());
+        const terisi = await sinkronCermin(controller.signal);
         if (!aktif) return;
-        // Hanya menimpa bila edge API memberikan data — sebaliknya
-        // state lokal (seed) tetas dipakai.
-        if (eq.length > 0) stateStore.equipments = eq as Equipment[];
-        if (rn.length > 0) stateStore.rentals = rn as Rental[];
+        if (terisi === 0) {
+          // Worker tidak menjawab sama sekali -> biarkan seed demo melayani.
+          setDataError(null);
+        }
         refreshData();
       } catch (err) {
         if (!aktif) return;
@@ -144,6 +147,8 @@ export const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    hapusTokenSesi();
+    setApiBridgeToken(null);
     setCurrentUser(null);
     try {
       sessionStorage.removeItem('sbs_active_user');
@@ -241,10 +246,16 @@ export const App: React.FC = () => {
   };
 
   /** Mengganti password akun sendiri. */
-  const handleChangeOwnPassword = async (passwordBaru: string) => {
+  const handleChangeOwnPassword = async (passwordBaru: string, passwordLama: string) => {
     if (!currentUser) return;
-    const hasil = await db.setUserPassword(currentUser.id, passwordBaru);
-    if (!hasil) throw new Error('Pengguna tidak ditemukan.');
+    if (currentUser.role_name === 'ADMIN') {
+      const hasil = await db.setUserPassword(currentUser.id, passwordBaru);
+      if (!hasil) throw new Error('Pengguna tidak ditemukan.');
+      return;
+    }
+    // STAFF/CUSTOMER: endpoint admin (/api/users/:id/password) dilarang untuk
+    // mereka; pakai jalur mandiri yang membuktikan password lama di server.
+    await db.changeOwnPassword(passwordLama, passwordBaru);
   };
 
   if (!currentUser) {

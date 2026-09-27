@@ -1,0 +1,440 @@
+[
+ {
+  "role": "LOGIN",
+  "pages": [
+   {
+    "menu": "submit-kosong",
+    "validation_msg": false,
+    "console_errors": []
+   },
+   {
+    "menu": "password-salah-http",
+    "status": 401,
+    "denied": true
+   }
+  ]
+ },
+ {
+  "role": "ADMIN",
+  "pages": [
+   {
+    "menu": "Dashboard Utama",
+    "n_buttons": 8,
+    "heading": "Dashboard Eksekutif Administrator / Tren Pendapatan 12 Bulan Terakhir",
+    "blank": false,
+    "click_issues": [
+     {
+      "btn": "Muat Ulang",
+      "console": [],
+      "net": [
+       "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/dashboard/stats"
+      ]
+     }
+    ],
+    "clicked": 3,
+    "skipped_destructive": [],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": [
+     "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/dashboard/stats"
+    ]
+   },
+   {
+    "menu": "Inventaris Alat Berat",
+    "n_buttons": 27,
+    "heading": "Inventaris Alat Berat & Pemantauan Armada",
+    "blank": false,
+    "clicked": 6,
+    "skipped_destructive": [],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Transaksi Penyewaan7",
+    "n_buttons": 44,
+    "heading": "Manajemen Transaksi Penyewaan",
+    "blank": false,
+    "clicked": 2,
+    "skipped_destructive": [
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Tolak",
+     "Tolak",
+     "Tolak",
+     "Tolak"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Perawatan & Servis14",
+    "n_buttons": 68,
+    "heading": "Manajemen Transaksi Penyewaan / Kontrak Sewa Digital & Tanda Tangan Elektronik",
+    "blank": false,
+    "clicked": 28,
+    "skipped_destructive": [],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Pelacakan GPS Telemetri",
+    "n_buttons": 52,
+    "heading": "Pelacakan Telemetri GPS Alat Berat (Real-time) / Excavator Komatsu PC200-8",
+    "blank": false,
+    "clicked": 27,
+    "skipped_destructive": [
+     "Reset Filter"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Laporan & Dokumen",
+    "n_buttons": 47,
+    "heading": "Laporan Resmi & Dokumen Berita Acara (BAST) / 11 Laporan Operasional",
+    "blank": false,
+    "clicked": 26,
+    "skipped_destructive": [
+     "Reset Periode",
+     "Cetak / Simpan PDF"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": [
+     "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/reports/analytics?id=RENTAL_BULANAN"
+    ]
+   },
+   {
+    "menu": "Manajemen Pengguna",
+    "n_buttons": 27,
+    "heading": "Manajemen Pengguna Sistem (Multi-Role RBAC)",
+    "blank": false,
+    "clicked": 4,
+    "skipped_destructive": [
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "Nonaktifkan",
+     "1",
+     "2",
+     "3"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Audit Trail",
+    "n_buttons": 1,
+    "heading": "Audit Trail — Catatan Mutasi Sistem",
+    "blank": false,
+    "clicked": 1,
+    "skipped_destructive": [],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": [
+     "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/audit-log?limit=200"
+    ]
+   },
+   {
+    "menu": "Pengaturan Sistem",
+    "n_buttons": 2,
+    "heading": "Profil Akun / Ganti Password",
+    "blank": false,
+    "clicked": 1,
+    "skipped_destructive": [
+     "Simpan Perubahan"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   }
+  ],
+  "login": {
+   "click": "CLICKED",
+   "aside": true
+  }
+ },
+ {
+  "role": "STAFF",
+  "pages": [
+   {
+    "menu": "Dashboard Operasional",
+    "n_buttons": 37,
+    "heading": "Terminal Staf Operasional & Verifikasi / Notifikasi Jatuh Tempo & Keterlambatan",
+    "blank": false,
+    "clicked": 5,
+    "skipped_destructive": [
+     "Verifikasi Pembayaran9 Menunggu9 siap · 0 ",
+     "Tolak",
+     "Tolak",
+     "Tolak",
+     "Tolak",
+     "Tolak",
+     "Tolak"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Transaksi Penyewaan7",
+    "n_buttons": 20,
+    "heading": "Terminal Staf Operasional & Verifikasi / Notifikasi Jatuh Tempo & Keterlambatan",
+    "blank": false,
+    "clicked": 5,
+    "skipped_destructive": [
+     "Verifikasi Pembayaran9 Menunggu9 siap · 0 ",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak",
+     "Setujui",
+     "Tolak"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Kontrak Sewa Digital",
+    "n_buttons": 57,
+    "heading": "Terminal Staf Operasional & Verifikasi / Notifikasi Jatuh Tempo & Keterlambatan",
+    "blank": false,
+    "clicked": 27,
+    "skipped_destructive": [
+     "Verifikasi Pembayaran9 Menunggu9 siap · 0 "
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Verifikasi Pembayaran9",
+    "n_buttons": 37,
+    "heading": "Terminal Staf Operasional & Verifikasi / Notifikasi Jatuh Tempo & Keterlambatan",
+    "blank": false,
+    "clicked": 5,
+    "skipped_destructive": [
+     "Verifikasi Pembayaran9 Menunggu9 siap · 0 ",
+     "Tolak",
+     "Tolak",
+     "Tolak",
+     "Tolak",
+     "Tolak",
+     "Tolak"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Penjadwalan Servis14",
+    "n_buttons": 14,
+    "heading": "Manajemen Perawatan & Servis Armada (Hour Meter) / Peringatan Servis Preventif (interval 250 HM)",
+    "blank": false,
+    "clicked": 14,
+    "skipped_destructive": [],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Monitoring Posisi GPS",
+    "n_buttons": 52,
+    "heading": "Pelacakan Telemetri GPS Alat Berat (Real-time) / Excavator Komatsu PC200-8",
+    "blank": false,
+    "clicked": 27,
+    "skipped_destructive": [
+     "Reset Filter"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Cetak Laporan BAST",
+    "n_buttons": 47,
+    "heading": "Laporan Resmi & Dokumen Berita Acara (BAST) / 11 Laporan Operasional",
+    "blank": false,
+    "clicked": 26,
+    "skipped_destructive": [
+     "Reset Periode",
+     "Cetak / Simpan PDF"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": [
+     "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/reports/analytics?id=RENTAL_BULANAN"
+    ]
+   },
+   {
+    "menu": "Pengaturan Akun",
+    "n_buttons": 2,
+    "heading": "Profil Akun / Ganti Password",
+    "blank": false,
+    "clicked": 1,
+    "skipped_destructive": [
+     "Simpan Perubahan"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   }
+  ],
+  "login": {
+   "click": "CLICKED",
+   "aside": true
+  }
+ },
+ {
+  "role": "CUSTOMER",
+  "pages": [
+   {
+    "menu": "Katalog Alat Berat",
+    "n_buttons": 25,
+    "heading": "Selamat Datang, Budi Santoso (Logistik) / Katalog Alat Berat Siap Mobilisasi",
+    "blank": false,
+    "clicked": 4,
+    "skipped_destructive": [
+     "Tagihan & Transfer1 Pembayaran"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Penyewaan Saya",
+    "n_buttons": 5,
+    "heading": "Selamat Datang, Budi Santoso (Logistik) / Riwayat Permohonan & Transaksi Sewa Saya",
+    "blank": false,
+    "clicked": 4,
+    "skipped_destructive": [
+     "Tagihan & Transfer1 Pembayaran"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Kontrak Digital Saya",
+    "n_buttons": 6,
+    "heading": "Selamat Datang, Budi Santoso (Logistik) / Kontrak Sewa Digital & Tanda Tangan Elektronik",
+    "blank": false,
+    "clicked": 4,
+    "skipped_destructive": [
+     "Tagihan & Transfer1 Pembayaran"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Pembayaran & Tagihan",
+    "n_buttons": 5,
+    "heading": "Selamat Datang, Budi Santoso (Logistik) / Tagihan Pembayaran Sewa & Bukti Transfer",
+    "blank": false,
+    "clicked": 4,
+    "skipped_destructive": [
+     "Tagihan & Transfer1 Pembayaran"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Lacak Lokasi Unit",
+    "n_buttons": 5,
+    "heading": "Selamat Datang, Budi Santoso (Logistik) / Pelacakan Posisi Unit Sewa Anda",
+    "blank": false,
+    "clicked": 4,
+    "skipped_destructive": [
+     "Tagihan & Transfer1 Pembayaran"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   },
+   {
+    "menu": "Profil Perusahaan",
+    "n_buttons": 5,
+    "heading": "Selamat Datang, Budi Santoso (Logistik) / Pelacakan Posisi Unit Sewa Anda",
+    "blank": false,
+    "clicked": 4,
+    "skipped_destructive": [
+     "Tagihan & Transfer1 Pembayaran"
+    ],
+    "modals_ok": 0,
+    "modals_stuck": 0,
+    "console_errors": [],
+    "net_errors": []
+   }
+  ],
+  "login": {
+   "click": "CLICKED",
+   "aside": true
+  }
+ }
+]

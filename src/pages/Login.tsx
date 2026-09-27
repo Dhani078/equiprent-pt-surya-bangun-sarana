@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { RoleName, User } from '../types';
 import { Truck, Shield, Lock, Eye, EyeOff, User as UserIcon, CheckCircle, X, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
-import { db } from '../lib/db';
+import { simpanTokenSesi } from '../lib/authClient';
+import { db, loginApi, setApiBridgeToken, stateStore } from '../lib/db';
 import { STITCH_IMAGES } from '../lib/stitchAssets';
 import { useTerjemahan } from '../lib/i18n';
 
@@ -70,15 +71,46 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }
 
     try {
-      // Verifikasi username DAN password melalui lapisan auth (PBKDF2).
+      // Jalur utama: Edge API (Worker -> TiDB). Identitas & token berasal
+      // dari server, bukan cermin lokal — ini yang menutup 401 senyap di
+      // dashboard/laporan (temuan audit production 2026-09-27).
+      const hasilApi = await loginApi(username, password);
+      if (hasilApi.ok) {
+        simpanTokenSesi(hasilApi.token);
+        setApiBridgeToken(hasilApi.token);
+        const { sinkronCermin } = await import('../lib/fetchCollection');
+        await sinkronCermin();
+        const userApi = hasilApi.user;
+        if (userApi.role !== selectedRole) {
+          setErrorMsg(`Akun "${username}" terdaftar sebagai role ${userApi.role}, bukan ${selectedRole}. Silakan pilih tab role yang sesuai.`);
+          setLoading(false);
+          return;
+        }
+        const user = stateStore.users.find(u => u.id === userApi.id) ?? stateStore.users.find(
+          u => u.username.toLowerCase() === username.toLowerCase()
+        );
+        if (!user) {
+          setErrorMsg('Data pengguna tidak ditemukan di server.');
+          setLoading(false);
+          return;
+        }
+        onLoginSuccess(user);
+        return;
+      }
+      if (!hasilApi.offline) {
+        // Server menolak dengan pesan spesifik (rate limit, akun nonaktif, dsb.)
+        setErrorMsg(hasilApi.message);
+        setLoading(false);
+        return;
+      }
+
+      // Worker tidak terjangkau (dev murni tanpa wrangler) -> verifikasi lokal.
       const check = await db.verifyCredentials(username, password);
 
       if (!check.ok) {
         if (check.reason === 'SUSPENDED') {
           setErrorMsg('Akun Anda telah dinonaktifkan. Silakan hubungi administrator PT. Surya Bangun Sarana.');
         } else {
-          // Pesan seragam sengaja dipakai agar penyerang tidak bisa
-          // menebak username mana yang terdaftar (username enumeration).
           setErrorMsg('Nama pengguna atau password salah. Silakan periksa kembali kredensial Anda.');
         }
         setLoading(false);
