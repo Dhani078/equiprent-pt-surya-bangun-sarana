@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { db, getDataMode, isDatabaseConnected } from '../lib/db';
+import { configureDatabaseUrl, db, getDataMode, isDatabaseConnected } from '../lib/db';
 import {
   configureSessionSecret,
   createSessionToken,
@@ -190,6 +190,9 @@ app.use('/api/*', async (c, next) => {
   // Workers (bukan process.env), jadi diteruskan di sini. Nilainya dicache
   // di modul auth sehingga pemanggilan berulang tidak mahal.
   configureSessionSecret(c.env?.SESSION_SECRET);
+  // Secret TiDB lewat binding worker (bukan process.env) — sambungkan client
+  // sebelum route mana pun membaca data; no-op setelah terhubung.
+  configureDatabaseUrl(c.env?.DATABASE_URL);
 
   // Pengaturan aplikasi (tarif denda, dll.) dimuat sekali per isolate dari
   // tabel settings. `warmSettings()` segera kembali bila DB belum terhubung
