@@ -47,3 +47,10 @@
 - Bukti via wrangler dev lokal (.dev.vars gitignored): /api/health data_mode=TIDB; login admin = hash DB asli; 50 users/50 equipments/55 gps dari TiDB; CRUD equipment probe OK (51->50, delete bersih); audit LOGIN tercatat.
 - Gate: tsc 0, 29/29, build 4.79s. Commit f4b42da.
 - BELUM: deploy production (wrangler login CF expired — perlu user OAuth) + `wrangler secret put DATABASE_URL/SESSION_SECRET`.
+
+## Cycle 59b — DEPLOY PRODUCTION + TiDB LIVE (2026-09-27)
+- wrangler login OK (OAuth browser). Deploy `npm run deploy` -> versi baru di workers.dev.
+- Secret DATABASE_URL+SESSION_SECRET dipasang (wrangler versions secret put -> deploy).
+- BUG PRODUKSI: login 500. wrangler tail: PBKDF2 600000 iterasi ditolak Workers (maks 100000). Fix: konstanta 100k + hash demo regen. 
+- Verified live: /api/health TIDB, session_secret permanen, admin login = baris DB asli, 50 equipment, revenue dari TiDB.
+- Catatan: skema aplikasi ada di DB `test` cluster serverless (bukan sys). DDL di `sys` diblokir flag tapi tidak dipakai.
