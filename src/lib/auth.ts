@@ -18,8 +18,11 @@ import type { RoleName, User } from '../types';
 // Konstanta Keamanan
 // ---------------------------------------------------------------------------
 
-/** Jumlah iterasi PBKDF2. Sesuai rekomendasi OWASP minimum 600.000 untuk SHA-256. */
-const PBKDF2_ITERATIONS = 600_000;
+/** Jumlah iterasi PBKDF2. 100.000 = batas maksimum crypto.subtle di
+ * Cloudflare Workers (BoringSSL menolak >100.000, error OperationError) —
+ * sebelumnya 600.000 lolos di Node/browser tapi selalu 500 di produksi.
+ * ponytail: naikkan lewat jalur verifikasi bertingkat bila perlu OWASP penuh. */
+const PBKDF2_ITERATIONS = 100_000;
 
 /** Panjang salt dalam byte (16 byte = 128 bit). */
 const SALT_BYTES = 16;
@@ -137,9 +140,9 @@ const DEMO_SALT = 'SBS-DEMO-ACCOUNT-SALT';
  * Karena itu password demo TIDAK dapat dibaca balik dari source code.
  */
 export const DEMO_PASSWORD_HASHES: Readonly<Record<string, string>> = Object.freeze({
-  admin: 'pbkdf2$600000$ffcbaa0009aad8dcc331eb64d145e649c475898705729f95929636ad13ddaf4f',
-  staff: 'pbkdf2$600000$f009bb4a3e8c564e6af5c67e54523e6183c15d098e83e4d237cd761c62a9246b',
-  user: 'pbkdf2$600000$c487873e638cf1f65712847abb0a59cef267b5cdcdb2c1b8766b9c3d7f05856d',
+  admin: 'pbkdf2$100000$e0b46aa9aa5e7bfe756387ee5aae3bd69d469a60dc5b8a2976a0e2243777075e',
+  staff: 'pbkdf2$100000$869c271bf0ed2a0172362933a336cc1a8f360804d5dbdf60cfc818c28ea60c71',
+  user: 'pbkdf2$100000$c27eb316d61a41156d1ddc608c70303a2834f6655910f19b95eef5210f5c8502',
 });
 
 /** Daftar akun yang menggunakan password demo. */
@@ -281,7 +284,7 @@ export async function verifyPassword(
     // Salt harus identik dengan yang dipakai saat menghasilkan DEMO_PASSWORD_HASHES.
     const effectiveSalt = encoder.encode(`${DEMO_SALT}:${username.toLowerCase()}`);
     const derived = await crypto.subtle.deriveBits(
-      { name: 'PBKDF2', salt: effectiveSalt, iterations: 600_000, hash: 'SHA-256' },
+      { name: 'PBKDF2', salt: effectiveSalt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
       keyMaterial,
       256
     );
