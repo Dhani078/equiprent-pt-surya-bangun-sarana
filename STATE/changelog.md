@@ -117,3 +117,6 @@
 
 ## Siklus 76 — 2026-09-28
 - Refactor: CustomerPortal.tsx -> portal/PortalHeader.tsx (header + 5 tab). Verifikasi UI production 5 tab.
+
+## Siklus 77 — 2026-09-28
+- Refactor: EquipmentManagement.tsx -> equipment/EquipmentFormModal.tsx. Alur tulis via modal terverifikasi production.
