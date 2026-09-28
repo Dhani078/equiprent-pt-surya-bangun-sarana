@@ -12,7 +12,8 @@ const getEnv = (key, fallback = '') => {
   return match ? match[1].trim() : process.env[key] || fallback;
 };
 
-const user = getEnv('TIDB_USER', '3ajUHv8otax7qCG.root');
+const user = getEnv('TIDB_USER', '');
+if (!user) { console.error('TIDB_USER wajib diisi (.env / .dev.vars) — kredensial tidak boleh di-commit.'); process.exit(1); }
 const pass = getEnv('TIDB_PASSWORD', '');
 const host = getEnv('TIDB_HOST', 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com');
 const port = getEnv('TIDB_PORT', '4000');
