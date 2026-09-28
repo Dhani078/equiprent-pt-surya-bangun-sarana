@@ -24,8 +24,8 @@ import {
   RENTAL_JOURNEY_TONE,
   RENTAL_NEXT_ACTION_LABEL,
   DEFAULT_CATALOG_FILTER,
-} from '../../lib/customerPortal';
-import type { CatalogFilter } from '../../lib/customerPortal';
+} from '../../lib/portal';
+import type { CatalogFilter } from '../../lib/portal';
 import {
   buildFleetTelemetry,
   formatCoordinate,

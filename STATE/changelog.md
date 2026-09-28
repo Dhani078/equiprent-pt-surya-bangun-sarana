@@ -132,3 +132,6 @@
 
 ## Siklus 81 — 2026-09-28
 - Refactor: validators.ts -> validators/{core,rules,fields,forms,contract,index}. Barrel menjaga 8 consumer lama tanpa edit.
+
+## Siklus 82 — 2026-09-28
+- Refactor: customerPortal.ts -> paket src/lib/portal/ (6 modul + barrel). Portal terverifikasi production.
