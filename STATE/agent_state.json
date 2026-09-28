@@ -1,5 +1,5 @@
 {
-  "cycle": 75,
+  "cycle": 76,
   "last_run": "2026-09-26T21:30:00.000Z",
   "current_task_id": null,
   "current_phase": "FASE 5: INOVASI",
@@ -24,6 +24,6 @@
     "note": "npm run deploy = npm run build && npx wrangler deploy; deploy:dry untuk uji tanpa publish"
   },
   "next_focus": "T-0054 (opsional): halaman admin manajemen settings + endpoint PUT /api/settings (RBAC ADMIN) agar tarif denda dapat diubah dari UI tanpa edit DB",
-  "updated": "2026-09-28T13:31:33",
-  "last_summary": "Siklus 75: pecah src/lib/db.ts (1202 baris) -> src/lib/db/index.ts (43 baris, penggabung) + src/lib/store/ 9 berkas (internal 358, hidrasi 252, payments 163, contractDocs 153, users 146, rentals 112, equipments 67, ops 45, settings 42). Tidak ada panggilan lintas-domain di db.ts sehingga penggabungan objek per-domain aman; store/contracts.ts dinamai contractDocs.ts agar tidak bentrok lib/contracts.ts. Runner test diarahkan ke db/index.ts. Bukti production deploy 00ca0ce3: 16 endpoint OK, RBAC 4x403, TULIS-BACA TiDB nyata (create unit id 51 -> terbaca -> hapus -> 50 unit kembali). tsc 0, 30/30 suite, build ok."
+  "updated": "2026-09-28T13:39:59",
+  "last_summary": "Siklus 76: pecah CustomerPortal.tsx 1254 -> 1015 baris; header + navigasi 5 tab jadi src/pages/customer/portal/PortalHeader.tsx (297) + types.ts. Komponen murni tampilan: terima activeTab/onSelect dan angka (jumlahKontrak/jumlahSewa/jumlahTagihan/unitSiapSewa/tagihanBelumBayar/jumlahUnitBeroperasi). Bukti production deploy effb526a: header 'Selamat Datang, Budi Santoso (Logistik)', 5 tab dgn angka benar (48 Unit Siap Sewa, 3 Transaksi, 3 Berkas Kontrak, 1 tagihan belum dibayar, 3 Unit Beroperasi), klik 5 tab membuka panel masing-masing, overflow 0, 0 error konsol. tsc 0, 30/30 suite."
 }
