@@ -708,6 +708,35 @@ export const db = {
   },
 
   /**
+   * Memperpanjang masa berlaku kontrak yang sudah lewat batasnya.
+   *
+   * Hanya mengubah `valid_until` — kode kontrak, penandatanganan, dan
+   * tagihan yang sudah ada tetap utuh, sehingga riwayat keuangan tidak
+   * berubah hanya karena masa sewa diperpanjang.
+   */
+  perpanjangKontrak: async (contractId: number, validUntil: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Contract>('POST', `/api/contracts/${contractId}/renew`, { validUntil });
+    }
+    const c = stateStore.contracts.find(x => x.id === contractId);
+    if (!c) return undefined;
+
+    // Kontrak yang sudah ditandatangani tidak diperpanjang diam-diam:
+    // tanggal di dokumen yang beredar harus selalu sama dengan yang tersimpan.
+    if (c.is_signed_customer === 1) {
+      throw new Error('KONTRAK_SUDAH_DITANDATANGANI');
+    }
+
+    await wt(
+      'UPDATE `contracts` SET `valid_until` = ? WHERE `id` = ?',
+      [validUntil, contractId],
+      'perpanjangKontrak'
+    );
+    c.valid_until = validUntil;
+    return c;
+  },
+
+  /**
    * Membubuhkan tanda tangan elektronik pada kontrak.
    *
    * `signerName` & `signature` sudah divalidasi oleh `validateContractSignature()`

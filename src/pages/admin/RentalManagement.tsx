@@ -39,6 +39,8 @@ interface RentalManagementProps {
   onCreateContract: (rentalId: number) => Promise<void>;
   /** Membubuhkan tanda tangan elektronik (Admin/Staf bertindak atas nama perusahaan). */
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
+  /** Memperpanjang masa berlaku kontrak kedaluwarsa (Admin/Staf saja). */
+  onRenewContract?: (contractId: number, validUntil: string) => Promise<void>;
   /** Menampilkan pesan sukses/gagal di tingkat aplikasi. */
   onNotify?: (message: string, tone: 'success' | 'error') => void;
   /** Tampilkan skeleton saat data sedang dimuat. */
@@ -87,6 +89,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
   onUpdateRentalStatus,
   onCreateContract,
   onSignContract,
+  onRenewContract,
   onNotify,
   isLoading = false,
 }) => {
@@ -362,6 +365,7 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
           users={users}
           onCreateContract={onCreateContract}
           onSignContract={onSignContract}
+          onRenewContract={onRenewContract}
           title="Kontrak Sewa Digital & Tanda Tangan Elektronik"
           canIssue={true}
           canSign={true}

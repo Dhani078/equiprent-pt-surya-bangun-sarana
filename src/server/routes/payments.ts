@@ -1,0 +1,308 @@
+/**
+ * Rute API domain payments.
+ *
+ * Dipisah dari `server/index.ts` supaya berkas rute tetap ringkas dan
+ * terbaca sebagai daftar endpoint; kerangka aplikasi (CORS, auth, error
+ * handler, fallback aset) tetap tinggal di `index.ts`.
+ */
+import type { Hono } from 'hono';
+import {
+  BAD_ID,
+  BAD_JSON,
+  FIELD_BUKTI,
+  auditActor,
+  auditLog,
+  badValidation,
+  checkPaymentGate,
+  db,
+  getAllowedPaymentTransitions,
+  mayTouchPayment,
+  mayVerifyPayment,
+  parseId,
+  readJsonBody,
+  summarizePaymentQueue,
+  summarizeRentalPayment,
+  validatePaymentProofPath,
+} from '../context';
+import type {
+  Payment,
+} from '../context';
+import type { AppEnv } from '../http';
+
+export function daftarPayments(app: Hono<AppEnv>): void {
+// Payments API — unggah bukti, verifikasi staf, penolakan (T-0008)
+// ---------------------------------------------------------------------------
+
+/**
+ * Daftar pembayaran + ringkasan antrean verifikasi untuk dashboard staf.
+ *
+ * PERBAIKAN KEAMANAN (IDOR): pelanggan hanya melihat tagihannya sendiri,
+ * dan ringkasan antrean hanya relevan (serta hanya dikirim) untuk internal.
+ */
+app.get('/api/payments', async (c) => {
+  const semua = await db.getPayments();
+  const role = c.get('role');
+
+  if (role === 'CUSTOMER') {
+    const userId = c.get('userId');
+    const milikSaya = semua.filter((p) => mayTouchPayment(p, role, userId));
+    return c.json({
+      success: true,
+      data: milikSaya,
+      meta: { total: milikSaya.length, queue: summarizePaymentQueue(milikSaya) },
+    });
+  }
+
+  return c.json({
+    success: true,
+    data: semua,
+    meta: { total: semua.length, queue: summarizePaymentQueue(semua) },
+  });
+});
+
+/**
+ * Mengubah kode penolakan dari modul pembayaran menjadi respons HTTP.
+ *
+ * Satu tempat untuk seluruh kode, agar pesan & status tidak menyimpang
+ * antar endpoint (unggah bukti, verifikasi, penolakan).
+ */
+function toPaymentErrorResponse(
+  code: string
+): { status: 400 | 403 | 409; body: { success: false; error: { code: string; message: string } } } | null {
+  switch (code) {
+    case 'BUKAN_PEMILIK_PEMBAYARAN':
+      return {
+        status: 403,
+        body: {
+          success: false,
+          error: { code, message: 'Tagihan ini bukan milik akun Anda.' },
+        },
+      };
+    case 'PEMBAYARAN_SUDAH_FINAL':
+      return {
+        status: 409,
+        body: {
+          success: false,
+          error: { code, message: 'Status pembayaran ini sudah final dan tidak dapat diubah.' },
+        },
+      };
+    case 'STATUS_PEMBAYARAN_TIDAK_VALID':
+      return {
+        status: 409,
+        body: {
+          success: false,
+          error: { code, message: 'Pembayaran tidak menunggu verifikasi.' },
+        },
+      };
+    case 'BUKTI_TRANSFER_BELUM_ADA':
+      return {
+        status: 409,
+        body: {
+          success: false,
+          error: { code, message: 'Bukti transfer belum dilampirkan.' },
+        },
+      };
+    case 'BUKTI_TIDAK_VALID':
+      return {
+        status: 400,
+        body: {
+          success: false,
+          error: { code, message: 'Berkas bukti transfer tidak valid.' },
+        },
+      };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Pelanggan melampirkan bukti transfer.
+ *
+ * RBAC: pelanggan HANYA boleh menyentuh tagihannya sendiri. Tanpa
+ * pemeriksaan ini, pelanggan dapat mengunggah bukti palsu atas tagihan
+ * pelanggan lain hanya dengan menebak ID.
+ */
+app.post('/api/payments/:id/proof', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  const body = await readJsonBody<{ paymentProofPath?: unknown }>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  // Validasi terpusat: nama berkas wajib, ekstensi dikenal, dan bebas dari
+  // jalur absolut/traversal yang berbahaya bila kelak dirender sebagai tautan.
+  const bukti = validatePaymentProofPath(body.paymentProofPath, { required: true });
+  if (!bukti.ok) {
+    return c.json(badValidation({ [FIELD_BUKTI]: bukti.message }), 400);
+  }
+
+  const semuaPembayaran = await db.getPayments();
+  const target = semuaPembayaran.find((p) => p.id === id);
+  if (!target) {
+    return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
+  }
+
+  // `return` wajib: tanpa itu, pemeriksaan kepemilikan hanya menyusun respons
+  // lalu tetap melanjutkan eksekusi ke perubahan data di bawahnya.
+  if (!mayTouchPayment(target, c.get('role'), c.get('userId'))) {
+    const respon = toPaymentErrorResponse('BUKAN_PEMILIK_PEMBAYARAN');
+    if (respon) return c.json(respon.body, respon.status);
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Tagihan ini bukan milik akun Anda.' } },
+      403
+    );
+  }
+
+  try {
+    const updated = await db.addPaymentProof(id, bukti.value);
+    if (!updated) {
+      return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
+    }
+
+    // Audit trail: pelanggan melampirkan bukti transfer.
+    auditLog({
+      ...auditActor(c),
+      action: 'PAYMENT_PROOF_UPLOAD',
+      entity: 'payment',
+      entity_id: id,
+      detail: `Bukti transfer pembayaran #${id} dilampirkan`,
+    });
+
+    return c.json({
+      success: true,
+      item: updated,
+      meta: { allowedNext: getAllowedPaymentTransitions(updated.status) },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    const respon = toPaymentErrorResponse(msg);
+    if (respon) return c.json(respon.body, respon.status);
+    throw err;
+  }
+});
+
+/** Verifikasi bukti transfer oleh Admin / Staf Operasional. */
+app.post('/api/payments/:id/verify', async (c) => {
+  // Mengubah status pembayaran adalah wewenang perusahaan: pelanggan tidak
+  // boleh mengesahkan tagihannya sendiri.
+  if (!mayVerifyPayment(c.get('role'))) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Verifikasi pembayaran dilakukan oleh Admin atau Staf Operasional.',
+        },
+      },
+      403
+    );
+  }
+
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  // Body opsional; bila ada harus JSON valid.
+  const body = await readJsonBody<{ staffId?: unknown; staffName?: unknown }>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  // Identitas pengesah diambil dari session (bukan dari body) agar tidak
+  // bisa dipalsukan. Sesi tanpa identitas ditolak — sebelumnya jatuh ke
+  // `staffId = 3`, sehingga pengesahan tercatat atas nama staf yang salah.
+  const staffId = c.get('userId');
+  if (!Number.isInteger(staffId) || staffId <= 0) {
+    return c.json(
+      { success: false, error: { code: 'MALFORMED', message: 'Sesi tidak valid. Silakan masuk kembali.' } },
+      401
+    );
+  }
+
+  const pengesah = await db.getUserById(staffId);
+  const staffName =
+    pengesah?.full_name?.trim() ||
+    (typeof body.staffName === 'string' && body.staffName.trim() ? body.staffName.trim() : 'Staf Operasional');
+
+  try {
+    const updated = await db.verifyPayment(id, staffId, staffName);
+    if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
+    auditLog({
+      ...auditActor(c),
+      action: 'PAYMENT_VERIFIED',
+      entity: 'payment',
+      entity_id: id,
+      detail: `Pembayaran #${id} diverifikasi oleh ${staffName}`,
+    });
+    return c.json({
+      success: true,
+      item: updated,
+      meta: { allowedNext: getAllowedPaymentTransitions(updated.status) },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    const respon = toPaymentErrorResponse(msg);
+    if (respon) return c.json(respon.body, respon.status);
+    throw err;
+  }
+});
+
+/**
+ * Menolak bukti transfer yang tidak sah (Pending Verification → FAILED).
+ *
+ * Tagihan yang ditolak tetap dapat dilampiri ulang buktinya oleh
+ * pelanggan, sehingga statusnya bukan status akhir.
+ */
+app.post('/api/payments/:id/reject', async (c) => {
+  if (!mayVerifyPayment(c.get('role'))) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Penolakan pembayaran dilakukan oleh Admin atau Staf Operasional.',
+        },
+      },
+      403
+    );
+  }
+
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  const body = await readJsonBody<{ staffName?: unknown }>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  const staffId = c.get('userId');
+  if (!Number.isInteger(staffId) || staffId <= 0) {
+    return c.json(
+      { success: false, error: { code: 'MALFORMED', message: 'Sesi tidak valid. Silakan masuk kembali.' } },
+      401
+    );
+  }
+
+  const peninjau = await db.getUserById(staffId);
+  const staffName =
+    peninjau?.full_name?.trim() ||
+    (typeof body.staffName === 'string' && body.staffName.trim() ? body.staffName.trim() : 'Staf Operasional');
+
+  try {
+    const updated = await db.rejectPayment(id, staffId, staffName);
+    if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
+    auditLog({
+      ...auditActor(c),
+      action: 'PAYMENT_REJECTED',
+      entity: 'payment',
+      entity_id: id,
+      detail: `Pembayaran #${id} ditolak oleh ${staffName}`,
+    });
+    return c.json({
+      success: true,
+      item: updated,
+      meta: { allowedNext: getAllowedPaymentTransitions(updated.status) },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    const respon = toPaymentErrorResponse(msg);
+    if (respon) return c.json(respon.body, respon.status);
+    throw err;
+  }
+});
+}

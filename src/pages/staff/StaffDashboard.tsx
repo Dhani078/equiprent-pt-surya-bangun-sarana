@@ -32,6 +32,8 @@ interface StaffDashboardProps {
   onCreateContract: (rentalId: number) => Promise<void>;
   /** Membubuhkan tanda tangan atas nama perusahaan. */
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
+  /** Memperpanjang masa berlaku kontrak kedaluwarsa (Admin/Staf saja). */
+  onRenewContract?: (contractId: number, validUntil: string) => Promise<void>;
   /** Umpan balik sederhana (sukses / galat) setelah sebuah aksi. */
   onNotify?: (message: string, tone: 'success' | 'error') => void;
   /** Tab sidebar aktif — sub-tab mengikuti saat user mengklik "Kontrak Sewa Digital" dsb. */
@@ -51,6 +53,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   onUpdateRentalStatus,
   onCreateContract,
   onSignContract,
+  onRenewContract,
   onNotify,
   activeMenu
 }) => {
@@ -662,6 +665,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           users={users}
           onCreateContract={onCreateContract}
           onSignContract={onSignContract}
+          onRenewContract={onRenewContract}
           title="Kontrak Sewa Digital & Tanda Tangan Elektronik"
           canIssue={true}
           canSign={false}

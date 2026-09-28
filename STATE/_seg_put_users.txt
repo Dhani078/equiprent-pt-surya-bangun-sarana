@@ -1,0 +1,38 @@
+app.put('/api/users/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  // Satu orang hanya boleh mengurai profil dirinya sendiri.
+  const userId = c.get('userId');
+  if (userId !== id && c.get('role') !== 'ADMIN') {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Tidak dapat mengubah profil pengguna lain.' } },
+      403
+    );
+  }
+
+  const body = await readJsonBody<Record<string, unknown>>(c);
+  if (body === null) return c.json(BAD_JSON, 400);
+
+  const updated = await db.updateUser(id, {
+    full_name: typeof body.full_name === 'string' ? body.full_name : undefined,
+    email: typeof body.email === 'string' ? body.email : undefined,
+    phone: typeof body.phone === 'string' ? body.phone : undefined,
+    address: typeof body.address === 'string' ? body.address : undefined,
+    company_name:
+      body.company_name === null || typeof body.company_name === 'string' ? body.company_name : undefined,
+  } as Partial<User>);
+  if (!updated) {
+    return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pengguna tidak ditemukan.' } }, 404);
+  }
+
+  auditLog({
+    ...auditActor(c),
+    action: 'USER_UPDATE',
+    entity: 'user',
+    entity_id: id,
+    detail: `Profil pengguna ${updated.username} diperbarui`,
+  });
+
+  return c.json({ success: true, item: ringkasUser(updated) });
+});

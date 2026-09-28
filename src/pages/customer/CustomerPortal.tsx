@@ -43,6 +43,8 @@ interface CustomerPortalProps {
   trackingData: GpsTracking[];
   onAddRental: (item: Omit<Rental, 'id' | 'rental_code'>) => Promise<void>;
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
+  /** Memperpanjang masa berlaku kontrak kedaluwarsa (Admin/Staf saja). */
+  onRenewContract?: (contractId: number, validUntil: string) => Promise<void>;
   onUploadPaymentProof: (paymentId: number, proofPath: string) => Promise<void>;
   /** Tab menu sidebar — sinkronkan konten portal saat user klik nav. */
   activeMenu?: string;
@@ -57,6 +59,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   trackingData,
   onAddRental,
   onSignContract,
+  onRenewContract,
   onUploadPaymentProof,
   activeMenu
 }) => {
@@ -832,6 +835,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             throw new Error('Penerbitan kontrak dilakukan oleh Admin atau Staf Operasional.');
           }}
           onSignContract={onSignContract}
+          onRenewContract={onRenewContract}
           title="Kontrak Sewa Digital & Tanda Tangan Elektronik"
           canIssue={false}
           canSign={true}

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { CheckCircle2, FileSignature, FileText, PenLine, Search, X } from 'lucide-react';
+import { CalendarPlus, CheckCircle2, FileSignature, FileText, PenLine, Search, X } from 'lucide-react';
 import { Modal } from './Modal';
 import { SignatureCanvas } from './SignatureCanvas';
 import { ContractViewer } from './ContractViewer';
@@ -10,7 +10,7 @@ import {
   getContractStatusTone,
   isContractSigned,
 } from '../lib/contracts';
-import { validateContractSignature } from '../lib/validators';
+import { validateContractRenewal, validateContractSignature } from '../lib/validators';
 import type { Contract, Equipment, Rental, User } from '../types';
 
 /**
@@ -51,6 +51,8 @@ export interface ContractPanelProps {
   onCreateContract: (rentalId: number) => Promise<void>;
   /** Membubuhkan tanda tangan. Melempar bila gagal — panel yang menampilkannya. */
   onSignContract: (contractId: number, signerName: string, signature: string) => Promise<void>;
+  /** Memperpanjang masa berlaku kontrak kedaluwarsa (Admin/Staf). */
+  onRenewContract?: (contractId: number, validUntil: string) => Promise<void>;
   /** Judul panel. */
   title?: string;
   /** Tampilkan tombol "Terbitkan Kontrak" (Admin/Staf saja). */
@@ -64,7 +66,8 @@ type ActiveModal =
   | { kind: 'none' }
   | { kind: 'issue' }
   | { kind: 'preview'; contract: Contract }
-  | { kind: 'sign'; contract: Contract };
+  | { kind: 'sign'; contract: Contract }
+  | { kind: 'renew'; contract: Contract };
 
 export const ContractPanel: React.FC<ContractPanelProps> = ({
   contracts,
@@ -73,6 +76,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
   users,
   onCreateContract,
   onSignContract,
+  onRenewContract,
   title = 'Manajemen Kontrak Digital',
   canIssue = true,
   canSign = true,
@@ -87,6 +91,11 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
   const [signError, setSignError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string | undefined>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form perpanjangan
+  const [renewDate, setRenewDate] = useState('');
+  const [renewError, setRenewError] = useState<string | null>(null);
+  const [isRenewing, setIsRenewing] = useState(false);
 
   // Form penerbitan
   const [selectedRentalId, setSelectedRentalId] = useState<number | null>(null);
@@ -167,6 +176,8 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
     setSignature('');
     setSignerName('');
     setSelectedRentalId(null);
+    setRenewError(null);
+    setFormErrors({});
   }, []);
 
   const bukaTandaTangan = useCallback(
@@ -206,6 +217,41 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
       setIsSubmitting(false);
     }
   }, [modal, signerName, signature, onSignContract, tutupModal]);
+
+  /** Membuka dialog perpanjangan untuk kontrak kedaluwarsa. */
+  const bukaPerpanjang = useCallback((kontrak: Contract) => {
+    // Usulan awal: sebulan setelah batas lama, supaya staf tidak menghitung
+    // sendiri saat kebutuhan umumnya sekadar memperpanjang satu periode.
+    const lama = new Date(`${kontrak.valid_until}T12:00:00Z`);
+    const usul = new Date(lama.getTime() + 30 * 86_400_000);
+    setRenewDate(usul.toISOString().slice(0, 10));
+    setRenewError(null);
+    setFormErrors({});
+    setModal({ kind: 'renew', contract: kontrak });
+  }, []);
+
+  /** Mengirim perpanjangan ke server. */
+  const handleRenew = useCallback(async () => {
+    if (modal.kind !== 'renew' || onRenewContract === undefined) return;
+
+    const hasil = validateContractRenewal({ validUntil: renewDate });
+    if (!hasil.ok) {
+      setFormErrors(hasil.errors);
+      return;
+    }
+
+    setFormErrors({});
+    setIsRenewing(true);
+    setRenewError(null);
+    try {
+      await onRenewContract(modal.contract.id, hasil.value.validUntil);
+      tutupModal();
+    } catch (err) {
+      setRenewError(err instanceof Error ? err.message : 'Perpanjangan gagal disimpan.');
+    } finally {
+      setIsRenewing(false);
+    }
+  }, [modal, renewDate, onRenewContract, tutupModal]);
 
   /** Menerbitkan kontrak baru. */
   const handleIssue = useCallback(async () => {
@@ -399,6 +445,19 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
                           <span>Tinjau</span>
                         </button>
 
+                        {canIssue && status === 'EXPIRED' && onRenewContract !== undefined && (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => bukaPerpanjang(kontrak)}
+                            aria-label={`Perpanjang kontrak ${kontrak.contract_code} yang kedaluwarsa`}
+                            style={{ padding: '5px 9px', fontSize: '11.5px' }}
+                          >
+                            <CalendarPlus size={13} />
+                            <span>Perpanjang</span>
+                          </button>
+                        )}
+
                         {canSign && status === 'AWAITING' && (
                           <button
                             type="button"
@@ -429,6 +488,73 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
           title={`Kontrak ${modal.contract.contract_code}`}
         >
           <ContractViewer preview={buildPreview(modal.contract)} />
+        </Modal>
+      )}
+
+      {/* Modal: Perpanjangan kontrak */}
+      {modal.kind === 'renew' && (
+        <Modal
+          isOpen={true}
+          onClose={tutupModal}
+          title={`Perpanjang Kontrak: ${modal.contract.contract_code}`}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div
+              style={{
+                padding: '12px 14px',
+                backgroundColor: 'var(--bg-amber-soft)',
+                border: '1px solid var(--border-amber-soft)',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                lineHeight: 1.6,
+                color: 'var(--fg-warning-deep)',
+              }}
+              role="status"
+            >
+              <strong>Kontrak ini kedaluwarsa per {modal.contract.valid_until}.</strong>{' '}
+              Menetapkan batas berlaku baru membuat dokumen dapat ditandatangani kembali oleh
+              pelanggan. Kode kontrak dan tagihan yang sudah terbit tidak berubah.
+            </div>
+
+            <div>
+              <label
+                htmlFor="renew-valid-until"
+                style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}
+              >
+                Berlaku sampai
+              </label>
+              <input
+                id="renew-valid-until"
+                type="date"
+                className="input-premium"
+                value={renewDate}
+                min={new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)}
+                onChange={(e) => setRenewDate(e.target.value)}
+                style={{ width: '100%' }}
+              />
+              {formErrors.validUntil !== undefined && (
+                <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: 'var(--fg-danger, #B42318)' }}>
+                  {formErrors.validUntil}
+                </p>
+              )}
+            </div>
+
+            {renewError !== null && (
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--fg-danger, #B42318)' }} role="alert">
+                {renewError}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button type="button" className="btn-secondary" onClick={tutupModal} disabled={isRenewing}>
+                Batal
+              </button>
+              <button type="button" className="btn-primary" onClick={handleRenew} disabled={isRenewing}>
+                <CalendarPlus size={14} />
+                <span>{isRenewing ? 'Menyimpan...' : 'Simpan Perpanjangan'}</span>
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 
