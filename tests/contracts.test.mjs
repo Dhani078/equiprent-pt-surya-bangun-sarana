@@ -62,6 +62,19 @@ t('label AWAITING', c.getContractStatusLabel('AWAITING') === 'Menunggu Tanda Tan
 t('tone SIGNED = success', c.getContractStatusTone('SIGNED') === 'success');
 t('tone AWAITING = warning', c.getContractStatusTone('AWAITING') === 'warning');
 
+t('daur-hidup: belum tanda tangan + belum lewat = AWAITING',
+  c.getContractLifecycleStatus({ is_signed_customer: 0, valid_until: '2999-01-01' }) === 'AWAITING');
+t('daur-hidup: belum tanda tangan + lewat batas = EXPIRED',
+  c.getContractLifecycleStatus({ is_signed_customer: 0, valid_until: '2000-01-01' }) === 'EXPIRED');
+t('daur-hidup: sudah tanda tangan tetap SIGNED walau tanggal lewat',
+  c.getContractLifecycleStatus({ is_signed_customer: 1, valid_until: '2000-01-01' }) === 'SIGNED');
+t('daur-hidup: tanpa batas akhir tidak pernah kedaluwarsa',
+  c.getContractLifecycleStatus({ is_signed_customer: 0, valid_until: '' }) === 'AWAITING');
+t('daur-hidup: signed + lewat tanggal bukan EXPIRED (bukti tanda tangan tak gugur)',
+  c.getContractLifecycleStatus({ is_signed_customer: 1, valid_until: '2000-01-01' }) !== 'EXPIRED');
+t('label EXPIRED', c.getContractStatusLabel('EXPIRED') === 'Kedaluwarsa');
+t('tone EXPIRED = danger', c.getContractStatusTone('EXPIRED') === 'danger');
+
 t('kontrak tanpa batas akhir dianggap aktif', c.isContractActive({ valid_until: '' }) === true);
 t('kontrak yang belum jatuh tempo aktif',
   c.isContractActive({ valid_until: '2999-01-01' }) === true);

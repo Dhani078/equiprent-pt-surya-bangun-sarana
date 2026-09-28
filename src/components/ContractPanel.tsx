@@ -5,7 +5,7 @@ import { SignatureCanvas } from './SignatureCanvas';
 import { ContractViewer } from './ContractViewer';
 import {
   buildContractPreview,
-  getContractSignatureStatus,
+  getContractLifecycleStatus,
   getContractStatusLabel,
   getContractStatusTone,
   isContractSigned,
@@ -35,6 +35,7 @@ const TONE_STYLE: Record<string, { backgroundColor: string; color: string; borde
   warning: { backgroundColor: 'var(--bg-amber-soft)', color: 'var(--fg-warning-deep)', borderColor: 'var(--border-amber-soft)' },
   info: { backgroundColor: 'var(--bg-blue-soft)', color: 'var(--fg-info-deep)', borderColor: 'var(--border-blue-soft)' },
   neutral: { backgroundColor: 'var(--bg-subtle)', color: 'var(--text-body)', borderColor: 'var(--color-border)' },
+  danger: { backgroundColor: 'var(--bg-red-soft, #FEF2F2)', color: 'var(--fg-danger, #B42318)', borderColor: '#FECACA' },
 };
 
 export interface ContractPanelProps {
@@ -77,7 +78,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
   canSign = true,
 }) => {
   const [keyword, setKeyword] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'SIGNED' | 'AWAITING'>('ALL');
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'SIGNED' | 'AWAITING' | 'EXPIRED'>('ALL');
   const [modal, setModal] = useState<ActiveModal>({ kind: 'none' });
 
   // Form tanda tangan
@@ -131,7 +132,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
 
     return contracts
       .filter((kontrak) => {
-        if (filterStatus !== 'ALL' && getContractSignatureStatus(kontrak) !== filterStatus) return false;
+        if (filterStatus !== 'ALL' && getContractLifecycleStatus(kontrak) !== filterStatus) return false;
         if (kata === '') return true;
 
         const rental = rentals.find((r) => r.id === kontrak.rental_id);
@@ -311,6 +312,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
         >
           <option value="ALL">Semua Status</option>
           <option value="AWAITING">Menunggu Tanda Tangan</option>
+          <option value="EXPIRED">Kedaluwarsa</option>
           <option value="SIGNED">Telah Ditandatangani</option>
         </select>
       </div>
@@ -350,7 +352,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
             </thead>
             <tbody>
               {daftarKontrak.map((kontrak) => {
-                const status = getContractSignatureStatus(kontrak);
+                const status = getContractLifecycleStatus(kontrak);
                 const tone = TONE_STYLE[getContractStatusTone(status)] ?? TONE_STYLE.neutral;
                 const rental = rentals.find((r) => r.id === kontrak.rental_id);
 
@@ -397,7 +399,7 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
                           <span>Tinjau</span>
                         </button>
 
-                        {canSign && !isContractSigned(kontrak) && (
+                        {canSign && status === 'AWAITING' && (
                           <button
                             type="button"
                             className="btn-primary"

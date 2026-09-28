@@ -99,3 +99,7 @@
 ## Siklus 71 — 2026-09-28
 - Test: suite offlineQueue 21 assert (FIFO, kapasitas, flush, guard re-antre).
 - FIX bug: guard sedangFlush pada flushAntreanOffline (mencegah re-antre tak berujung saat server mati).
+
+## Siklus 72 — 2026-09-28
+- Fitur: daur-hidup kontrak - status Kedaluwarsa, guard tanda tangan 409, tombol disembunyikan, filter+badge.
+- Insiden: 13 tagihan terhapus oleh harness; dipulihkan dari seed kanonik; harness diberi pengaman cakupan + sidik jari.

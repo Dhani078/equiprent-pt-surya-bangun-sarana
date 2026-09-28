@@ -173,7 +173,7 @@ export function isValidContractCode(value: string): boolean {
 // ---------------------------------------------------------------------------
 
 /** Status penandatanganan kontrak dalam bentuk terstruktur. */
-export type ContractSignatureStatus = 'SIGNED' | 'AWAITING';
+export type ContractSignatureStatus = 'SIGNED' | 'AWAITING' | 'EXPIRED';
 
 /**
  * Normalisasi `is_signed_customer`.
@@ -195,12 +195,32 @@ export function getContractSignatureStatus(
 
 /** Label siap tampil untuk status penandatanganan. */
 export function getContractStatusLabel(status: ContractSignatureStatus): string {
-  return status === 'SIGNED' ? 'Telah Ditandatangani' : 'Menunggu Tanda Tangan';
+  if (status === 'SIGNED') return 'Telah Ditandatangani';
+  if (status === 'EXPIRED') return 'Kedaluwarsa';
+  return 'Menunggu Tanda Tangan';
 }
 
-/** Nada warna badge mengikuti design system §7 (hijau=sah, kuning=pending). */
-export function getContractStatusTone(status: ContractSignatureStatus): 'success' | 'warning' {
-  return status === 'SIGNED' ? 'success' : 'warning';
+/** Nada warna badge mengikuti design system §7 (hijau=sah, kuning=pending, merah=kedaluwarsa). */
+export function getContractStatusTone(status: ContractSignatureStatus): 'success' | 'warning' | 'danger' {
+  if (status === 'SIGNED') return 'success';
+  if (status === 'EXPIRED') return 'danger';
+  return 'warning';
+}
+
+/**
+ * Status daur-hidup kontrak: SAH (sudah ditandatangani) > KEDALUWARSA
+ * (belum ditandatangani dan melewati batas berlaku) > MENUNGGU.
+ *
+ * Kontrak yang sudah ditandatangani tidak menjadi kedaluwarsa: tandatangan
+ * adalah bukti persetujuan, bukan sesuatu yang gugur oleh tanggal tampil.
+ */
+export function getContractLifecycleStatus(
+  kontrak: Pick<Contract, 'is_signed_customer' | 'valid_until'>,
+  now: Date = new Date()
+): ContractSignatureStatus {
+  if (isContractSigned(kontrak)) return 'SIGNED';
+  if (!isContractActive({ valid_until: kontrak.valid_until }, now)) return 'EXPIRED';
+  return 'AWAITING';
 }
 
 /**

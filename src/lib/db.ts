@@ -725,6 +725,13 @@ export const db = {
     if (c.is_signed_customer === 1) {
       throw new Error('KONTRAK_SUDAH_DITANDATANGANI');
     }
+    // Daur-hidup: kedaluwarsa -> tolak (identik dengan guard sisi Worker).
+    if (typeof c.valid_until === 'string' && c.valid_until !== '') {
+      const batas = new Date(c.valid_until);
+      if (!Number.isNaN(batas.getTime()) && batas.getTime() < Date.now()) {
+        throw new Error('KONTRAK_KEDALUWARSA');
+      }
+    }
 
     const signedAt = new Date().toISOString().replace('T', ' ').slice(0, 19);
     await wt(
