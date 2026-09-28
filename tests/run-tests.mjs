@@ -44,7 +44,7 @@ bundle('src/lib/rentalWorkflow.ts', '.tmp_rentalWorkflow.mjs');
 bundle('src/lib/contracts.ts', '.tmp_contracts.mjs');
 bundle('src/lib/paymentWorkflow.ts', '.tmp_paymentWorkflow.mjs');
 bundle('src/lib/fleetTelemetry.ts', '.tmp_fleetTelemetry.mjs');
-bundle('src/lib/customerPortal.ts', '.tmp_customerPortal.mjs');
+bundle('src/lib/portal/index.ts', '.tmp_customerPortal.mjs');
 
 // Panel laporan butuh JSX → sertakan loader .tsx dan jadikan React eksternal
 // agar modul react/react-dom tidak ikut ter-bundle (cukup satu instans).
