@@ -138,3 +138,6 @@
 
 ## Siklus 83 — 2026-09-28
 - Refactor: GpsTrackingPage.tsx -> gps/{GeofenceAlertBanner,TelemetryFilterPanel}.tsx. Terverifikasi production.
+
+## Siklus 84 — 2026-09-28
+- Refactor: 2 modal CustomerPortal -> RentBookingModal + PaymentProofModal. Fix bug tutup-modal hasil pecah.
