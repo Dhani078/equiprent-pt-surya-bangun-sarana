@@ -1,5 +1,5 @@
 {
-  "cycle": 60,
+  "cycle": 61,
   "last_run": "2026-09-26T21:30:00.000Z",
   "current_task_id": null,
   "current_phase": "FASE 5: INOVASI",
@@ -24,6 +24,6 @@
     "note": "npm run deploy = npm run build && npx wrangler deploy; deploy:dry untuk uji tanpa publish"
   },
   "next_focus": "T-0054 (opsional): halaman admin manajemen settings + endpoint PUT /api/settings (RBAC ADMIN) agar tarif denda dapat diubah dari UI tanpa edit DB",
-  "updated": "2026-09-27T15:51:31",
-  "last_summary": "Siklus 60: AKAR TERDALAM diperbaiki — browser <-> Edge API <-> TiDB kini satu alur. Login UI memakai /api/auth/login (token sesi server, simpan sbs_session_token, bridge token); cermin penuh 8 koleksi saat mount; SEMUA mutator db.ts (equipment/rental/kontrak/pembayaran/servis/user/profil/password) diteruskan ke Worker -> write-through TiDB. RBAC method-aware (GET katalog & PUT profil untuk semua role, kepemilikan dicek di route), GET /api/gps baru (customer: unit sewanya), PUT /api/users/:id. Ganti password STAFF/CUSTOMER via /api/auth/change-password (buktikan password lama). Kolom path DB dilebarkan 255->600. VERIFIKASI PRODUCTION: 3 role login, 0 error console, 0 respons 4xx di semua halaman (dulu 4x 401); UI tambah unit -> POST 201 -> reload -> baris ADA -> hilang dari TiDB setelah delete (probe dibersihkan, 50 unit). Mode gelap production: topbar/sidebar/KPI/banner semua themed (computed rgb(15,23,42)/rgb(30,41,59)). Gate: tsc 0, 29/29, build ok, deploy versi 7c6a7781. SISA: rotasi password TiDB (masih terpapar chat), kolom Nilai Sewa tabel laporan perlu padding kanan (scroll-x sudah ada)."
+  "updated": "2026-09-28T08:55:29",
+  "last_summary": "Siklus 61: E2E alur bisnis PRODUCTION lewat UI (CDP) 9/9 hijau — admin tambah unit -> customer ajukan sewa (katalog tampil krn cermin re-sync saat login) -> staff setujui (APPROVED) -> staff terbitkan kontrak (tagihan PAY-SBS otomatis UNPAID ikut terbit) -> customer tanda tangan kanvas pointer (signed) -> customer kirim bukti (PENDING_VERIFICATION) -> staff verifikasi LUNAS (PAID) -> reload total unit masih ada (TiDB) -> cleanup. Route DELETE payments/contracts/rentals berjenjang (PAID immutable 409, CUSTOMER 403). App.tsx effect: sinkronCermin ulang tiap ganti user (akar cermin basi). Keamanan GitHub: repo PUBLIC -> fallback username TiDB di migrate_to_tidb.js + tabel DEPLOYMENT_GUIDE dihapus, main = HEAD fix/security-audit (bersih; SCAN git grep semua commit: password TIDAK pernah masuk git). Deploy 940f6d34; tsc 0; 29/29; data 50/50/50/50."
 }

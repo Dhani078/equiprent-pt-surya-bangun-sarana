@@ -59,3 +59,7 @@
 - Akar: browser tidak pernah bicara API untuk mutasi & 4 halaman 401 senyap.
 - Jembatan penuh login->token->cermin->write-through; RBAC method-aware; /api/gps + PUT profil.
 - Verif production via CDP: 3 role, 401=0, persist UI->TiDB terbukti bolak-balik, tema gelap OK.
+
+## Siklus 61 — 2026-09-28
+- E2E alur sewa penuh production 9/9 (CDP UI asli): unit->sewa->approve->kontrak+tagihan otomatis->TTD->bukti->LUNAS.
+- Cermin browser re-sync saat login; rute DELETE berjenjang; sanitasi GitHub main (username TiDB keluar, password tak pernah masuk git).
