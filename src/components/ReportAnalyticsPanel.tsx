@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { ReportCellValue, ReportResult, ReportId, DateRangeFilter, ReportColumnFormat } from '../types';
-import { REPORT_CATALOG, EMPTY_RANGE, formatCell, buildCsv, buildCsvFilename } from '../lib/reports';
+import { REPORT_CATALOG, EMPTY_RANGE, formatCell, buildCsv, buildCsvFilename, presetRange, REPORT_PRESET_LABELS } from '../lib/reports';
+import type { ReportPreset } from '../lib/reports';
 import { downloadCsv, fetchReport } from '../lib/reportsClient';
 import { Download, CalendarRange, FileSpreadsheet, Inbox, AlertTriangle, RefreshCw, BarChart3, Search } from 'lucide-react';
 import { SkeletonRows } from './Skeleton';
@@ -214,6 +215,29 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
               aria-label="Tanggal akhir periode laporan"
               style={{ padding: '8px 10px', fontSize: '13px' }}
             />
+          </div>
+
+          <div
+            role="group"
+            aria-label="Preset periode cepat"
+            style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}
+          >
+            {REPORT_PRESET_LABELS.map(({ id, label }) => {
+              const aktif = presetRange(id).from === range.from && presetRange(id).to === range.to;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onRangeChange(presetRange(id))}
+                  className={aktif ? 'btn-primary' : 'btn-secondary'}
+                  style={{ padding: '6px 9px', fontSize: '11.5px' }}
+                  aria-label={`Preset periode ${label}`}
+                  aria-pressed={aktif}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           <button

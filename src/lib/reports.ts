@@ -164,6 +164,49 @@ function toDay(value: string | null | undefined): string {
 /** Rentang kosong — berarti tanpa batas tanggal. */
 export const EMPTY_RANGE: DateRangeFilter = { from: '', to: '' };
 
+/** Preset periode cepat pada panel laporan. */
+export type ReportPreset = '7HARI' | '30HARI' | '90HARI' | 'BULAN_INI' | 'KUARTAL_INI' | 'SEMUA';
+
+/**
+ * Rentang [dari, sampai] (inklusif, ISO yyyy-mm-dd) untuk sebuah preset,
+ * dihitung relatif terhadap `hariIni` (default: sekarang). 'SEMUA' -> kosong.
+ */
+export function presetRange(preset: ReportPreset, hariIni: Date = new Date()): DateRangeFilter {
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const y = hariIni.getUTCFullYear();
+  const m = hariIni.getUTCMonth(); // 0-11
+  switch (preset) {
+    case '7HARI':
+    case '30HARI':
+    case '90HARI': {
+      const n = Number(preset.slice(0, -4)); // '7HARI' -> 7 ; slice up to 'HARI'
+      const dari = new Date(hariIni.getTime() - n * 86_400_000);
+      return { from: iso(dari), to: iso(hariIni) };
+    }
+    case 'BULAN_INI': {
+      const akhirBulan = new Date(Date.UTC(y, m + 1, 0));
+      return { from: iso(new Date(Date.UTC(y, m, 1))), to: iso(akhirBulan) };
+    }
+    case 'KUARTAL_INI': {
+      const awalKuartal = Math.floor(m / 3) * 3;
+      const akhirKuartal = new Date(Date.UTC(y, awalKuartal + 3, 0));
+      return { from: iso(new Date(Date.UTC(y, awalKuartal, 1))), to: iso(akhirKuartal) };
+    }
+    case 'SEMUA':
+    default:
+      return EMPTY_RANGE;
+  }
+}
+
+export const REPORT_PRESET_LABELS: ReadonlyArray<{ id: ReportPreset; label: string }> = [
+  { id: '7HARI', label: '7 hari' },
+  { id: '30HARI', label: '30 hari' },
+  { id: '90HARI', label: '90 hari' },
+  { id: 'BULAN_INI', label: 'Bulan ini' },
+  { id: 'KUARTAL_INI', label: 'Kuartal ini' },
+  { id: 'SEMUA', label: 'Semua' },
+];
+
 /**
  * Menormalisasi rentang tanggal:
  * - nilai bukan format `YYYY-MM-DD` dibuang (dianggap tidak difilter),
