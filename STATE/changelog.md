@@ -120,3 +120,6 @@
 
 ## Siklus 77 — 2026-09-28
 - Refactor: EquipmentManagement.tsx -> equipment/EquipmentFormModal.tsx. Alur tulis via modal terverifikasi production.
+
+## Siklus 78 — 2026-09-28
+- Refactor: AdminDashboard.tsx -> dashboard/panels.tsx (2 panel analytics). Verifikasi UI production.
