@@ -262,6 +262,32 @@ async function lewatJembatan<T>(
 }
 
 // CRUD Helpers
+/** Kode + baris tagihan (UNPAID) untuk kontrak yang baru terbit. */
+function buatTagihanKontrak(
+  existing: ReadonlyArray<Payment>,
+  contract: Contract,
+  amount: number
+): Payment {
+  const tgl = new Date();
+  const ymd = tgl.toISOString().slice(0, 10).replace(/-/g, '');
+  const pref = `PAY-SBS-${ymd}-`;
+  const urut = existing.filter((p) => p.payment_code.startsWith(pref)).length + 1;
+  return {
+    id: nextId(existing),
+    payment_code: `${pref}${String(urut).padStart(3, '0')}`,
+    contract_id: contract.id,
+    contract_code: contract.contract_code,
+    customer_id: contract.customer_id,
+    customer_name: contract.customer_name,
+    amount,
+    payment_method: 'Belum dibayar',
+    status: 'UNPAID',
+    payment_date: tgl.toISOString().replace('T', ' ').slice(0, 19),
+  };
+}
+
+// ponytail: tagihan tunggal per kontrak. Naikkan ke multi-invoice (DP +
+// pelunasan + penalti) saat kebutuhan faktur parsial masuk backlog produk.
 export const db = {
   // Users
   getUsers: async () => stateStore.users,
@@ -600,6 +626,22 @@ export const db = {
       'createContract'
     );
     stateStore.contracts.push(contract);
+
+    // Tagihan resmi dibuat SEKALIGUS dengan penerbitan kontrak. Tanpa ini
+    // kontrak baru tidak pernah punya payment -> tab Pembayaran pelanggan
+    // kosong dan alur verifikasi staf mustahil (temuan E2E siklus 61).
+    const eq = stateStore.equipments.find(x => x.id === (rental as { equipment_id?: number }).equipment_id);
+    const hari = Math.max(1, Math.round(
+      (new Date(rental.end_date).getTime() - new Date(rental.start_date).getTime()) / 86_400_000
+    ) + 1);
+    const tarif = eq?.rental_price_per_day ?? 0;
+    const tagihan = buatTagihanKontrak(stateStore.payments, contract, hari * tarif);
+    await wt(
+      'INSERT INTO `payments` (`id`, `payment_code`, `contract_id`, `customer_id`, `amount`, `payment_method`, `status`) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [tagihan.id, tagihan.payment_code, tagihan.contract_id, tagihan.customer_id, tagihan.amount, tagihan.payment_method, tagihan.status],
+      'createContract:tagihan'
+    );
+    stateStore.payments.push(tagihan);
     return contract;
   },
 
@@ -637,6 +679,42 @@ export const db = {
 
   // Payments
   getPayments: async () => stateStore.payments,
+
+  /** Hapus tagihan (UNPAID/FAILED/PENDING) beserta jejaknya. */
+  hapusPayment: async (paymentId: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Payment>('DELETE', `/api/payments/${paymentId}`);
+    }
+    const idx = stateStore.payments.findIndex(x => x.id === paymentId);
+    if (idx === -1) return undefined;
+    await wt('DELETE FROM `payments` WHERE `id` = ?', [paymentId], 'hapusPayment');
+    const [hapus] = stateStore.payments.splice(idx, 1);
+    return hapus;
+  },
+
+  /** Hapus kontrak (belum lunas ditangani; dipanggil berurutan dgn tagihannya). */
+  hapusKontrak: async (contractId: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Contract>('DELETE', `/api/contracts/${contractId}`);
+    }
+    const idx = stateStore.contracts.findIndex(x => x.id === contractId);
+    if (idx === -1) return undefined;
+    await wt('DELETE FROM `contracts` WHERE `id` = ?', [contractId], 'hapusKontrak');
+    const [hapus] = stateStore.contracts.splice(idx, 1);
+    return hapus;
+  },
+
+  /** Hapus pengajuan sewa (PENDING/Ditolak saja — dijaga rute). */
+  hapusRental: async (rentalId: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Rental>('DELETE', `/api/rentals/${rentalId}`);
+    }
+    const idx = stateStore.rentals.findIndex(x => x.id === rentalId);
+    if (idx === -1) return undefined;
+    await wt('DELETE FROM `rentals` WHERE `id` = ?', [rentalId], 'hapusRental');
+    const [hapus] = stateStore.rentals.splice(idx, 1);
+    return hapus;
+  },
 
   /**
    * Mengesahkan pembayaran menjadi PAID.
@@ -1026,11 +1104,26 @@ async function jalankanHidrasi(): Promise<void> {
  * sebelum route apa pun menyentuh data. Mode demo (tanpa DATABASE_URL) tidak
  * pernah masuk fungsi ini.
  */
+/** Batas umur cermin per isolate (detik) — lihat komentar fungsi. */
+const UMUR_CERMIN = 5;
+let cerminPada = 0;
+
+/**
+ * Muat Cermin TiDB ke stateStore. Dipanggil middleware sebelum route mana pun
+ * menyentuh data. Cloudflare bisa punya BANYAK isolate hidup serentak: tanpa
+ * TTL, isolate warm yang tidak kena cold-start lagi melayani salinan basi
+ * (temuan E2E siklus 61 — unit yang baru ditulis isolat lain tak terlihat).
+ * Revalidasi maksimal tiap `UMUR_CERMIN` detik; tulis-tembus isolate ini
+ * sendiri sudah mutakhir, 9 SELECT cheap < 1 RTT extra. Mode demo no-op.
+ */
 export async function hydrasiDariTiDB(): Promise<void> {
-  if (hidrasiDimuat || !tidbClient) return;
-  hidrasiDimuat = true;
+  if (!tidbClient) return;
+  const sekarang = Date.now();
+  if (hidrasiDimuat && sekarang - cerminPada < UMUR_CERMIN * 1000) return;
   try {
     await jalankanHidrasi();
+    hidrasiDimuat = true;
+    cerminPada = sekarang;
   } catch (err) {
     // Gagal hidrasi: biarkan seed demo melayani (jujur via getDataMode?
     // mode pelaporan tetap TIDB karena tulis-tembus juga gagal dan meledak

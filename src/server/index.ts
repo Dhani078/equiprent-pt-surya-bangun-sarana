@@ -12,7 +12,7 @@ import {
   SESSION_TTL_SECONDS,
 } from '../lib/auth';
 import type { RoleName, ReportId, User } from '../types';
-import type { Contract, Equipment, Rental, Maintenance } from '../types';
+import type { Contract, Equipment, Rental, Maintenance, Payment } from '../types';
 import {
   buildEquipmentAvailability,
   describeBlockedReason,
@@ -1292,6 +1292,72 @@ app.post('/api/contracts', async (c) => {
     }
     throw err;
   }
+});
+
+/** Hapus kontrak — hanya bila tagihannya sudah tiada / belum lunas. */
+app.delete('/api/contracts/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (c.get('role') === 'CUSTOMER') {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Penghapusan data dilakukan oleh Admin atau Staf Operasional.' } },
+      403
+    );
+  }
+  if (id === null) return c.json(BAD_ID, 400);
+  const target = (await db.getContracts()).find((x) => x.id === id);
+  if (!target) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Kontrak tidak ditemukan.' } }, 404);
+  const bayar = (await db.getPayments()).filter((p) => p.contract_id === id);
+  if (bayar.some((p) => p.status === 'PAID')) {
+    return c.json({ success: false, error: { code: 'CONTRACT_HAS_PAID', message: 'Kontrak dengan pembayaran lunas tidak dapat dihapus.' } }, 409);
+  }
+  await (db as unknown as { hapusKontrak: (id: number) => Promise<Contract | undefined> }).hapusKontrak(id);
+  auditLog({ ...auditActor(c), action: 'CONTRACT_DELETE', entity: 'contract', entity_id: id, detail: `Kontrak ${target.contract_code} dihapus` });
+  return c.json({ success: true });
+});
+
+/** Hapus pengajuan sewa — hanya PENDING/REJECTED; blokir bila ada kontrak aktif. */
+app.delete('/api/rentals/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (c.get('role') === 'CUSTOMER') {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Penghapusan data dilakukan oleh Admin atau Staf Operasional.' } },
+      403
+    );
+  }
+  if (id === null) return c.json(BAD_ID, 400);
+  const target = (await db.getRentals()).find((x) => x.id === id);
+  if (!target) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Transaksi sewa tidak ditemukan.' } }, 404);
+  if ((await db.getContracts()).some((x) => x.rental_id === id)) {
+    return c.json({ success: false, error: { code: 'RENTAL_HAS_CONTRACT', message: 'Hapus kontrak terkait terlebih dahulu.' } }, 409);
+  }
+  // CONFIRMED tanpa kontrak = rumah-rapikan Admin (mis. pembatalan data uji);
+  // role lain tetap dibatasi PENDING/REJECTED.
+  if (!['PENDING', 'REJECTED'].includes(target.status) && c.get('role') !== 'ADMIN') {
+    return c.json({ success: false, error: { code: 'RENTAL_ACTIVE', message: 'Sewa berjalan hanya dapat dihapus oleh Admin (tanpa kontrak terkait).' } }, 409);
+  }
+  await (db as unknown as { hapusRental: (id: number) => Promise<Rental | undefined> }).hapusRental(id);
+  auditLog({ ...auditActor(c), action: 'RENTAL_DELETE', entity: 'rental', entity_id: id, detail: `Pengajuan ${target.rental_code} dihapus` });
+  return c.json({ success: true });
+});
+
+/** Menghapus draf/entri pembayaran (Admin; berjenjang dari kontrak). */
+app.delete('/api/payments/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (c.get('role') === 'CUSTOMER') {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Penghapusan data dilakukan oleh Admin atau Staf Operasional.' } },
+      403
+    );
+  }
+  if (id === null) return c.json(BAD_ID, 400);
+  const target = (await db.getPayments()).find((x) => x.id === id);
+  if (!target) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pembayaran tidak ditemukan.' } }, 404);
+  if (target.status === 'PAID') {
+    return c.json({ success: false, error: { code: 'PAID_IMMUTABLE', message: 'Pembayaran lunas tidak dapat dihapus (audit keuangan).' } }, 409);
+  }
+  await (db as unknown as { hapusPayment: (id: number) => Promise<Payment | undefined> }).hapusPayment(id);
+  auditLog({ ...auditActor(c), action: 'PAYMENT_DELETE', entity: 'payment', entity_id: id, detail: `Tagihan ${target.payment_code} dihapus` });
+  return c.json({ success: true });
 });
 
 /** Membubuhkan tanda tangan elektronik pada kontrak. */

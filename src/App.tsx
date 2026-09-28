@@ -112,6 +112,26 @@ export const App: React.FC = () => {
     };
   }, [reloadKey]);
 
+  /* Akar siklus 61 #3: effect mount di atas sempat berjalan SEBELUM token
+     sesi ada (login terjadi setelahnya) sehingga cermin menganggur di seed
+     demo — pelanggan tak melihat unit yang baru dibuat admin. Setiap kali
+     user berganti (login), tarik ulang cermin penuh dengan token sah. */
+  useEffect(() => {
+    if (!currentUser) return;
+    setApiBridgeToken(bacaTokenSesi());
+    let aktif = true;
+    void sinkronCermin()
+      .then((n) => {
+        if (aktif && n > 0) refreshData();
+      })
+      .catch(() => {
+        /* Worker mati: seed lokal tetap melayani */
+      });
+    return () => {
+      aktif = false;
+    };
+  }, [currentUser?.id]);
+
   /** Badge counter Sidebar — dihitung dari state reaktif yang sudah ada. */
   const sidebarBadges: SidebarBadges = {
     payments: payments.filter((p) => p.status === 'PENDING_VERIFICATION').length,
