@@ -132,6 +132,33 @@ export const App: React.FC = () => {
     };
   }, [currentUser?.id]);
 
+  /* Siklus 65: cermin LIVE. Perubahan dari pengguna lain (admin menambah
+     unit, pelanggan mengajukan sewa) terlihat tanpa reload — pull ulang
+     tiap 30 dtk saat tab terlihat, plus penyegaran segera ketika tab kembali
+     fokus. Tab tersembunyi tidak menarik apa pun (hemat kuota worker). */
+  useEffect(() => {
+    if (!currentUser) return;
+    let batal = false;
+    const tarik = () => {
+      if (document.hidden) return;
+      void sinkronCermin()
+        .then((n) => {
+          if (!batal && n > 0) refreshData();
+        })
+        .catch(() => {});
+    };
+    const id = window.setInterval(tarik, 30_000);
+    const saatFokus = () => tarik();
+    window.addEventListener('focus', saatFokus);
+    document.addEventListener('visibilitychange', saatFokus);
+    return () => {
+      batal = true;
+      window.clearInterval(id);
+      window.removeEventListener('focus', saatFokus);
+      document.removeEventListener('visibilitychange', saatFokus);
+    };
+  }, [currentUser?.id]);
+
   /** Badge counter Sidebar — dihitung dari state reaktif yang sudah ada. */
   const sidebarBadges: SidebarBadges = {
     payments: payments.filter((p) => p.status === 'PENDING_VERIFICATION').length,
