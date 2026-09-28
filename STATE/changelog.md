@@ -95,3 +95,7 @@
 
 ## Siklus 70 — 2026-09-28
 - Fitur: antrean mutasi offline FIFO + flush otomatis saat pulih + badge tertahan.
+
+## Siklus 71 — 2026-09-28
+- Test: suite offlineQueue 21 assert (FIFO, kapasitas, flush, guard re-antre).
+- FIX bug: guard sedangFlush pada flushAntreanOffline (mencegah re-antre tak berujung saat server mati).
