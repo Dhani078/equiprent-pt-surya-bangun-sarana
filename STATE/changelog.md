@@ -141,3 +141,6 @@
 
 ## Siklus 84 — 2026-09-28
 - Refactor: 2 modal CustomerPortal -> RentBookingModal + PaymentProofModal. Fix bug tutup-modal hasil pecah.
+
+## Siklus 85 — 2026-09-28
+- Refactor: StaffDashboard.tsx -> staff/components/{DueNotificationPanel,PaymentProofViewerModal}.tsx. Terverifikasi production.
