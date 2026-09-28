@@ -126,3 +126,6 @@
 
 ## Siklus 79 — 2026-09-28
 - Refactor: RentalManagement.tsx -> rental/{StatusConfirmModal,AddRentalModal}.tsx. Kedua modal terverifikasi production.
+
+## Siklus 80 — 2026-09-28
+- Refactor: MaintenanceManagement.tsx -> maintenance/{ServiceHistoryPanel,MaintenanceFormModal}.tsx. Terverifikasi production.

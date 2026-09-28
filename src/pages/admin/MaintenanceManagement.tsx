@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Maintenance, Equipment, User } from '../../types';
 import { MAINTENANCE_TYPES, MAINTENANCE_TYPE_LABEL } from '../../lib/validators';
+import { MaintenanceFormModal } from './maintenance/MaintenanceFormModal';
+import { ServiceHistoryPanel } from './maintenance/ServiceHistoryPanel';
 import type { MaintenanceTypeValue } from '../../lib/validators';
 import { Plus, Search, Filter, Wrench, CheckCircle, Clock, Calendar, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
@@ -409,122 +411,14 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
         )}
       </div>
 
-      {/* Panel Riwayat Servis per Unit */}
-      <div className="card-premium" style={{ padding: '16px 18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          <Wrench size={18} color="var(--fg-teal)" />
-          <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-            Riwayat Servis per Unit
-          </h3>
-
-          <select
-            className="input-premium"
-            value={historyUnitId}
-            onChange={(e) => setHistoryUnitId(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-            style={{ marginLeft: 'auto', width: 'auto', minWidth: '240px', height: '36px', fontSize: '12.5px' }}
-            aria-label="Pilih unit untuk melihat riwayat servis"
-          >
-            <option value="ALL">— Pilih unit untuk melihat riwayat —</option>
-            {unitsWithHistory.map(u => (
-              <option key={u.id} value={u.id}>
-                {u.equipment_code} — {u.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {historyUnitId === 'ALL' ? (
-          <p style={{ fontSize: '12.5px', color: 'var(--color-secondary)', margin: 0 }}>
-            Pilih salah satu unit di atas untuk melihat log servis, total biaya perawatan, dan tren hour meter.
-            {unitsWithHistory.length > 0 && ` Tersedia ${unitsWithHistory.length} unit yang memiliki catatan servis.`}
-          </p>
-        ) : serviceHistory.length === 0 ? (
-          <p style={{ fontSize: '12.5px', color: 'var(--color-secondary)', margin: 0 }}>
-            Unit ini belum memiliki catatan servis.
-          </p>
-        ) : (
-          <>
-            {/* Ringkasan */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                gap: '10px',
-                marginBottom: '14px',
-              }}
-            >
-              {[
-                { label: 'Total Servis', value: String(historySummary.totalServis) },
-                { label: 'Selesai', value: `${historySummary.selesai}/${historySummary.totalServis}` },
-                { label: 'Total Biaya', value: formatRupiah(historySummary.totalBiaya) },
-                { label: 'Rata-rata / Servis', value: formatRupiah(historySummary.rataBiaya) },
-                { label: 'HM Terakhir', value: `${historySummary.hmAkhir.toFixed(2)} HM` },
-              ].map(item => (
-                <div
-                  key={item.label}
-                  style={{
-                    padding: '10px 12px',
-                    backgroundColor: 'var(--bg-raised)',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
-                  <div style={{ fontSize: '11px', color: 'var(--color-secondary)', marginBottom: '3px' }}>
-                    {item.label}
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-primary)' }}>
-                    {item.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Tabel log servis */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left' }}>
-                    {['Kode Servis', 'Tanggal', 'Jenis', 'HM', 'Suku Cadang', 'Biaya', 'Status'].map(h => (
-                      <th
-                        key={h}
-                        style={{ padding: '8px 10px', fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 700 }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {serviceHistory.map(m => (
-                    <tr key={m.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: '8px 10px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                        {m.maintenance_code}
-                      </td>
-                      <td style={{ padding: '8px 10px' }}>{m.scheduled_date ?? '-'}</td>
-                      <td style={{ padding: '8px 10px' }}>{m.maintenance_type}</td>
-                      <td style={{ padding: '8px 10px' }}>
-                        {Number(m.hour_meter_at_maintenance ?? 0).toFixed(2)}
-                      </td>
-                      <td style={{ padding: '8px 10px', maxWidth: '220px' }}>
-                        <span style={{ color: 'var(--color-secondary)' }}>
-                          {m.spareparts_replaced || '-'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontWeight: 700 }}>
-                        {formatRupiah(Number(m.cost ?? 0))}
-                      </td>
-                      <td style={{ padding: '8px 10px' }}>
-                        <StatusBadge kind="maintenance" status={m.status} fontSize={10.5} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
-
+      <ServiceHistoryPanel
+        equipments={equipments}
+        unitDipilih={historyUnitId}
+        onPilihUnit={setHistoryUnitId}
+        unitsWithHistory={unitsWithHistory}
+        serviceHistory={serviceHistory}
+        historySummary={historySummary}
+      />
       {/* Filter Bar */}
       <div className="card-premium" style={{ padding: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ position: 'relative', flex: '1 1 300px' }}>
@@ -674,135 +568,14 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
         )}
       </div>
 
-      {/* Modal Schedule Maintenance */}
-      <Modal
-        isOpen={isModalOpen}
+      <MaintenanceFormModal
+        open={isModalOpen}
+        equipments={equipments}
+        values={formData}
+        onChange={setFormData}
+        onSubmit={handleFormSubmit}
         onClose={() => setIsModalOpen(false)}
-        title="Jadwalkan Perawatan Alat Berat"
-      >
-        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Pilih Alat Berat
-            </label>
-            <select
-              className="input-premium"
-              value={formData.equipment_id}
-              onChange={(e) => {
-                const eq = equipments.find(item => item.id === Number(e.target.value));
-                setFormData({
-                  ...formData,
-                  equipment_id: Number(e.target.value),
-                  hour_meter_at_maintenance: eq?.hour_meter || 0
-                });
-              }}
-            >
-              {equipments.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.equipment_code} - {e.name} (HM: {e.hour_meter} jam)
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Jenis Pemeliharaan
-              </label>
-              <select
-                className="input-premium"
-                value={formData.maintenance_type}
-                onChange={(e) => setFormData({ ...formData, maintenance_type: e.target.value as MaintenanceTypeValue })}
-              >
-                {MAINTENANCE_TYPES.map((jenis) => (
-                  <option key={jenis} value={jenis}>
-                    {jenis} ({MAINTENANCE_TYPE_LABEL[jenis]})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Hour Meter (HM) Unit
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                className="input-premium"
-                value={formData.hour_meter_at_maintenance}
-                onChange={(e) => setFormData({ ...formData, hour_meter_at_maintenance: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Tanggal Terjadwal
-              </label>
-              <input
-                type="date"
-                required
-                className="input-premium"
-                value={formData.scheduled_date}
-                onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Estimasi Biaya Servis (Rp)
-              </label>
-              <input
-                type="number"
-                className="input-premium"
-                value={formData.cost}
-                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Deskripsi & Keluhan Perbaikan
-            </label>
-            <textarea
-              rows={2}
-              className="input-premium"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Suku Cadang yang Diganti
-            </label>
-            <input
-              type="text"
-              className="input-premium"
-              value={formData.spareparts_replaced}
-              onChange={(e) => setFormData({ ...formData, spareparts_replaced: e.target.value })}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="btn-secondary"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-            >
-              Simpan Jadwal Servis
-            </button>
-          </div>
-        </form>
-      </Modal>
+      />
     </div>
   );
 };
