@@ -4,7 +4,7 @@
   "pages": [
    {
     "menu": "submit-kosong",
-    "validation_msg": false,
+    "validation_msg": true,
     "console_errors": []
    },
    {
@@ -22,27 +22,16 @@
     "n_buttons": 8,
     "heading": "Dashboard Eksekutif Administrator / Tren Pendapatan 12 Bulan Terakhir",
     "blank": false,
-    "click_issues": [
-     {
-      "btn": "Muat Ulang",
-      "console": [],
-      "net": [
-       "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/dashboard/stats"
-      ]
-     }
-    ],
     "clicked": 3,
     "skipped_destructive": [],
     "modals_ok": 0,
     "modals_stuck": 0,
     "console_errors": [],
-    "net_errors": [
-     "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/dashboard/stats"
-    ]
+    "net_errors": []
    },
    {
     "menu": "Inventaris Alat Berat",
-    "n_buttons": 27,
+    "n_buttons": 29,
     "heading": "Inventaris Alat Berat & Pemantauan Armada",
     "blank": false,
     "clicked": 6,
@@ -53,25 +42,12 @@
     "net_errors": []
    },
    {
-    "menu": "Transaksi Penyewaan7",
-    "n_buttons": 44,
+    "menu": "Transaksi Penyewaan",
+    "n_buttons": 37,
     "heading": "Manajemen Transaksi Penyewaan",
     "blank": false,
     "clicked": 2,
     "skipped_destructive": [
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
      "Tolak",
      "Tolak",
      "Tolak",
@@ -84,8 +60,8 @@
     "net_errors": []
    },
    {
-    "menu": "Perawatan & Servis14",
-    "n_buttons": 68,
+    "menu": "Perawatan & Servis13",
+    "n_buttons": 66,
     "heading": "Manajemen Transaksi Penyewaan / Kontrak Sewa Digital & Tanda Tangan Elektronik",
     "blank": false,
     "clicked": 28,
@@ -97,8 +73,8 @@
    },
    {
     "menu": "Pelacakan GPS Telemetri",
-    "n_buttons": 52,
-    "heading": "Pelacakan Telemetri GPS Alat Berat (Real-time) / Excavator Komatsu PC200-8",
+    "n_buttons": 42,
+    "heading": "Pelacakan Telemetri GPS Alat Berat (Real-time) / Hydraulic Excavator Komatsu PC200-8",
     "blank": false,
     "clicked": 27,
     "skipped_destructive": [
@@ -111,7 +87,7 @@
    },
    {
     "menu": "Laporan & Dokumen",
-    "n_buttons": 47,
+    "n_buttons": 107,
     "heading": "Laporan Resmi & Dokumen Berita Acara (BAST) / 11 Laporan Operasional",
     "blank": false,
     "clicked": 26,
@@ -122,9 +98,7 @@
     "modals_ok": 0,
     "modals_stuck": 0,
     "console_errors": [],
-    "net_errors": [
-     "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/reports/analytics?id=RENTAL_BULANAN"
-    ]
+    "net_errors": []
    },
    {
     "menu": "Manajemen Pengguna",
@@ -172,9 +146,7 @@
     "modals_ok": 0,
     "modals_stuck": 0,
     "console_errors": [],
-    "net_errors": [
-     "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/audit-log?limit=200"
-    ]
+    "net_errors": []
    },
    {
     "menu": "Pengaturan Sistem",
@@ -201,18 +173,12 @@
   "pages": [
    {
     "menu": "Dashboard Operasional",
-    "n_buttons": 37,
+    "n_buttons": 32,
     "heading": "Terminal Staf Operasional & Verifikasi / Notifikasi Jatuh Tempo & Keterlambatan",
     "blank": false,
-    "clicked": 5,
+    "clicked": 8,
     "skipped_destructive": [
-     "Verifikasi Pembayaran9 Menunggu9 siap · 0 ",
-     "Tolak",
-     "Tolak",
-     "Tolak",
-     "Tolak",
-     "Tolak",
-     "Tolak"
+     "Verifikasi Pembayaran6 Menunggu6 siap · 0 "
     ],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -220,27 +186,13 @@
     "net_errors": []
    },
    {
-    "menu": "Transaksi Penyewaan7",
-    "n_buttons": 20,
+    "menu": "Transaksi Penyewaan",
+    "n_buttons": 9,
     "heading": "Terminal Staf Operasional & Verifikasi / Notifikasi Jatuh Tempo & Keterlambatan",
     "blank": false,
-    "clicked": 5,
+    "clicked": 8,
     "skipped_destructive": [
-     "Verifikasi Pembayaran9 Menunggu9 siap · 0 ",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak",
-     "Setujui",
-     "Tolak"
+     "Verifikasi Pembayaran6 Menunggu6 siap · 0 "
     ],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -249,12 +201,12 @@
    },
    {
     "menu": "Kontrak Sewa Digital",
-    "n_buttons": 57,
+    "n_buttons": 60,
     "heading": "Terminal Staf Operasional & Verifikasi / Notifikasi Jatuh Tempo & Keterlambatan",
     "blank": false,
     "clicked": 27,
     "skipped_destructive": [
-     "Verifikasi Pembayaran9 Menunggu9 siap · 0 "
+     "Verifikasi Pembayaran6 Menunggu6 siap · 0 "
     ],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -262,19 +214,13 @@
     "net_errors": []
    },
    {
-    "menu": "Verifikasi Pembayaran9",
-    "n_buttons": 37,
+    "menu": "Verifikasi Pembayaran6",
+    "n_buttons": 32,
     "heading": "Terminal Staf Operasional & Verifikasi / Notifikasi Jatuh Tempo & Keterlambatan",
     "blank": false,
-    "clicked": 5,
+    "clicked": 8,
     "skipped_destructive": [
-     "Verifikasi Pembayaran9 Menunggu9 siap · 0 ",
-     "Tolak",
-     "Tolak",
-     "Tolak",
-     "Tolak",
-     "Tolak",
-     "Tolak"
+     "Verifikasi Pembayaran6 Menunggu6 siap · 0 "
     ],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -283,10 +229,10 @@
    },
    {
     "menu": "Penjadwalan Servis14",
-    "n_buttons": 14,
+    "n_buttons": 10,
     "heading": "Manajemen Perawatan & Servis Armada (Hour Meter) / Peringatan Servis Preventif (interval 250 HM)",
     "blank": false,
-    "clicked": 14,
+    "clicked": 10,
     "skipped_destructive": [],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -295,8 +241,8 @@
    },
    {
     "menu": "Monitoring Posisi GPS",
-    "n_buttons": 52,
-    "heading": "Pelacakan Telemetri GPS Alat Berat (Real-time) / Excavator Komatsu PC200-8",
+    "n_buttons": 42,
+    "heading": "Pelacakan Telemetri GPS Alat Berat (Real-time) / Hydraulic Excavator Komatsu PC200-8",
     "blank": false,
     "clicked": 27,
     "skipped_destructive": [
@@ -309,7 +255,7 @@
    },
    {
     "menu": "Cetak Laporan BAST",
-    "n_buttons": 47,
+    "n_buttons": 107,
     "heading": "Laporan Resmi & Dokumen Berita Acara (BAST) / 11 Laporan Operasional",
     "blank": false,
     "clicked": 26,
@@ -320,9 +266,7 @@
     "modals_ok": 0,
     "modals_stuck": 0,
     "console_errors": [],
-    "net_errors": [
-     "401 https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev/api/reports/analytics?id=RENTAL_BULANAN"
-    ]
+    "net_errors": []
    },
    {
     "menu": "Pengaturan Akun",
@@ -349,12 +293,12 @@
   "pages": [
    {
     "menu": "Katalog Alat Berat",
-    "n_buttons": 25,
+    "n_buttons": 53,
     "heading": "Selamat Datang, Budi Santoso (Logistik) / Katalog Alat Berat Siap Mobilisasi",
     "blank": false,
     "clicked": 4,
     "skipped_destructive": [
-     "Tagihan & Transfer1 Pembayaran"
+     "Tagihan & Transfer1 tagihan belum dibayar"
     ],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -363,12 +307,12 @@
    },
    {
     "menu": "Penyewaan Saya",
-    "n_buttons": 5,
+    "n_buttons": 7,
     "heading": "Selamat Datang, Budi Santoso (Logistik) / Riwayat Permohonan & Transaksi Sewa Saya",
     "blank": false,
     "clicked": 4,
     "skipped_destructive": [
-     "Tagihan & Transfer1 Pembayaran"
+     "Tagihan & Transfer1 tagihan belum dibayar"
     ],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -377,12 +321,12 @@
    },
    {
     "menu": "Kontrak Digital Saya",
-    "n_buttons": 6,
+    "n_buttons": 10,
     "heading": "Selamat Datang, Budi Santoso (Logistik) / Kontrak Sewa Digital & Tanda Tangan Elektronik",
     "blank": false,
     "clicked": 4,
     "skipped_destructive": [
-     "Tagihan & Transfer1 Pembayaran"
+     "Tagihan & Transfer1 tagihan belum dibayar"
     ],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -391,12 +335,14 @@
    },
    {
     "menu": "Pembayaran & Tagihan",
-    "n_buttons": 5,
+    "n_buttons": 7,
     "heading": "Selamat Datang, Budi Santoso (Logistik) / Tagihan Pembayaran Sewa & Bukti Transfer",
     "blank": false,
     "clicked": 4,
     "skipped_destructive": [
-     "Tagihan & Transfer1 Pembayaran"
+     "Tagihan & Transfer1 tagihan belum dibayar",
+     "Unggah Bukti Transfer",
+     "Unggah Bukti Transfer"
     ],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -410,7 +356,7 @@
     "blank": false,
     "clicked": 4,
     "skipped_destructive": [
-     "Tagihan & Transfer1 Pembayaran"
+     "Tagihan & Transfer1 tagihan belum dibayar"
     ],
     "modals_ok": 0,
     "modals_stuck": 0,
@@ -424,7 +370,7 @@
     "blank": false,
     "clicked": 4,
     "skipped_destructive": [
-     "Tagihan & Transfer1 Pembayaran"
+     "Tagihan & Transfer1 tagihan belum dibayar"
     ],
     "modals_ok": 0,
     "modals_stuck": 0,

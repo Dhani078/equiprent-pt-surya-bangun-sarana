@@ -343,7 +343,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
       {/* Tabel data */}
       {!loading && !error && result && result.totalRows > 0 && (
         <>
-          <div className="table-container" style={{ maxHeight: '460px', overflowY: 'auto' }}>
+          <div className="table-container table-analytics" style={{ maxHeight: '460px', overflowY: 'auto' }}>
             <table className="data-table">
               <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr>
