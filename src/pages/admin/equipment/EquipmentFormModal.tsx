@@ -1,0 +1,320 @@
+/**
+ * Formulir tambah/perbarui unit alat berat (isi Modal "Tambah Unit").
+ *
+ * Dipisah dari `EquipmentManagement.tsx` supaya berkas induk fokus pada daftar
+ * unit; komponen ini murni tampilan — seluruh keadaan form dimiliki induk agar
+ * nilai yang tersimpan tidak pernah berbeda dari yang tampil.
+ */
+import { AlertCircle } from 'lucide-react';
+import { Modal } from '../../../components/Modal';
+import { EQUIPMENT_TYPES } from '../../../lib/validators';
+import type { ValidatedEquipmentInput } from '../../../lib/validators';
+import type { Equipment } from '../../../types';
+
+/** Nilai form unit — dipakai induk & formulir ini. */
+export interface EquipmentFormValues {
+  equipment_code: string;
+  name: string;
+  type: string;
+  model: string;
+  brand: string;
+  hour_meter: number;
+  rental_price_per_day: number;
+  status: Equipment['status'];
+  last_maintenance_date: string;
+  thumbnail_url: string;
+}
+
+interface Props {
+  open: boolean;
+  editingItem: Equipment | null;
+  values: EquipmentFormValues;
+  onChange: (values: EquipmentFormValues) => void;
+  errors: Partial<Record<keyof ValidatedEquipmentInput, string>>;
+  onErrorsChange: (errors: Partial<Record<keyof ValidatedEquipmentInput, string>>) => void;
+  error: string | null;
+  submitting: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+  onClose: () => void;
+}
+
+export const EquipmentFormModal: React.FC<Props> = ({
+  open,
+  editingItem,
+  values: formData,
+  onChange: setFormData,
+  errors: formErrors,
+  onErrorsChange: setFormErrors,
+  error: formError,
+  submitting: isSubmitting,
+  onSubmit: handleFormSubmit,
+  onClose: handleCloseModal,
+}) => (
+    <Modal
+      isOpen={open}
+      onClose={handleCloseModal}
+      title={editingItem ? `Perbarui Data Alat Berat: ${editingItem.equipment_code}` : 'Tambah Unit Alat Berat Baru'}
+    >
+      <form onSubmit={handleFormSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* Ringkasan galat: muncul bila server menolak (kode unit sudah dipakai). */}
+        {formError && (
+          <div
+            role="alert"
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--bg-red-soft)',
+              border: '1px solid var(--border-red-soft)',
+              color: 'var(--fg-danger-deep)',
+              fontSize: '12.5px',
+              lineHeight: 1.5,
+            }}
+          >
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+            <span>{formError}</span>
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Kode Registrasi Unit
+            </label>
+            <input
+              type="text"
+              className="input-premium"
+              required
+              value={formData.equipment_code}
+              onChange={(e) => {
+                setFormData({ ...formData, equipment_code: e.target.value });
+                setFormErrors({ ...formErrors, equipment_code: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.equipment_code)}
+              aria-label="Kode registrasi unit"
+              style={formErrors.equipment_code ? { borderColor: '#F87171' } : undefined}
+            />
+            {formErrors.equipment_code && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
+                {formErrors.equipment_code}
+              </p>
+            )}
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Kategori Alat
+            </label>
+            <select
+              className="input-premium"
+              value={formData.type}
+              onChange={(e) => {
+                setFormData({ ...formData, type: e.target.value });
+                setFormErrors({ ...formErrors, type: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.type)}
+              aria-label="Kategori alat berat"
+              style={formErrors.type ? { borderColor: '#F87171' } : undefined}
+            >
+              {EQUIPMENT_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            {formErrors.type && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
+                {formErrors.type}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+            Nama Lengkap Alat Berat
+          </label>
+          <input
+            type="text"
+            className="input-premium"
+            required
+            placeholder="Contoh: Hydraulic Excavator Komatsu PC200-8"
+            value={formData.name}
+            onChange={(e) => {
+              setFormData({ ...formData, name: e.target.value });
+              setFormErrors({ ...formErrors, name: undefined });
+            }}
+            aria-invalid={Boolean(formErrors.name)}
+            aria-label="Nama lengkap alat berat"
+            style={formErrors.name ? { borderColor: '#F87171' } : undefined}
+          />
+          {formErrors.name && (
+            <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
+              {formErrors.name}
+            </p>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Merk / Brand
+            </label>
+            <input
+              type="text"
+              className="input-premium"
+              required
+              placeholder="Komatsu / Caterpillar / Sakai"
+              value={formData.brand}
+              onChange={(e) => {
+                setFormData({ ...formData, brand: e.target.value });
+                setFormErrors({ ...formErrors, brand: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.brand)}
+              aria-label="Merk alat berat"
+              style={formErrors.brand ? { borderColor: '#F87171' } : undefined}
+            />
+            {formErrors.brand && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
+                {formErrors.brand}
+              </p>
+            )}
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Model / Seri Mesin
+            </label>
+            <input
+              type="text"
+              className="input-premium"
+              required
+              placeholder="PC200-8 / D85ESS-2 / SV520"
+              value={formData.model}
+              onChange={(e) => {
+                setFormData({ ...formData, model: e.target.value });
+                setFormErrors({ ...formErrors, model: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.model)}
+              aria-label="Model atau seri mesin"
+              style={formErrors.model ? { borderColor: '#F87171' } : undefined}
+            />
+            {formErrors.model && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
+                {formErrors.model}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Hour Meter (HM) Awal
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min={0}
+              className="input-premium"
+              required
+              value={formData.hour_meter}
+              onChange={(e) => {
+                setFormData({ ...formData, hour_meter: Number(e.target.value) });
+                setFormErrors({ ...formErrors, hour_meter: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.hour_meter)}
+              aria-label="Hour Meter awal"
+              style={formErrors.hour_meter ? { borderColor: '#F87171' } : undefined}
+            />
+            {formErrors.hour_meter && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
+                {formErrors.hour_meter}
+              </p>
+            )}
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Tarif Sewa Per Hari (Rp)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={100000}
+              className="input-premium"
+              required
+              value={formData.rental_price_per_day}
+              onChange={(e) => {
+                setFormData({ ...formData, rental_price_per_day: Number(e.target.value) });
+                setFormErrors({ ...formErrors, rental_price_per_day: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.rental_price_per_day)}
+              aria-label="Tarif sewa per hari"
+              style={formErrors.rental_price_per_day ? { borderColor: '#F87171' } : undefined}
+            />
+            {formErrors.rental_price_per_day && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
+                {formErrors.rental_price_per_day}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Status Operasional
+            </label>
+            <select
+              className="input-premium"
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as Equipment['status'] })}
+            >
+              <option value="AVAILABLE">AVAILABLE (Tersedia)</option>
+              <option value="RENTED">RENTED (Disewa)</option>
+              <option value="MAINTENANCE">MAINTENANCE (Perawatan)</option>
+              <option value="UNAVAILABLE">UNAVAILABLE (Non-Aktif)</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Tanggal Servis Terakhir
+            </label>
+            <input
+              type="date"
+              className="input-premium"
+              value={formData.last_maintenance_date}
+              onChange={(e) => {
+                setFormData({ ...formData, last_maintenance_date: e.target.value });
+                setFormErrors({ ...formErrors, last_maintenance_date: undefined });
+              }}
+              aria-invalid={Boolean(formErrors.last_maintenance_date)}
+              aria-label="Tanggal servis terakhir"
+              style={formErrors.last_maintenance_date ? { borderColor: '#F87171' } : undefined}
+            />
+            {formErrors.last_maintenance_date && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
+                {formErrors.last_maintenance_date}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px' }}>
+          <button
+            type="button"
+            onClick={handleCloseModal}
+            className="btn-secondary"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isSubmitting}
+            style={isSubmitting ? { opacity: 0.6, cursor: 'wait' } : undefined}
+          >
+            <span>{isSubmitting ? 'Menyimpan...' : editingItem ? 'Simpan Perubahan' : 'Tambah Unit'}</span>
+          </button>
+        </div>
+      </form>
+    </Modal>
+);
