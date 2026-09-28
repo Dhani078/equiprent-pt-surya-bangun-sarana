@@ -147,3 +147,6 @@
 
 ## Siklus 86 — 2026-09-28
 - Refactor: ContractPanel.tsx -> contract/{Sign,Issue,Renew}Modal. Modal sign+renew terverifikasi production (kontrak uji 38 direnew lalu dipulihkan).
+
+## Siklus 87 — 2026-09-28
+- Refactor: Login.tsx -> login/RegisterModal.tsx. Terverifikasi production (alur daftar penuh).
