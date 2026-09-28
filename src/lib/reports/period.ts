@@ -1,0 +1,139 @@
+/**
+ * Rentang tanggal laporan: normalisasi, preset cepat, dan label periode.
+ *
+ * Bagian dari mesin laporan operasional (dipecah dari `reports.ts` agar tiap
+ * berkas tetap di bawah ~300 baris dan mudah ditelusuri). Modul tetap MURNI:
+ * tanpa DOM, tanpa database.
+ */
+import type {
+  DateRangeFilter,
+} from '../../types';
+
+
+// ---------------------------------------------------------------------------
+// Helper Tanggal & Rentang
+// ---------------------------------------------------------------------------
+
+export const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Mengambil bagian tanggal (YYYY-MM-DD) dari nilai yang bisa berupa
+ * tanggal saja (`2026-09-04`) maupun tanggal+waktu (`2026-09-04 14:30:00`).
+ */
+export function toDay(value: string | null | undefined): string {
+  if (typeof value !== 'string' || value.length < 10) return '';
+  const day = value.slice(0, 10);
+  return ISO_DAY.test(day) ? day : '';
+}
+
+/** Rentang kosong — berarti tanpa batas tanggal. */
+export const EMPTY_RANGE: DateRangeFilter = { from: '', to: '' };
+
+/** Preset periode cepat pada panel laporan. */
+export type ReportPreset = '7HARI' | '30HARI' | '90HARI' | 'BULAN_INI' | 'KUARTAL_INI' | 'SEMUA';
+
+/**
+ * Rentang [dari, sampai] (inklusif, ISO yyyy-mm-dd) untuk sebuah preset,
+ * dihitung relatif terhadap `hariIni` (default: sekarang). 'SEMUA' -> kosong.
+ */
+export function presetRange(preset: ReportPreset, hariIni: Date = new Date()): DateRangeFilter {
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const y = hariIni.getUTCFullYear();
+  const m = hariIni.getUTCMonth(); // 0-11
+  switch (preset) {
+    case '7HARI':
+    case '30HARI':
+    case '90HARI': {
+      const n = Number(preset.slice(0, -4)); // '7HARI' -> 7 ; slice up to 'HARI'
+      const dari = new Date(hariIni.getTime() - n * 86_400_000);
+      return { from: iso(dari), to: iso(hariIni) };
+    }
+    case 'BULAN_INI': {
+      const akhirBulan = new Date(Date.UTC(y, m + 1, 0));
+      return { from: iso(new Date(Date.UTC(y, m, 1))), to: iso(akhirBulan) };
+    }
+    case 'KUARTAL_INI': {
+      const awalKuartal = Math.floor(m / 3) * 3;
+      const akhirKuartal = new Date(Date.UTC(y, awalKuartal + 3, 0));
+      return { from: iso(new Date(Date.UTC(y, awalKuartal, 1))), to: iso(akhirKuartal) };
+    }
+    case 'SEMUA':
+    default:
+      return EMPTY_RANGE;
+  }
+}
+
+export const REPORT_PRESET_LABELS: ReadonlyArray<{ id: ReportPreset; label: string }> = [
+  { id: '7HARI', label: '7 hari' },
+  { id: '30HARI', label: '30 hari' },
+  { id: '90HARI', label: '90 hari' },
+  { id: 'BULAN_INI', label: 'Bulan ini' },
+  { id: 'KUARTAL_INI', label: 'Kuartal ini' },
+  { id: 'SEMUA', label: 'Semua' },
+];
+
+/**
+ * Menormalisasi rentang tanggal:
+ * - nilai bukan format `YYYY-MM-DD` dibuang (dianggap tidak difilter),
+ * - bila `from` lebih besar dari `to`, keduanya ditukar agar filter tetap masuk akal.
+ */
+export function normalizeRange(from: string, to: string): DateRangeFilter {
+  const a = ISO_DAY.test(from) ? from : '';
+  const b = ISO_DAY.test(to) ? to : '';
+  return a && b && a > b ? { from: b, to: a } : { from: a, to: b };
+}
+
+/** Apakah rentang ini membatasi data? */
+export function hasRange(range: DateRangeFilter): boolean {
+  return range.from !== '' || range.to !== '';
+}
+
+/** Uji keanggotaan sebuah hari dalam rentang. Hari kosong selalu gagal bila ada filter. */
+export function inRange(day: string, range: DateRangeFilter): boolean {
+  if (!hasRange(range)) return day !== '';
+  if (day === '') return false;
+  if (range.from !== '' && day < range.from) return false;
+  if (range.to !== '' && day > range.to) return false;
+  return true;
+}
+
+/** Label periode untuk kepala tabel, misal `01 Jan 2026 – 31 Des 2026`. */
+export function buildPeriodLabel(range: DateRangeFilter): string {
+  if (!hasRange(range)) return 'Semua periode';
+  if (range.from !== '' && range.to !== '') {
+    return `${formatTanggalSingkat(range.from)} – ${formatTanggalSingkat(range.to)}`;
+  }
+  return range.from !== ''
+    ? `Mulai ${formatTanggalSingkat(range.from)}`
+    : `Sampai ${formatTanggalSingkat(range.to)}`;
+}
+
+/** Format tanggal ringkas `04 Sep 2026` untuk label periode. */
+export function formatTanggalSingkat(value: string): string {
+  const d = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return value;
+  return new Intl.DateTimeFormat('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(d);
+}
+
+/** Kunci periode bulanan `YYYY-MM` dari sebuah tanggal. */
+export function monthKey(day: string): string {
+  return day.slice(0, 7);
+}
+
+/** Label periode `2026-09` menjadi `September 2026`. */
+export function monthLabel(key: string): string {
+  const [year, month] = key.split('-');
+  const d = new Date(Number(year), Number(month) - 1, 1);
+  if (Number.isNaN(d.getTime())) return key;
+  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(d);
+}
+
+/** Pembulatan ke 2 desimal untuk menghindari artefak floating point. */
+export function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}

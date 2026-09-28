@@ -1,0 +1,103 @@
+/**
+ * Format sel untuk tampilan/ekspor dan penyusun berkas CSV.
+ *
+ * Bagian dari mesin laporan operasional — tetap MURNI (tanpa DOM/DB).
+ */
+import type { ReportCellValue, ReportColumn, ReportResult } from '../../types';
+import { formatRupiah, formatTanggal, formatWaktu } from '../businessRules';
+import { round2 } from './period';
+
+// ---------------------------------------------------------------------------
+// Format Tampilan & Ekspor CSV
+// ---------------------------------------------------------------------------
+
+/**
+ * Mengubah nilai sel menjadi teks siap tampil.
+ * Angka dirawat sebagai angka agar bisa diformat Rupiah di UI.
+ */
+export function formatCell(value: ReportCellValue, format?: ReportColumn['format']): string {
+  switch (format) {
+    case 'currency':
+      return formatRupiah(Number(value));
+    case 'integer':
+      return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Number(value));
+    case 'decimal':
+      return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(Number(value));
+    case 'date':
+      return formatTanggal(String(value));
+    case 'datetime':
+      return formatWaktu(String(value));
+    default:
+      return String(value ?? '');
+  }
+}
+
+/**
+ * Nilai mentah untuk ekspor CSV.
+ * Angka diekspor TANPA titik pemisah ribuan agar langsung bisa dijumlahkan
+ * di Excel; tanggal diekspor dalam format ISO agar bisa diurutkan.
+ */
+export function toCsvValue(value: ReportCellValue, format?: ReportColumn['format']): string {
+  switch (format) {
+    case 'currency':
+      return String(Math.round(Number(value)));
+    case 'integer':
+      return String(Math.round(Number(value)));
+    case 'decimal':
+      return String(round2(Number(value)));
+    case 'date':
+    case 'datetime':
+      return String(value ?? '');
+    default:
+      return String(value ?? '');
+  }
+}
+
+/**
+ * Pemisah CSV. Memakai titik koma karena locale Indonesia memakai koma
+ * sebagai pemisah desimal — titik koma menjaga angka tetap utuh di Excel.
+ */
+export const CSV_DELIMITER = ';';
+
+/** Mengapit nilai dengan tanda kutip bila mengandung karakter khusus CSV. */
+export function escapeCsv(value: string): string {
+  if (/[";\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/**
+ * Menyusun isi berkas CSV dari sebuah laporan.
+ *
+ * Baris pertama adalah judul laporan (metadata), lalu header kolom, lalu data.
+ * Diawali BOM UTF-8 agar Excel mengenali karakter Indonesia dengan benar.
+ */
+export function buildCsv(result: ReportResult): string {
+  const lines: string[] = [];
+
+  lines.push(escapeCsv(result.title));
+  lines.push(escapeCsv(`Periode: ${result.periodLabel}`));
+  lines.push('');
+  lines.push(result.columns.map((c) => escapeCsv(c.label)).join(CSV_DELIMITER));
+
+  for (const row of result.rows) {
+    lines.push(
+      row.map((cell, idx) => escapeCsv(toCsvValue(cell, result.columns[idx]?.format))).join(CSV_DELIMITER)
+    );
+  }
+
+  for (const s of result.summaries) {
+    lines.push(escapeCsv(`${s.label}: ${s.value}`));
+  }
+
+  // BOM + CRLF: kombinasi yang paling aman untuk Excel Indonesia.
+  return `\uFEFF${lines.join('\r\n')}`;
+}
+
+/** Nama berkas ekspor, misal `Laporan_Rental_Bulanan_2026-09-09.csv`. */
+export function buildCsvFilename(result: ReportResult, today: Date = new Date()): string {
+  const day = today.toISOString().slice(0, 10);
+  const slug = result.title.replace(/^Laporan\s+/i, '').replace(/[^a-zA-Z0-9]+/g, '_');
+  return `Laporan_${slug}_${day}.csv`;
+}

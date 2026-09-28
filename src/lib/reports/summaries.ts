@@ -1,0 +1,224 @@
+/**
+ * Ringkasan (summary card) per jenis laporan.
+ *
+ * Bagian dari mesin laporan operasional — tetap MURNI (tanpa DOM/DB).
+ */
+import type { ReportCellValue, ReportId, ReportSummary } from '../../types';
+import { formatRupiah } from '../businessRules';
+import { sumColumn } from './aggregate';
+import { countWhere } from './aggregate';
+import { RECEIVABLE_STATUSES } from './catalog';
+import { MAINTENANCE_TYPE_LABEL, PAYMENT_STATUS_LABEL } from './datasource';
+import { round2 } from './period';
+
+// ---------------------------------------------------------------------------
+// Perangkum Ringkasan (satu definisi per laporan)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ringkasan dihitung HANYA dari baris yang tersedia.
+ *
+ * Konsekuensi penting: bila baris disaring kata kunci, `applyKeywordFilter`
+ * memanggil perangkum yang sama dengan baris hasil penyaringan, sehingga
+ * angka pada kartu ringkasan mengikuti apa yang terlihat di tabel.
+ *
+ * `baseline` adalah jumlah baris SEBELUM penyaringan. Ia dipakai hanya oleh
+ * metrik rasio (misal "Cakupan Umpan Balik") yang membandingkan sebagian
+ * terhadap keseluruhan periode, bukan terhadap dirinya sendiri.
+ */
+export type Summarizer = (rows: readonly ReportCellValue[][], baseline: number) => ReportSummary[];
+
+export function summarizeRentalBulanan(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalNilai = sumColumn(rows, 6);
+  const totalHari = sumColumn(rows, 5);
+  return [
+    { label: 'Total Transaksi', value: `${rows.length} sewa` },
+    { label: 'Total Nilai Sewa', value: formatRupiah(totalNilai), tone: 'positive' },
+    {
+      label: 'Rata-rata Nilai Sewa',
+      value: formatRupiah(rows.length === 0 ? 0 : totalNilai / rows.length),
+    },
+    { label: 'Akumulasi Hari Sewa', value: `${totalHari} hari` },
+  ];
+}
+
+export function summarizePembayaranPiutang(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalTagihan = sumColumn(rows, 3);
+  const totalLunas = sumColumn(
+    rows.filter((row) => row[4] === PAYMENT_STATUS_LABEL.PAID),
+    3
+  );
+  const totalPiutang = sumColumn(
+    rows.filter((row) => RECEIVABLE_STATUSES.some((s) => PAYMENT_STATUS_LABEL[s] === row[4])),
+    3
+  );
+  return [
+    { label: 'Total Tagihan', value: formatRupiah(totalTagihan) },
+    { label: 'Sudah Diterima', value: formatRupiah(totalLunas), tone: 'positive' },
+    { label: 'Piutang Berjalan', value: formatRupiah(totalPiutang), tone: 'negative' },
+    {
+      label: 'Rasio Penerimaan',
+      value: totalTagihan === 0 ? '0%' : `${Math.round((totalLunas / totalTagihan) * 100)}%`,
+    },
+  ];
+}
+
+export function summarizePendapatanBersih(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalGross = sumColumn(rows, 1);
+  const totalMaint = sumColumn(rows, 2);
+  const totalTax = sumColumn(rows, 3);
+  const totalNet = sumColumn(rows, 4);
+  return [
+    { label: 'Pendapatan Kotor', value: formatRupiah(totalGross), tone: 'positive' },
+    { label: 'Biaya Servis', value: formatRupiah(totalMaint), tone: 'negative' },
+    { label: 'Pajak & Operasional', value: formatRupiah(totalTax), tone: 'negative' },
+    {
+      label: 'Laba Bersih',
+      value: formatRupiah(totalNet),
+      tone: totalNet >= 0 ? 'positive' : 'negative',
+    },
+  ];
+}
+
+export function summarizeMaintenanceServis(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalBiaya = sumColumn(rows, 5);
+  const preventif = countWhere(rows, 2, MAINTENANCE_TYPE_LABEL.PREVENTIVE);
+  const korektif =
+    countWhere(rows, 2, MAINTENANCE_TYPE_LABEL.CORRECTIVE) +
+    countWhere(rows, 2, MAINTENANCE_TYPE_LABEL.OVERHAUL);
+  return [
+    { label: 'Total Pekerjaan', value: `${rows.length} servis` },
+    { label: 'Total Biaya', value: formatRupiah(totalBiaya), tone: 'negative' },
+    { label: 'Servis Preventif', value: `${preventif} pekerjaan` },
+    { label: 'Servis Korektif/Overhaul', value: `${korektif} pekerjaan` },
+  ];
+}
+
+export function summarizeUtilisasiHm(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalHm = sumColumn(rows, 3);
+  const rataHm = rows.length === 0 ? 0 : totalHm / rows.length;
+  return [
+    { label: 'Total Unit', value: `${rows.length} unit` },
+    { label: 'Akumulasi HM', value: `${round2(totalHm)} jam` },
+    { label: 'Rata-rata HM per Unit', value: `${round2(rataHm)} jam` },
+    {
+      // Baris sudah terurut menurun berdasarkan HM, jadi baris pertama
+      // adalah unit dengan jam operasi tertinggi di antara yang tampil.
+      label: 'HM Tertinggi',
+      value:
+        rows.length === 0 ? '-' : `${String(rows[0][0])} · ${round2(Number(rows[0][3]))} jam`,
+    },
+  ];
+}
+
+export function summarizeKerusakanUnit(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalBiaya = sumColumn(rows, 4);
+  return [
+    { label: 'Total Kejadian', value: `${rows.length} kasus`, tone: 'negative' },
+    { label: 'Total Biaya Perbaikan', value: formatRupiah(totalBiaya), tone: 'negative' },
+    {
+      label: 'Rata-rata Biaya',
+      value: formatRupiah(rows.length === 0 ? 0 : totalBiaya / rows.length),
+    },
+  ];
+}
+
+export function summarizeTelemetriGps(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const mesinMenyala = countWhere(rows, 4, 'Menyala');
+  const totalBbm = sumColumn(rows, 5);
+  const rataBbm = rows.length === 0 ? 0 : totalBbm / rows.length;
+  return [
+    { label: 'Total Titik Rekam', value: `${rows.length} titik` },
+    { label: 'Mesin Menyala', value: `${mesinMenyala} titik`, tone: 'positive' },
+    { label: 'Rata-rata BBM', value: `${round2(rataBbm)}%` },
+    {
+      label: 'Utilisasi Mesin',
+      value: rows.length === 0 ? '0%' : `${Math.round((mesinMenyala / rows.length) * 100)}%`,
+    },
+  ];
+}
+
+export function summarizeKinerjaStaf(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalVerifikasi = sumColumn(rows, 5);
+  const totalServis = sumColumn(rows, 6);
+  return [
+    { label: 'Total Akun Staf', value: `${rows.length} akun` },
+    { label: 'Total Verifikasi', value: `${totalVerifikasi} pembayaran`, tone: 'positive' },
+    { label: 'Total Servis', value: `${totalServis} pekerjaan`, tone: 'positive' },
+    {
+      label: 'Rata-rata Beban Kerja',
+      value:
+        rows.length === 0
+          ? '0'
+          : `${round2((totalVerifikasi + totalServis) / rows.length)} tugas`,
+    },
+  ];
+}
+
+export function summarizeSukuCadang(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const totalBiaya = sumColumn(rows, 3);
+  return [
+    { label: 'Total Penggantian', value: `${rows.length} item` },
+    { label: 'Total Biaya', value: formatRupiah(totalBiaya), tone: 'negative' },
+    {
+      label: 'Rata-rata Biaya',
+      value: formatRupiah(rows.length === 0 ? 0 : totalBiaya / rows.length),
+    },
+  ];
+}
+
+export function summarizeKepuasanPelanggan(
+  rows: readonly ReportCellValue[][],
+  baseline: number
+): ReportSummary[] {
+  return [
+    { label: 'Total Umpan Balik', value: `${rows.length} catatan`, tone: 'positive' },
+    {
+      label: 'Pelanggan Memberi Catatan',
+      value: `${new Set(rows.map((row) => String(row[1]))).size} pelanggan`,
+    },
+    {
+      // Cakupan dibandingkan terhadap SELURUH transaksi pada periode
+      // (baseline), bukan terhadap baris yang lolos penyaringan — kalau
+      // tidak, angkanya akan selalu 100% dan tidak bermakna.
+      label: 'Cakupan Umpan Balik',
+      value: baseline === 0 ? '0%' : `${Math.round((rows.length / baseline) * 100)}%`,
+    },
+  ];
+}
+
+export function summarizeAuditTrail(rows: readonly ReportCellValue[][], _baseline: number): ReportSummary[] {
+  const perJenis = new Map<string, number>();
+  for (const row of rows) {
+    const key = String(row[2] ?? '');
+    perJenis.set(key, (perJenis.get(key) ?? 0) + 1);
+  }
+  const jenisTerbanyak = [...perJenis.entries()].sort((a, b) => b[1] - a[1])[0];
+  return [
+    { label: 'Total Dokumen', value: `${rows.length} dokumen` },
+    { label: 'Jenis Dokumen', value: `${perJenis.size} jenis` },
+    {
+      label: 'Terbanyak',
+      value: jenisTerbanyak ? `${jenisTerbanyak[0]} (${jenisTerbanyak[1]})` : '-',
+    },
+    {
+      label: 'Penerbit Aktif',
+      value: `${new Set(rows.map((row) => String(row[1]))).size} pengguna`,
+    },
+  ];
+}
+
+/** Perangkum ringkasan per jenis laporan. Kunci harus lengkap & unik. */
+export const SUMMARIZERS: Readonly<Record<ReportId, Summarizer>> = {
+  RENTAL_BULANAN: summarizeRentalBulanan,
+  PEMBAYARAN_PIUTANG: summarizePembayaranPiutang,
+  PENDAPATAN_BERSIH: summarizePendapatanBersih,
+  MAINTENANCE_SERVIS: summarizeMaintenanceServis,
+  UTILISASI_HM: summarizeUtilisasiHm,
+  KERUSAKAN_UNIT: summarizeKerusakanUnit,
+  TELEMETRI_GPS: summarizeTelemetriGps,
+  KINERJA_STAF: summarizeKinerjaStaf,
+  SUKU_CADANG: summarizeSukuCadang,
+  KEPUASAN_PELANGGAN: summarizeKepuasanPelanggan,
+  AUDIT_TRAIL: summarizeAuditTrail,
+};
