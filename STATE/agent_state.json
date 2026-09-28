@@ -1,5 +1,5 @@
 {
-  "cycle": 83,
+  "cycle": 84,
   "last_run": "2026-09-26T21:30:00.000Z",
   "current_task_id": null,
   "current_phase": "FASE 5: INOVASI",
@@ -24,6 +24,6 @@
     "note": "npm run deploy = npm run build && npx wrangler deploy; deploy:dry untuk uji tanpa publish"
   },
   "next_focus": "T-0054 (opsional): halaman admin manajemen settings + endpoint PUT /api/settings (RBAC ADMIN) agar tarif denda dapat diubah dari UI tanpa edit DB",
-  "updated": "2026-09-28T15:11:40",
-  "last_summary": "Siklus 83: GpsTrackingPage.tsx 745 -> 590; gps/GeofenceAlertBanner.tsx (82) + gps/TelemetryFilterPanel.tsx (120). Deploy cc20c3dd. Verifikasi CDP production: filter mesin/BBM/cari ada, banner geofence '14 unit terdeteksi... terjauh 69,5 km', peta leaflet + marker, ubah filter ON -> hitungan berubah, Reset Filter jalan, overflow 0. tsc 0, 30/30."
+  "updated": "2026-09-28T15:25:50",
+  "last_summary": "Siklus 84: CustomerPortal.tsx 1013 -> 844; RentBookingModal.tsx (136) + PaymentProofModal.tsx (109) di src/pages/customer/. VERI-84 menemukan BUG NYATA dari refactor (modal booking tak tertutup krn kondisi render lupa isRentModalOpen) -> diperbaiki, retest: batal= count 0. Transfer modal: kode PAY-, rekening Mandiri, validasi berkas lokal '.exe' ditolak pesan server-identik. Deploy 2643c7d8. tsc 0, 30/30, overflow 0."
 }

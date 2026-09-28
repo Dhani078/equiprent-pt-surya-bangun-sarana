@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo, Suspense, lazy } from 'react';
 import { Equipment, Rental, Contract, Payment, User, GpsTracking } from '../../types';
 import { Truck, ClipboardList, FileCheck, CreditCard, Check, Upload, ArrowRight, ShieldCheck, PenTool, Calendar, DollarSign, FileText, CheckCircle, MapPin, Crosshair } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { RentBookingModal } from './RentBookingModal';
+import { PaymentProofModal } from './PaymentProofModal';
 import { ContractPanel } from '../../components/ContractPanel';
 import { PortalHeader } from './portal/PortalHeader';
 // Lazy: Leaflet berat (~140KB), hanya dipakai di tab pelacakan — jangan masuk bundle awal
@@ -809,204 +811,33 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
         </div>
       )}
 
-      {/* Modal: Rent Booking */}
-      {selectedEquipment && (
-        <Modal
-          isOpen={isRentModalOpen}
+      {/* Modal pengajuan sewa — komponen RentBookingModal. */}
+      {selectedEquipment && isRentModalOpen && (
+        <RentBookingModal
+          equipment={selectedEquipment}
+          startDate={startDate}
+          endDate={endDate}
+          notes={notes}
+          estimasi={estimasi}
+          rentError={rentError}
+          onChangeTanggal={(m, s) => { setStartDate(m); setEndDate(s); }}
+          onChangeCatatan={setNotes}
           onClose={() => setIsRentModalOpen(false)}
-          title={`Pengajuan Sewa: ${selectedEquipment.name}`}
-        >
-          <form onSubmit={handleConfirmRent} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', gap: '14px', padding: '12px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-              <img
-                src={selectedEquipment.thumbnail_url || getEquipmentImage(selectedEquipment.equipment_code, selectedEquipment.type)}
-                alt={selectedEquipment.name}
-                style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }}
-              />
-              <div style={{ fontSize: '13px' }}>
-                <div style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{selectedEquipment.name}</div>
-                <div style={{ color: 'var(--color-secondary)', fontSize: '11.5px', marginBottom: '4px' }}>
-                  Kode: <span className="serial-code">{selectedEquipment.equipment_code}</span> &bull; {selectedEquipment.brand} {selectedEquipment.model}
-                </div>
-                <div className="serial-code" style={{ fontWeight: 800, color: 'var(--text-strong)' }}>
-                  {formatRupiah(Number(selectedEquipment.rental_price_per_day))} / hari
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                  Tanggal Mulai Sewa
-                </label>
-                <input
-                  type="date"
-                  required
-                  className="input-premium"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                  Tanggal Selesai Sewa
-                </label>
-                <input
-                  type="date"
-                  required
-                  className="input-premium"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Catatan Lokasi / Proyek Pekerjaan
-              </label>
-              <textarea
-                rows={2}
-                className="input-premium"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Contoh: Pekerjaan cut & fill Pelabuhan Trisakti Banjarmasin"
-              />
-            </div>
-
-            {/* Peringatan: unit tidak tersedia pada rentang tanggal dipilih */}
-            {rentError && (
-              <div
-                role="alert"
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  background: 'rgba(220, 38, 38, 0.08)',
-                  border: '1px solid rgba(220, 38, 38, 0.3)',
-                  color: 'var(--fg-danger)',
-                  fontSize: '12.5px',
-                  fontWeight: 600
-                }}
-              >
-                {rentError}
-              </div>
-            )}
-
-            <div style={{ padding: '12px', backgroundColor: 'var(--bg-blue-soft)', borderRadius: '8px', border: '1px solid var(--border-blue-soft)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--color-secondary)' }}>
-                <span>Durasi: <strong>{estimasi.ok ? `${estimasi.rentalDays} Hari` : '-'}</strong></span>
-                <span>Tarif: <strong>{formatRupiah(Number(selectedEquipment.rental_price_per_day))}</strong>/hari</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)' }}>
-                <span>Total Estimasi Biaya Sewa:</span>
-                <span className="serial-code">
-                  {estimasi.ok ? formatRupiah(estimasi.subtotal) : '-'}
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button type="button" onClick={() => setIsRentModalOpen(false)} className="btn-secondary">
-                Batal
-              </button>
-              <button type="submit" className="btn-primary">
-                Ajukan Permohonan Sewa
-              </button>
-            </div>
-          </form>
-        </Modal>
+          onSubmit={handleConfirmRent}
+        />
       )}
 
-      {/* Modal: Upload Payment Proof */}
+      {/* Modal bukti transfer — komponen PaymentProofModal. */}
       {uploadingPayment && (
-        <Modal
-          isOpen={true}
-          onClose={() => setUploadingPayment(null)}
-          title={`Konfirmasi Transfer: ${uploadingPayment.payment_code}`}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '14px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px' }}>
-              <div>Jumlah Tagihan: <strong style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatRupiah(Number(uploadingPayment.amount))}</strong></div>
-              <div>Metode: <strong>{uploadingPayment.payment_method}</strong></div>
-              <div>Rekening Tujuan: <strong>Bank Mandiri 031-00-1234567-8 a/n PT. Surya Bangun Sarana</strong></div>
-            </div>
-
-            {/* Visual Struk Transfer Mockup Asli Stitch Prototype */}
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
-                Pratinjau Struk / Bukti Transfer
-              </label>
-              <div style={{
-                height: '160px',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                border: '1px solid var(--color-border)',
-                backgroundColor: 'var(--bg-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <img
-                  src={STITCH_IMAGES.PAYMENT_PROOF}
-                  alt="Struk Transfer Mockup"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=500&auto=format&fit=crop&q=60';
-                  }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Nama Berkas Bukti Transfer
-              </label>
-              <input
-                type="text"
-                className="input-premium"
-                value={proofFile}
-                onChange={(e) => setProofFile(e.target.value)}
-                aria-label="Nama berkas bukti transfer"
-                aria-invalid={proofError !== null}
-                aria-describedby="petunjuk-bukti-transfer"
-              />
-              <div id="petunjuk-bukti-transfer" style={{ fontSize: '11px', color: 'var(--color-secondary)', marginTop: '4px' }}>
-                Unggah bukti mutasi bank transfer atau struk setor resmi (PNG, JPG, WebP, atau PDF).
-              </div>
-              {/* Pesan galat divalidasi dengan aturan yang SAMA dengan server,
-                  sehingga pelanggan tidak mengirim berkas yang pasti ditolak. */}
-              {proofError && (
-                <div role="alert" style={{ fontSize: '11.5px', color: 'var(--fg-danger)', fontWeight: 600, marginTop: '6px' }}>
-                  {proofError}
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setUploadingPayment(null);
-                  setProofError(null);
-                }}
-                className="btn-secondary"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                disabled={sendingProof}
-                onClick={kirimBuktiTransfer}
-                className="btn-primary"
-                style={{ opacity: sendingProof ? 0.6 : 1 }}
-                aria-label="Kirim bukti pembayaran untuk diverifikasi"
-              >
-                <Upload size={14} />
-                <span>{sendingProof ? 'Mengirim…' : 'Kirim Bukti Pembayaran'}</span>
-              </button>
-            </div>
-          </div>
-        </Modal>
+        <PaymentProofModal
+          payment={uploadingPayment}
+          proofFile={proofFile}
+          proofError={proofError}
+          sending={sendingProof}
+          onChangeFile={setProofFile}
+          onClose={() => { setUploadingPayment(null); setProofError(null); }}
+          onSend={kirimBuktiTransfer}
+        />
       )}
     </div>
   );
