@@ -164,5 +164,25 @@ t('semua laporan aman dengan sumber data kosong', !gagal);
 t('laporan kosong punya 0 baris', rep.buildReport('RENTAL_BULANAN', sumberKosong).rows.length === 0);
 t('CSV dari laporan kosong tetap punya header', rep.buildCsv(rep.buildReport('RENTAL_BULANAN', sumberKosong)).split('\r\n').length >= 4);
 
+// ---- Preset periode cepat (siklus 64) ----
+{
+  const tgl = new Date(Date.UTC(2026, 8, 28)); // 28 September 2026
+  const r7 = rep.presetRange('7HARI', tgl);
+  t('preset 7 hari: rentang 7 hari ke belakang', r7.from === '2026-09-21' && r7.to === '2026-09-28');
+  const r30 = rep.presetRange('30HARI', tgl);
+  t('preset 30 hari: rentang 30 hari ke belakang', r30.from === '2026-08-29' && r30.to === '2026-09-28');
+  const r90 = rep.presetRange('90HARI', tgl);
+  t('preset 90 hari: rentang 90 hari ke belakang', r90.from === '2026-06-30' && r90.to === '2026-09-28');
+  const bm = rep.presetRange('BULAN_INI', tgl);
+  t('preset bulan ini: 1 s.d. akhir bulan', bm.from === '2026-09-01' && bm.to === '2026-09-30');
+  const k4 = rep.presetRange('KUARTAL_INI', tgl);
+  t('preset kuartal ini: Q3 1 Jul s.d. 30 Sep', k4.from === '2026-07-01' && k4.to === '2026-09-30');
+  const semua = rep.presetRange('SEMUA', tgl);
+  t('preset semua: rentang kosong', semua.from === '' && semua.to === '');
+  const feb = rep.presetRange('BULAN_INI', new Date(Date.UTC(2028, 1, 15))); // kabisat
+  t('preset bulan ini handle kabisat (2028-02-29)', feb.to === '2028-02-29');
+  t('label preset lengkap 6 butir', rep.REPORT_PRESET_LABELS.length === 6);
+}
+
 console.log(`\n=== HASIL: ${pass} PASS, ${fail} FAIL ===`);
 process.exit(fail === 0 ? 0 : 1);
