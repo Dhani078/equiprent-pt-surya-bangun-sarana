@@ -1,0 +1,38 @@
+};
+
+// ---------------------------------------------------------------------------
+// Pengaturan Aplikasi (tabel `settings`)
+// ---------------------------------------------------------------------------
+// Saat DB terhubung, tarif denda & konfigurasi lain dibaca dari tabel settings.
+// Cache di sini (bukan di businessRules) karena modul ini pemilik koneksi DB;
+// businessRules hanya menerima nilai lewat setter agar tidak timbul dependensi
+// melingkar (businessRules adalah modul murni tanpa import db).
+// ponytail: tidak ada notifikasi perubahan dari DB. Cache hanya disegarkan
+// ulang per isolate lewat warmSettings(); naik ke: pub/sub atau TTL bila
+// pengaturan banyak diubah dari banyak isolate.
+
+let settingsDimuat = false;
+
+async function muatSettings(): Promise<void> {
+  settingsDimuat = true;
+  if (!isDatabaseConnected()) return; // mode IN_MEMORY_DEMO → nilai default kode
+
+  const rows = await executeSql<{ value: string | null }>(
+    'SELECT `value` FROM `settings` WHERE `key` = ? LIMIT 1',
+    ['late_penalty_per_day']
+  );
+  const mentah = rows.length > 0 ? rows[0]?.value : null;
+  const angka = typeof mentah === 'string' ? Number(mentah) : NaN;
+  setLatePenaltyPerDay(Number.isFinite(angka) && angka >= 0 ? angka : null);
+}
+
+/**
+ * Muat pengaturan sekali per isolate. Dipanggil middleware API; bila DB belum
+ * terhubung, segera ditandai agar tidak mengulang setiap permintaan.
+ */
+export async function warmSettings(): Promise<void> {
+  if (settingsDimuat) return;
+  await muatSettings();
+}
+
+// ---------------------------------------------------------------------------

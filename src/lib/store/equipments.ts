@@ -1,0 +1,67 @@
+/**
+ * Operasi data unit alat berat.
+ *
+ * Dipisah dari `db.ts`; seluruh konteks bersama (stateStore, jalur tulis,
+ * cermin TiDB) datang dari `./internal`.
+ */
+import { nextId, stateStore, tidbClient, wt } from './internal';
+import { lewatJembatan } from './internal';
+import type { Equipment } from '../../types';
+
+export const equipments = {
+  getEquipments: async () => stateStore.equipments,
+  getEquipmentById: async (id: number) => stateStore.equipments.find(e => e.id === id),
+  addEquipment: async (eq: Omit<Equipment, 'id'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Equipment>('POST', '/api/equipments', eq);
+    }
+    const newEq: Equipment = { ...eq, id: nextId(stateStore.equipments) };
+    await wt(
+      'INSERT INTO `equipments` (`id`, `equipment_code`, `name`, `type`, `model`, `brand`, `hour_meter`, `rental_price_per_day`, `status`, `last_maintenance_date`, `thumbnail_url`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newEq.id, newEq.equipment_code, newEq.name, newEq.type, newEq.model, newEq.brand, newEq.hour_meter, newEq.rental_price_per_day, newEq.status, newEq.last_maintenance_date, newEq.thumbnail_url ?? null],
+      'addEquipment'
+    );
+    stateStore.equipments.unshift(newEq);
+    return newEq;
+  },
+  updateEquipment: async (id: number, data: Partial<Equipment>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Equipment>('PUT', `/api/equipments/${id}`, data);
+    }
+    const eq = stateStore.equipments.find(e => e.id === id);
+    if (eq) {
+      const gabungan = { ...eq, ...data };
+      await wt(
+        'UPDATE `equipments` SET `name` = ?, `type` = ?, `model` = ?, `brand` = ?, `hour_meter` = ?, `rental_price_per_day` = ?, `status` = ?, `last_maintenance_date` = ?, `thumbnail_url` = ? WHERE `id` = ?',
+        [gabungan.name, gabungan.type, gabungan.model, gabungan.brand, gabungan.hour_meter, gabungan.rental_price_per_day, gabungan.status, gabungan.last_maintenance_date, gabungan.thumbnail_url ?? null, id],
+        'updateEquipment'
+      );
+      Object.assign(eq, data);
+    }
+    return eq;
+  },
+  deleteEquipment: async (id: number) => {
+    // REFERENTIAL INTEGRITY: unit yang pernah dipakai dalam transaksi sewa
+    // tidak boleh dihapus secara fisik — rental, kontrak, pembayaran, dan
+    // laporan menunjuk ke equipment_id ini; menghapusnya membuat baris-baris
+    // itu kehilangan referensi (nama/kode unit hilang dari riwayat & cetakan).
+    // Lapisan API sudah memblokir unit dalam sewa AKTIF; ini menjaga
+    // RIWAYAT (COMPLETED/REJECTED) yang sah ada.
+    if (typeof window !== 'undefined') {
+      await lewatJembatan('DELETE', `/api/equipments/${id}`);
+      return true;
+    }
+    const punyaRiwayat = stateStore.rentals.some((r) => r.equipment_id === id);
+    if (punyaRiwayat) return false;
+
+    const idx = stateStore.equipments.findIndex(e => e.id === id);
+    if (idx !== -1) {
+      await wt('DELETE FROM `equipments` WHERE `id` = ?', [id], 'deleteEquipment');
+      stateStore.equipments.splice(idx, 1);
+      return true;
+    }
+    return false;
+  },
+
+  // Rentals
+};

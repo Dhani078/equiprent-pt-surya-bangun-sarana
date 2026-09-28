@@ -1,0 +1,145 @@
+ * Dihasilkan oleh `seedGenerator.ts` agar konsisten secara relasional
+ * (50 pengguna, 50 unit, 50 rental, 50 kontrak, 50 pembayaran,
+ *  25 log servis, 55 titik GPS, 20 dokumen) sesuai dokumentasi.
+ */
+const DEMO_USERS = GENERATED_USERS;
+const DEMO_EQUIPMENTS = GENERATED_EQUIPMENTS;
+const DEMO_RENTALS = GENERATED_RENTALS;
+const DEMO_CONTRACTS = GENERATED_CONTRACTS;
+const DEMO_PAYMENTS = GENERATED_PAYMENTS;
+const DEMO_MAINTENANCE = GENERATED_MAINTENANCE;
+const DEMO_GPS = GENERATED_GPS;
+const DEMO_REPORTS = GENERATED_REPORTS;
+
+/** Ambil konfigurasi database dari environment secara aman untuk browser, edge, & node. */
+function resolveEnv(): Record<string, string | undefined> {
+  const metaEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+  if (metaEnv) return metaEnv;
+
+  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+  return proc?.env ?? {};
+}
+
+const envLookup = resolveEnv();
+// HANYA `DATABASE_URL`. Prefiks `VITE_` sengaja TIDAK dipakai: nilai dengan
+// prefiks itu ikut terbawa ke bundle klien (vite memasukkannya ke kode yang
+// diunduh browser), sehingga kredensial database bocor ke publik. Worker
+// Cloudflare hanya mengikat `DATABASE_URL` (server-only).
+const databaseUrl = envLookup.DATABASE_URL ?? '';
+
+/** Client TiDB. Null ketika DATABASE_URL belum dikonfigurasi → fallback ke in-memory store. */
+type TidbClient = { execute: (sql: string, params: unknown[]) => Promise<unknown> };
+let tidbClient: TidbClient | null = null;
+
+if (databaseUrl && !databaseUrl.includes('your_username')) {
+  try {
+    tidbClient = connect({ url: databaseUrl }) as unknown as TidbClient;
+  } catch {
+    // Gagal inisialisasi → diamkan. Aplikasi tetap berjalan dengan in-memory store.
+    tidbClient = null;
+  }
+}
+
+/**
+ * Worker TIDAK punya process.env — secret `DATABASE_URL` hanya datang lewat
+ * binding `c.env`. Middleware memanggil ini sekali per cold-start; setelah
+ * tidbClient terbentuk, panggilan berikut no-op.
+ */
+export const configureDatabaseUrl = (url?: string): void => {
+  if (tidbClient || !url || url.includes('your_username')) return;
+  try {
+    tidbClient = connect({ url }) as unknown as TidbClient;
+  } catch {
+    tidbClient = null;
+  }
+};
+
+/** Menandakan apakah aplikasi sedang terhubung ke database sungguhan. */
+export const isDatabaseConnected = (): boolean => tidbClient !== null;
+
+/**
+ * Mode sumber data yang sedang aktif.
+ *
+ * Dilaporkan apa adanya oleh `/api/health` agar tidak ada kesalahpahaman:
+ * pada mode `IN_MEMORY_DEMO`, seluruh perubahan hanya hidup di memori
+ * isolate yang sedang menangani request dan akan hilang saat isolate diganti.
+ */
+export type DataMode = 'TIDB' | 'IN_MEMORY_DEMO';
+
+export const getDataMode = (): DataMode => (tidbClient !== null ? 'TIDB' : 'IN_MEMORY_DEMO');
+
+/**
+ * Hasil verifikasi kredensial.
+ * Discriminated union — memaksa pemanggil mengecek `ok` sebelum memakai `user`.
+ */
+export type AuthCheck =
+  | { ok: true; user: User }
+  | { ok: false; reason: 'NOT_FOUND' | 'BAD_PASSWORD' | 'SUSPENDED' | 'NO_PASSWORD_SET' };
+
+// In-Memory Reactive Cache for Edge & Offline Simulation
+export const stateStore = {
+  users: [...DEMO_USERS] as User[],
+  equipments: [...DEMO_EQUIPMENTS] as Equipment[],
+  rentals: [...DEMO_RENTALS] as Rental[],
+  contracts: [...DEMO_CONTRACTS] as Contract[],
+  payments: [...DEMO_PAYMENTS] as Payment[],
+  maintenance: [...DEMO_MAINTENANCE] as Maintenance[],
+  gps: [...DEMO_GPS] as GpsTracking[],
+  reports: [...DEMO_REPORTS] as ReportItem[],
+};
+
+/**
+ * Menghasilkan ID baru yang bebas bentrok.
+ *
+ * Tidak memakai `panjang Array + 1`: bila sebuah baris dihapus, panjang array
+ * menyusut dan ID lama akan dipakai ulang — dua entitas berbeda lalu berbagi
+ * satu ID (data laporan & riwayat jadi kacau). `maksimum + 1` aman.
+ */
+function nextId(daftar: ReadonlyArray<{ id: number }>): number {
+  return daftar.reduce((maks, item) => (item.id > maks ? item.id : maks), 0) + 1;
+}
+
+/**
+ * Normalisasi nilai DATE/DATETIME dari driver menjadi string.
+ * DATE -> 'YYYY-MM-DD'; DATETIME/timestamp -> 'YYYY-MM-DD HH:MM:SS'.
+ */
+function strTanggal(v: unknown, hanyaTanggal = false): string | null {
+  if (v === null || v === undefined) return null;
+  if (v instanceof Date) {
+    const iso = v.toISOString().replace('T', ' ').replace('Z', '');
+    return hanyaTanggal ? iso.slice(0, 10) : iso.slice(0, 19);
+  }
+  const t = String(v).replace('T', ' ').replace(/Z$/, '').trim();
+  return hanyaTanggal ? t.slice(0, 10) : t;
+}
+
+/**
+ * Write-through: setiap mutasi stateStore ikut ditulis ke TiDB (safer: DB
+ * dulu, baru memori) — temuan audit siklus 59: sebelumnya CRUD hanya hidup
+ * di memori isolate, reload/p isolate lain data hilang.
+ * Menglempar PERSIST_GAGAL agar API jujur melaporkan kegagalan, bukan
+ * berpura-pura sukses lalu datanya lenyap.
+ */
+async function wt(sql: string, params: unknown[], label: string): Promise<void> {
+  if (!tidbClient) return; // IN_MEMORY_DEMO -> tulis memori saja
+  try {
+    await tidbClient.execute(sql, params);
+  } catch (err) {
+    console.error('[persist] gagal menulis', label, err);
+    throw new Error('PERSIST_GAGAL');
+  }
+}
+
+/**
+ * Eksekusi Query SQL ke TiDB Cloud Serverless.
+ *
+ * CATATAN KEAMANAN: Parameter WAJIB dikirim terpisah (parameterized query).
+ * Jangan pernah menyisipkan nilai langsung ke dalam string SQL.
+ */
+export async function executeSql<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+  if (tidbClient) {
+    const results = await tidbClient.execute(sql, params);
+    return results as T[];
+  }
+  // Database belum dikonfigurasi → kembalikan array kosong.
+  return [] as T[];

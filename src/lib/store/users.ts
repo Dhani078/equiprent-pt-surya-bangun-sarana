@@ -1,0 +1,146 @@
+/**
+ * Operasi data pengguna: baca, verifikasi kredensial, ubah, aktif/nonaktif.
+ *
+ * Dipisah dari `db.ts`; seluruh konteks bersama (stateStore, jalur tulis,
+ * cermin TiDB) datang dari `./internal`.
+ */
+import { nextId, stateStore, tidbClient, wt, kirimKeApi } from './internal';
+import type { AuthCheck } from './internal';
+import { lewatJembatan } from './internal';
+import type { User } from '../../types';
+import { hashPassword, isDemoAccount, isStoredPasswordHash, verifyPassword } from '../auth';
+
+export const users = {
+  // Users
+  getUsers: async () => stateStore.users,
+  getUserById: async (id: number) => stateStore.users.find(u => u.id === id),
+  getUserByUsername: async (username: string) => stateStore.users.find(u => u.username.toLowerCase() === username.toLowerCase()),
+
+  /**
+   * Memverifikasi kredensial login: username + password + status akun.
+   * Password di-hash dengan PBKDF2 (lihat src/lib/auth.ts).
+   *
+   * PERBAIKAN KEAMANAN: versi sebelumnya memanggil
+   * `verifyPassword(password, '', user.username)` sehingga `password_hash`
+   * milik pengguna SELALU diabaikan — hanya akun demo yang bisa login, dan
+   * pengguna sungguhan tidak pernah bisa masuk walau password benar.
+   * Sekarang hash tersimpan yang dipakai; jalur akun demo hanya berlaku bila
+   * akun belum punya hash DAN mode demo diizinkan.
+   */
+  verifyCredentials: async (
+    username: string,
+    password: string,
+    options: { allowDemoAccounts?: boolean } = {}
+  ): Promise<AuthCheck> => {
+    const user = stateStore.users.find(
+      u => u.username.toLowerCase() === username.trim().toLowerCase()
+    );
+    if (!user) return { ok: false, reason: 'NOT_FOUND' };
+
+    // Akun yang disuspend tidak boleh login meski password benar.
+    if (user.status === 'SUSPENDED') return { ok: false, reason: 'SUSPENDED' };
+
+    const allowDemoAccounts = options.allowDemoAccounts !== false;
+    const storedHash = isStoredPasswordHash(user.password_hash) ? user.password_hash : '';
+
+    // Akun tanpa hash & bukan akun demo yang diizinkan → belum bisa login.
+    if (!storedHash && !(allowDemoAccounts && isDemoAccount(user.username))) {
+      return { ok: false, reason: 'NO_PASSWORD_SET' };
+    }
+
+    const passwordOk = await verifyPassword(password, storedHash, user.username, {
+      allowDemoAccounts,
+    });
+    if (!passwordOk) return { ok: false, reason: 'BAD_PASSWORD' };
+
+    return { ok: true, user };
+  },
+
+  /**
+   * Menyetel (atau mengganti) password pengguna.
+   *
+   * Dipakai admin saat menerbitkan akun baru — `addUser()` sengaja tidak
+   * menyimpan password, sehingga akun baru tidak bisa login sampai
+   * passwordnya disetel lewat jalur ini.
+   */
+  /**
+   * Ganti password diri sendiri lewat Edge API — tersedia untuk SEMUA role
+   * (`/api/auth/change-password`), unlike /api/users/:id/password yang
+   * wewenang Admin. Password lama wajib dibuktikan server.
+   */
+  changeOwnPassword: async (oldPassword: string, newPassword: string): Promise<void> => {
+    await kirimKeApi('POST', '/api/auth/change-password', { oldPassword, newPassword });
+  },
+  setUserPassword: async (id: number, password: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('POST', `/api/users/${id}/password`, { password });
+    }
+    const user = stateStore.users.find(u => u.id === id);
+    if (!user) return undefined;
+
+    const hash = await hashPassword(password, user.username);
+    await wt('UPDATE `users` SET `password` = ? WHERE `id` = ?', [hash, id], 'setUserPassword');
+    user.password_hash = hash;
+    return user;
+  },
+  addUser: async (user: Omit<User, 'id'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('POST', '/api/users', user);
+    }
+    const newUser: User = { ...user, id: nextId(stateStore.users) };
+    await wt(
+      'INSERT INTO `users` (`id`, `role_id`, `username`, `password`, `email`, `full_name`, `phone`, `address`, `company_name`, `status`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newUser.id, newUser.role_id, newUser.username, null, newUser.email, newUser.full_name, newUser.phone, newUser.address, newUser.company_name, newUser.status],
+      'addUser'
+    );
+    stateStore.users.push(newUser);
+    return newUser;
+  },
+  /**
+   * Memperbarui data profil pengguna.
+   *
+   * Field sensitif (`id`, `username`, `role_id`, `role_name`, `status`,
+   * `password_hash`) sengaja diabaikan agar halaman "Pengaturan Akun" tidak
+   * bisa dipakai untuk menaikkan hak akses sendiri.
+   */
+  updateUser: async (id: number, data: Partial<User>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('PUT', `/api/users/${id}`, data);
+    }
+    const user = stateStore.users.find(u => u.id === id);
+    if (!user) return undefined;
+
+    const aman: Partial<User> = {};
+    if (typeof data.full_name === 'string') aman.full_name = data.full_name;
+    if (typeof data.email === 'string') aman.email = data.email;
+    if (typeof data.phone === 'string') aman.phone = data.phone;
+    if (typeof data.address === 'string') aman.address = data.address;
+    if (data.company_name === null || typeof data.company_name === 'string') {
+      aman.company_name = data.company_name;
+    }
+
+    const gabungan = { ...user, ...aman };
+    await wt(
+      'UPDATE `users` SET `email` = ?, `full_name` = ?, `phone` = ?, `address` = ?, `company_name` = ? WHERE `id` = ?',
+      [gabungan.email, gabungan.full_name, gabungan.phone, gabungan.address, gabungan.company_name, id],
+      'updateUser'
+    );
+    Object.assign(user, aman);
+    return user;
+  },
+
+  toggleUserStatus: async (id: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('POST', `/api/users/${id}/toggle`);
+    }
+    const u = stateStore.users.find(x => x.id === id);
+    if (u) {
+      const baru = u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+      await wt('UPDATE `users` SET `status` = ? WHERE `id` = ?', [baru, id], 'toggleUserStatus');
+      u.status = baru;
+    }
+    return u;
+  },
+
+  // Equipments
+};
