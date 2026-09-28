@@ -1,8 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Rental, Equipment, User, Contract } from '../../types';
 import { ContractPanel } from '../../components/ContractPanel';
-import { StatusConfirmModal } from './rental/StatusConfirmModal';
-import { AddRentalModal } from './rental/AddRentalModal';
 import { Plus, Search, CheckCircle, XCircle, Truck, CircleCheck, TriangleAlert, Hourglass, ClipboardList } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { getEquipmentImage } from '../../lib/stitchAssets';
@@ -604,30 +602,305 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
         )}
       </div>
 
-      <StatusConfirmModal
-        pending={pendingConfirm}
+      {/* Modal Konfirmasi Perubahan Status */}
+      <Modal
+        isOpen={pendingConfirm !== null}
         onClose={() => setPendingConfirm(null)}
-        onConfirm={jalankanPerubahan}
-        submitting={false}
-      />
+        title="Konfirmasi Perubahan Status"
+      >
+        {pendingConfirm && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <p style={{ margin: 0, fontSize: '13.5px', lineHeight: 1.6, color: 'var(--text-strong)' }}>
+              Ubah status transaksi{' '}
+              <strong className="serial-code">{pendingConfirm.rental.rental_code}</strong> dari{' '}
+              <strong>{getRentalStatusLabel(pendingConfirm.rental.status)}</strong> menjadi{' '}
+              <strong>{getRentalStatusLabel(pendingConfirm.next)}</strong>?
+            </p>
 
-      <AddRentalModal
-        open={isAddModalOpen}
-        customers={customers}
-        equipments={equipments}
-        availability={availability}
-        availabilitySummary={availabilitySummary}
-        selectedAvailability={selectedAvailability ?? null}
-        values={formData}
-        onChange={setFormData}
-        error={formError}
-        onSetError={setFormError}
-        submitting={false}
-        onSubmit={handleFormSubmit}
+            {pendingConfirm.next === 'ON_GOING' && (
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--color-secondary)', lineHeight: 1.6 }}>
+                Unit akan dikunci berstatus <strong>RENTED</strong> sampai transaksi diselesaikan.
+              </p>
+            )}
+
+            {pendingConfirm.next === 'COMPLETED' && (
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--color-secondary)', lineHeight: 1.6 }}>
+                Unit akan dibebaskan menjadi <strong>AVAILABLE</strong> dan dapat disewa kembali.
+              </p>
+            )}
+
+            {pendingConfirm.next === 'REJECTED' && (
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--fg-danger-deep)', lineHeight: 1.6 }}>
+                Penolakan bersifat <strong>final</strong> — transaksi tidak dapat diproses kembali.
+              </p>
+            )}
+
+            {pendingConfirm.next === 'COMPLETED' && (() => {
+              const denda = getLateReturnInfo(pendingConfirm.rental);
+              if (!denda.isLate) return null;
+              return (
+                <div
+                  role="alert"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--bg-red-soft)',
+                    border: '1px solid var(--border-red-soft)',
+                    color: 'var(--fg-danger-deep)',
+                    fontSize: '12.5px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <TriangleAlert size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <div>
+                    Unit terlambat <strong>{denda.lateDays} hari</strong>. Denda sebesar{' '}
+                    <strong>{formatRupiah(denda.penalty)}</strong> akan dibebankan kepada pelanggan.
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setPendingConfirm(null)}
+                className="btn-secondary"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={jalankanPerubahan}
+                className="btn-primary"
+                style={
+                  pendingConfirm.next === 'REJECTED'
+                    ? { backgroundColor: '#EF4444', borderColor: '#EF4444', color: '#FFFFFF' }
+                    : undefined
+                }
+              >
+                Ya, {ACTION_META[pendingConfirm.next]?.label ?? 'Lanjutkan'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal Add Booking */}
+      <Modal
+        isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        describeBlockedReason={describeBlockedReason}
-      />
-        </>
+        title="Buat Transaksi Penyewaan Baru"
+      >
+        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Pilih Pelanggan / Korporasi
+            </label>
+            <select
+              className="input-premium"
+              value={formData.customer_id}
+              onChange={(e) => setFormData({ ...formData, customer_id: Number(e.target.value) })}
+              aria-label="Pilih pelanggan atau korporasi"
+            >
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.company_name || c.full_name} ({c.full_name})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Pilih Alat Berat
+            </label>
+            <select
+              className="input-premium"
+              value={formData.equipment_id}
+              onChange={(e) => {
+                setFormData({ ...formData, equipment_id: Number(e.target.value) });
+                setFormError(null);
+              }}
+              aria-label="Pilih alat berat yang tersedia pada periode sewa"
+            >
+              {/* Semua unit tetap ditampilkan agar pengguna paham MENGAPA suatu
+                  unit tidak bisa dipilih, lalu ditandai & dinonaktifkan. */}
+              {availability.map(({ equipment, isBookable, blockedReason }) => (
+                <option key={equipment.id} value={equipment.id} disabled={!isBookable}>
+                  {equipment.equipment_code} - {equipment.name}{' '}
+                  ({formatRupiah(Number(equipment.rental_price_per_day))}/hari)
+                  {isBookable
+                    ? ''
+                    : blockedReason === 'DATE_CONFLICT'
+                      ? ' — sudah dipesan pada periode ini'
+                      : blockedReason === 'UNIT_STATUS'
+                        ? ` — ${equipment.status}`
+                        : ' — periode tidak valid'}
+                </option>
+              ))}
+            </select>
+
+            <div
+              style={{
+                marginTop: '6px',
+                fontSize: '11.5px',
+                color: 'var(--color-secondary)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '4px 10px',
+              }}
+              aria-live="polite"
+            >
+              <span>
+                <strong style={{ color: 'var(--color-primary)' }}>
+                  {availabilitySummary.bookable}
+                </strong>{' '}
+                dari {availabilitySummary.total} unit tersedia pada periode ini
+              </span>
+              {availabilitySummary.blockedByDate > 0 && (
+                <span>· {availabilitySummary.blockedByDate} unit bentrok jadwal</span>
+              )}
+              {availabilitySummary.blockedByStatus > 0 && (
+                <span>· {availabilitySummary.blockedByStatus} unit dirawat / nonaktif</span>
+              )}
+            </div>
+          </div>
+
+          {/* Peringatan: unit terpilih tidak bisa dipesan pada periode ini */}
+          {selectedAvailability && !selectedAvailability.isBookable && (
+            <div
+              role="alert"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--bg-red-soft)',
+                border: '1px solid var(--border-red-soft)',
+                color: 'var(--fg-danger-deep)',
+                fontSize: '12.5px',
+                lineHeight: 1.5,
+              }}
+            >
+              <TriangleAlert size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+              <div>
+                <strong>Unit tidak dapat dipesan.</strong>{' '}
+                {describeBlockedReason(selectedAvailability)}
+                {selectedAvailability.conflicts.length > 0 && (
+                  <div style={{ marginTop: '6px', fontSize: '11.5px', color: 'var(--banner-danger-fg)' }}>
+                    Bentrok dengan:{' '}
+                    {selectedAvailability.conflicts
+                      .map(c => `${c.rentalCode} (${c.startDate} s.d. ${c.endDate})`)
+                      .join('; ')}
+                  </div>
+                )}
+                <div style={{ marginTop: '6px', fontSize: '11.5px' }}>
+                  Ganti tanggal sewa atau pilih unit lain yang masih tersedia.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {formError && (
+            <div
+              role="alert"
+              style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--bg-red-soft)',
+                border: '1px solid var(--border-red-soft)',
+                color: 'var(--fg-danger-deep)',
+                fontSize: '12.5px',
+              }}
+            >
+              {formError}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+                Tanggal Mulai Sewa
+              </label>
+              <input
+                type="date"
+                required
+                className="input-premium"
+                value={formData.start_date}
+                onChange={(e) => {
+                  setFormData({ ...formData, start_date: e.target.value });
+                  setFormError(null);
+                }}
+                aria-label="Tanggal mulai sewa"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+                Tanggal Selesai Sewa
+              </label>
+              <input
+                type="date"
+                required
+                className="input-premium"
+                value={formData.end_date}
+                onChange={(e) => {
+                  setFormData({ ...formData, end_date: e.target.value });
+                  setFormError(null);
+                }}
+                aria-label="Tanggal selesai sewa"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
+              Catatan Proyek & Lokasi
+            </label>
+            <textarea
+              rows={2}
+              className="input-premium"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              aria-label="Catatan proyek dan lokasi"
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddModalOpen(false);
+                setFormError(null);
+              }}
+              className="btn-secondary"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={!selectedAvailability?.isBookable}
+              title={
+                selectedAvailability?.isBookable
+                  ? 'Terbitkan order sewa'
+                  : 'Pilih unit lain atau ubah periode sewa'
+              }
+              style={
+                selectedAvailability?.isBookable
+                  ? undefined
+                  : { opacity: 0.55, cursor: 'not-allowed' }
+              }
+            >
+              Simpan & Terbitkan Order
+            </button>
+          </div>
+        </form>
+      </Modal>
+      </>
       )}
     </div>
   );
