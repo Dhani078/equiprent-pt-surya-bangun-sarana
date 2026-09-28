@@ -114,3 +114,6 @@
 
 ## Siklus 75 — 2026-09-28
 - Refactor: db.ts 1202 baris -> db/index.ts + store/ (9 berkas, maks 358 baris). Verifikasi tulis-baca TiDB production.
+
+## Siklus 76 — 2026-09-28
+- Refactor: CustomerPortal.tsx -> portal/PortalHeader.tsx (header + 5 tab). Verifikasi UI production 5 tab.
