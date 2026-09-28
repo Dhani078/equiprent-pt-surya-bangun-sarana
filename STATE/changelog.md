@@ -123,3 +123,6 @@
 
 ## Siklus 78 — 2026-09-28
 - Refactor: AdminDashboard.tsx -> dashboard/panels.tsx (2 panel analytics). Verifikasi UI production.
+
+## Siklus 79 — 2026-09-28
+- Refactor: RentalManagement.tsx -> rental/{StatusConfirmModal,AddRentalModal}.tsx. Kedua modal terverifikasi production.
