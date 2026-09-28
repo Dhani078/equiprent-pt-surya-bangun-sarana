@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User, RoleName } from '../types';
-import { LogOut, Shield, Moon, Sun, ChevronDown, Languages } from 'lucide-react';
+import { LogOut, Shield, Moon, Sun, ChevronDown, Languages, Menu } from 'lucide-react';
 import { getUserAvatar } from '../lib/stitchAssets';
 import { useTerjemahan, type Bahasa } from '../lib/i18n';
 import { NotificationCenter } from './NotificationCenter';
@@ -18,6 +18,8 @@ interface NavbarProps {
   notifications?: readonly NotificationItem[];
   /** Dipanggil saat notifikasi diklik, dengan id tab tujuan. */
   onSelectTab?: (tab: string) => void;
+  /** Buka/tutup drawer sidebar di HP (<= 767px). */
+  onToggleSidebar?: () => void;
 }
 
 const STORAGE_KEY = 'sbs-theme';
@@ -41,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   notifications = [],
   onSelectTab,
+  onToggleSidebar,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dark, setDark] = useState(() => initTheme());
@@ -67,7 +70,16 @@ export const Navbar: React.FC<NavbarProps> = ({
       boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
     }}>
       {/* Title / Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+        <button
+          type="button"
+          className="sidebar-hamburger btn-secondary"
+          onClick={onToggleSidebar}
+          aria-label="Buka menu navigasi"
+          style={{ padding: '7px 9px' }}
+        >
+          <Menu size={18} />
+        </button>
         <div style={{
           width: '38px',
           height: '38px',
@@ -83,11 +95,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         }}>
           SBS
         </div>
-        <div>
-          <h1 style={{ fontSize: 'var(--fs-h2)', fontWeight: 800, color: 'var(--color-primary)', margin: 0, lineHeight: 1.2 }}>
+        <div className="navbar-brand-text" style={{ minWidth: 0 }}>
+          <h1 className="navbar-company" style={{ fontSize: 'var(--fs-h2)', fontWeight: 800, color: 'var(--color-primary)', margin: 0, lineHeight: 1.2 }}>
             PT. SURYA BANGUN SARANA BANJARMASIN
           </h1>
-          <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-secondary)', margin: 0 }}>
+          <p className="navbar-subtitle" style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-secondary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Sistem Monitoring &amp; Rental Alat Berat
           </p>
         </div>
@@ -103,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           type="button"
           onClick={() => aturBahasa(bahasa === 'id' ? 'en' : 'id')}
-          className="btn-secondary"
+          className="btn-secondary navbar-lang"
           title={bahasa === 'id' ? 'Switch to English' : 'Beralih ke Bahasa Indonesia'}
           aria-label={bahasa === 'id' ? 'Switch to English' : 'Beralih ke Bahasa Indonesia'}
           style={{ padding: '6px 10px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -122,16 +134,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           style={{ padding: '6px 10px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           {dark ? <Sun size={15} /> : <Moon size={15} />}
-          <span style={{ fontSize: '11.5px', fontWeight: 600 }}>{dark ? 'Terang' : 'Gelap'}</span>
+          <span className="navbar-theme-label" style={{ fontSize: '11.5px', fontWeight: 600 }}>{dark ? 'Terang' : 'Gelap'}</span>
         </button>
 
         {/* Penanda peran aktif — read-only. Penggantian peran adalah pola dev
             (impersonation); di produksi pengguna harus masuk kembali dengan
             akun yang sesuai, jadi tidak ada tombol pindah peran di top bar. */}
         <div
+          className="navbar-role-chip"
           title={`Anda masuk sebagai ${currentUser.role_name}. Keluar lalu masuk kembali untuk berganti peran.`}
           style={{
-            display: 'flex',
             alignItems: 'center',
             gap: 'var(--space-2)',
             background: 'var(--color-surface-hover, var(--bg-subtle))',
@@ -175,7 +187,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 border: '2px solid var(--color-primary)'
               }}
             />
-            <div style={{ textAlign: 'left' }} className="hidden sm:block">
+            <div style={{ textAlign: 'left' }} className="navbar-username">
               <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-strong)', lineHeight: 1.2 }}>
                 {currentUser.full_name}
               </div>

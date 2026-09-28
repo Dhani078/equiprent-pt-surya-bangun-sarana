@@ -78,3 +78,7 @@
 ## Siklus 65 — 2026-09-28
 - Fitur: live-sync cermin browser (interval 30s + refresh saat tab fokus; hemat saat tab tersembunyi).
 - Teruji production dua arah (tambah & hapus unit lintas klien, tanpa reload).
+
+## Siklus 66 — 2026-09-28
+- Responsif HP: drawer sidebar + hamburger, topbar ringkas, main minWidth 0, grid anti-overflow.
+- Sapuan CDP: 0 overflow di semua halaman (admin 9 + customer 6 + login) pada 390px & 1280px.
