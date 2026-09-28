@@ -20,11 +20,9 @@ import {
   Power,
   Radio,
   Clock,
-  Search,
-  Filter,
   AlertTriangle,
-  Gauge,
   RefreshCw,
+  Gauge,
   Layers,
   ShieldAlert,
 } from 'lucide-react';
@@ -45,10 +43,11 @@ import type {
 import {
   DEFAULT_SITE_ZONES,
   detectGeofenceBreaches,
-  formatJarakZona,
   summarizeGeofence,
 } from '../../lib/geofencing';
 import type { GeofenceBreach, SiteZone } from '../../lib/geofencing';
+import { GeofenceAlertBanner } from './gps/GeofenceAlertBanner';
+import { TelemetryFilterPanel } from './gps/TelemetryFilterPanel';
 
 /**
  * Zona site yang dipakai halaman ini.
@@ -308,169 +307,17 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
         />
       </div>
 
-      {/* Banner alert geofencing (T-0060).
-          Hanya tampil saat ada unit di luar semua zona site; daftar lengkap
-          unit beserta jaraknya ditampilkan agar operator bisa langsung
-          menindaklanjuti tanpa membuka panel lain. */}
-      {alertZona.length > 0 && (
-        <div
-          role="alert"
-          aria-label={`${alertZona.length} unit terdeteksi di luar zona site`}
-          className="card-premium animate-fade-in"
-          style={{
-            padding: '14px 16px',
-            borderLeft: '4px solid var(--fg-danger)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <AlertTriangle size={16} color="var(--fg-danger)" />
-            <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--fg-danger-deep)', flex: '1 1 260px' }}>
-              {alertZona.length} unit terdeteksi di luar zona site operasional
-            </span>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                color: 'var(--fg-danger-deep)',
-                backgroundColor: 'var(--bg-red-soft)',
-                padding: '4px 10px',
-                borderRadius: '999px',
-                border: '1px solid var(--border-red-soft)',
-              }}
-            >
-              Pelanggaran terjauh: {formatJarakZona(ringkasanZona.jarakTerjauhMeter)}
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {alertZona.slice(0, 5).map((b) => (
-              <div
-                key={b.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  fontSize: '12px',
-                  color: 'var(--banner-danger-fg)',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <span className="serial-code" style={{ fontWeight: 700, color: 'var(--fg-danger-deep)' }}>
-                  {b.equipmentCode}
-                </span>
-                <span style={{ fontWeight: 600, flex: '1 1 180px' }}>{b.equipmentName}</span>
-                <span>Zona terdekat: <strong>{b.zonaTerdekat}</strong></span>
-                <span style={{ fontWeight: 800 }}>
-                  {formatJarakZona(b.jarakMeter)} di luar batas
-                </span>
-              </div>
-            ))}
-          </div>
-          {alertZona.length > 5 && (
-            <div style={{ fontSize: '11px', color: 'var(--fg-danger-deep)', fontWeight: 600 }}>
-              + {alertZona.length - 5} unit lainnya juga di luar zona.
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* Panel Penyaringan */}
-      <div className="card-premium" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, color: 'var(--color-secondary)', textTransform: 'uppercase' }}>
-          <Filter size={13} />
-          <span>Penyaringan Telemetri</span>
-        </div>
+      {/* Banner alert geofencing (T-0060) — dirender komponen gps/GeofenceAlertBanner. */}
+      <GeofenceAlertBanner breaches={alertZona} summary={ringkasanZona} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-          <div>
-            <label htmlFor="filter-engine" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
-              Status Mesin
-            </label>
-            <select
-              id="filter-engine"
-              className="input-premium"
-              value={filter.engine}
-              onChange={(e) => ubahFilter({ engine: e.target.value as FleetTelemetryFilter['engine'] })}
-              aria-label="Saring berdasarkan status mesin"
-            >
-              <option value="ALL">Semua Status Mesin</option>
-              <option value="ON">Mesin Menyala (ON)</option>
-              <option value="OFF">Mesin Mati (OFF)</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="filter-movement" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
-              Pergerakan Unit
-            </label>
-            <select
-              id="filter-movement"
-              className="input-premium"
-              value={filter.movement}
-              onChange={(e) => ubahFilter({ movement: e.target.value as FleetTelemetryFilter['movement'] })}
-              aria-label="Saring berdasarkan pergerakan unit"
-            >
-              <option value="ALL">Semua Pergerakan</option>
-              <option value="BERGERAK">Sedang Bergerak</option>
-              <option value="DIAM">Tidak Bergerak</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="filter-fuel" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
-              Level Bahan Bakar
-            </label>
-            <select
-              id="filter-fuel"
-              className="input-premium"
-              value={filter.fuel}
-              onChange={(e) => ubahFilter({ fuel: e.target.value as FleetTelemetryFilter['fuel'] })}
-              aria-label="Saring berdasarkan level bahan bakar"
-            >
-              <option value="ALL">Semua Level BBM</option>
-              <option value="KRITIS">BBM Kritis (&lt; 15%)</option>
-              <option value="RENDAH">BBM Rendah (15–24%)</option>
-              <option value="NORMAL">BBM Aman (≥ 25%)</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="filter-search" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
-              Cari Unit
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Search
-                size={14}
-                style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-secondary-light)' }}
-              />
-              <input
-                id="filter-search"
-                type="search"
-                className="input-premium"
-                style={{ paddingLeft: '32px' }}
-                value={filter.search}
-                maxLength={SEARCH_MAX_LENGTH}
-                onChange={(e) => ubahFilter({ search: e.target.value })}
-                placeholder="Kode unit, nama, atau ID"
-                aria-label="Cari unit berdasarkan kode, nama, atau ID"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--color-secondary)' }}>
-          <span>
-            Menampilkan <strong>{rows.length}</strong> unit dari{' '}
-            <strong>{view.rawPointCount}</strong> titik rekam telemetri.
-          </span>
-          <button type="button" onClick={resetFilter} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} aria-label="Reset semua penyaringan telemetri">
-            <RefreshCw size={13} />
-            <span>Reset Filter</span>
-          </button>
-        </div>
-      </div>
+      <TelemetryFilterPanel
+        filter={filter}
+        onChange={ubahFilter}
+        onReset={resetFilter}
+        rowCount={rows.length}
+        rawPointCount={view.rawPointCount}
+      />
 
       {/* Main Grid: Telemetry Sidebar & Leaflet Map */}
       <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '20px' }}>

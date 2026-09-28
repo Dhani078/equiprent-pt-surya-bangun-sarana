@@ -135,3 +135,6 @@
 
 ## Siklus 82 — 2026-09-28
 - Refactor: customerPortal.ts -> paket src/lib/portal/ (6 modul + barrel). Portal terverifikasi production.
+
+## Siklus 83 — 2026-09-28
+- Refactor: GpsTrackingPage.tsx -> gps/{GeofenceAlertBanner,TelemetryFilterPanel}.tsx. Terverifikasi production.
