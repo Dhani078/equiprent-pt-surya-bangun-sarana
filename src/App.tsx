@@ -8,6 +8,10 @@ import {
   berlanggananKoneksi, bacaKoneksi, tandaiOffline, tandaiOnline,
   type InfoKoneksi,
 } from './lib/connectionState';
+import { flushAntreanOffline } from './lib/db';
+import {
+  berlanggananAntrean, jumlahAntrean, type AntreanMutasi,
+} from './lib/offlineQueue';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import type { SidebarBadges } from './components/Sidebar';
@@ -167,18 +171,42 @@ export const App: React.FC = () => {
     };
   }, [currentUser?.id]);
 
+  /* Siklus 70: jumlah mutasi tertahan di antrean offline (badge banner). */
+  const [jumlahAntre, setJumlahAntre] = useState<number>(() => jumlahAntrean());
   useEffect(() => {
     const lepas = berlanggananKoneksi(() => setKoneksi(bacaKoneksi()));
+    const lepas2 = berlanggananAntrean(() => setJumlahAntre(jumlahAntrean()));
     const saatOffline = () =>
       tandaiOffline('Perangkat tidak terhubung internet - perubahan menunggu jaringan pulih.');
     const saatOnline = () => {
-      // Pulih: segarkan cermin; fetchCollection menandai ONLINE bila server menjawab.
-      void sinkronCermin().catch(() => {});
+      /* Pulih: kirim ulang antrean FIFO dulu (baru cermin) agar perubahan
+         tertahan tidak tertimpa data server yang lebih baru. */
+      void flushAntreanOffline()
+        .then(({ terkirim, ditolak }) => {
+          if (terkirim > 0) {
+            notify(`${terkirim} perubahan tertahan terkirim ke server.`, 'success');
+          }
+          if (ditolak.length > 0) {
+            notify(
+              `${ditolak.length} perubahan tertahan ditolak server & dibuang: ${ditolak[0]}`,
+              'error'
+            );
+          }
+          void sinkronCermin().catch(() => {});
+        })
+        .catch(() => {});
     };
     window.addEventListener('offline', saatOffline);
     window.addEventListener('online', saatOnline);
+    /* Jaga-jala: beberapa browser tidak event 'online' bila tab tersembunyi;
+       cek berkala saat antrean menumpuk. */
+    const idPemeriksa = window.setInterval(() => {
+      if (jumlahAntrean() > 0 && navigator.onLine) saatOnline();
+    }, 20_000);
     return () => {
       lepas();
+      lepas2();
+      window.clearInterval(idPemeriksa);
       window.removeEventListener('offline', saatOffline);
       window.removeEventListener('online', saatOnline);
     };
@@ -378,6 +406,21 @@ export const App: React.FC = () => {
             <line x1="12" y1="20" x2="12.01" y2="20" />
           </svg>
           <span>{koneksi.pesan}</span>
+          {jumlahAntre > 0 && (
+            <span
+              style={{
+                marginLeft: 'auto',
+                background: 'rgba(217, 119, 6, 0.18)',
+                border: '1px solid rgba(217, 119, 6, 0.4)',
+                borderRadius: '999px',
+                padding: '2px 10px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+              }}
+            >
+              {jumlahAntre} perubahan tertahan
+            </span>
+          )}
         </div>
       )}
 
