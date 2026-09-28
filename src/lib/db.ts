@@ -2,6 +2,7 @@ import { connect } from '@tidbcloud/serverless';
 import { RoleName, User, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from '../types';
 import { hashPassword, isDemoAccount, isStoredPasswordHash, SESSION_HEADER, verifyPassword } from './auth';
 import { headerSesi } from './authClient';
+import { tambahAntrean, bacaAntrean, buangAntreanKe, type AntreanMutasi } from './offlineQueue';
 import { getTransitionEffect } from './rentalWorkflow';
 import { setLatePenaltyPerDay } from './businessRules';
 import { canChangePaymentStatus, summarizeRentalPayment } from './paymentWorkflow';
@@ -221,17 +222,37 @@ export async function loginApi(username: string, password: string): Promise<Logi
  * dulu oleh pemanggil, jadi pemanggil WAJIB memanggil ini sebelum menaruh
  * hasil ke UI/refresh (urutan: tulis DB -> cermin memori -> render).
  */
+/** Galat tingkat jaringan (fetch melempar TypeError) — bukan tolakan server. */
+function galatJaringan(e: unknown): boolean {
+  return e instanceof TypeError || /Failed to fetch|NetworkError|Load failed/i.test(String(e));
+}
+
 async function kirimKeApi(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<unknown> {
   if (typeof window === 'undefined') return null; // sisi Worker: wt() sudah menulis
-  const res = await fetch(path, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...headerSesi(tokenBridge ? { [SESSION_HEADER]: tokenBridge } : {}),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...headerSesi(tokenBridge ? { [SESSION_HEADER]: tokenBridge } : {}),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (e) {
+    /* Siklus 70: jaringan putus -> simpan di antrean FIFO localStorage,
+       kirim ulang otomatis saat pulih (flushAntreanOffline). Urutan antar
+       mutasi terjaga karena antrean diproses berurutan dari kepala. */
+    if (galatJaringan(e) && typeof localStorage !== 'undefined') {
+      const masuk = tambahAntrean({ method, path, body, dibuatAt: Date.now() });
+      if (masuk) {
+        throw new Error('Jaringan putus — perubahan dimasukkan antrean dan akan terkirim otomatis saat pulih.');
+      }
+      throw new Error('Jaringan putus dan antrean offline penuh — perubahan tidak tersimpan.');
+    }
+    throw e;
+  }
   const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
   if (!res.ok) {
     const err = (json as { error?: { message?: string } } | null)?.error?.message;
@@ -259,6 +280,38 @@ async function lewatJembatan<T>(
   const { sinkronCermin } = await import('./fetchCollection');
   await sinkronCermin();
   return item as T;
+}
+
+/**
+ * Kirim ulang antrean offline secara FIFO (siklus 70). Dipanggil saat
+ * koneksi pulih. Sukses -> buang item; tolakan server (4xx/5xx terukur,
+ * mis. kode ganda/RBAC) -> buang + kumpulkan pesannya (mutasi kedaluwarsa
+ * untuk kondisi sekarang); jaringan masih putus -> stop, sisanya menunggu.
+ */
+export async function flushAntreanOffline(): Promise<{ terkirim: number; ditolak: string[] }> {
+  const terkirimList: number[] = [];
+  const ditolak: string[] = [];
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const antrean = bacaAntrean() as AntreanMutasi[];
+    if (antrean.length === 0) break;
+    const m = antrean[0];
+    try {
+      await kirimKeApi(m.method, m.path, m.body);
+      terkirimList.push(1);
+      buangAntreanKe(0);
+    } catch (e) {
+      if (galatJaringan(e)) break; // masih offline: simpan sisanya
+      // Server menolak secara definitif -> buang agar tidak memblokir antrean.
+      ditolak.push(String((e as Error).message || e));
+      buangAntreanKe(0);
+    }
+  }
+  if (terkirimList.length > 0) {
+    const { sinkronCermin } = await import('./fetchCollection');
+    await sinkronCermin();
+  }
+  return { terkirim: terkirimList.length, ditolak };
 }
 
 // CRUD Helpers

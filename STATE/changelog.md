@@ -92,3 +92,6 @@
 
 ## Siklus 69 — 2026-09-28
 - Fitur: banner peringatan offline (Worker tak terjangkau / perangkat putus), pulih otomatis.
+
+## Siklus 70 — 2026-09-28
+- Fitur: antrean mutasi offline FIFO + flush otomatis saat pulih + badge tertahan.
