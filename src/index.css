@@ -550,6 +550,15 @@ table.data-table tbody tr:hover {
   .navbar-subtitle { display: none; }
   .navbar-lang, .navbar-theme-label, .navbar-username, .navbar-role-chip { display: none; }
   main { padding: 14px !important; }
+  /* Lantai sentuh 44px (pedoman Apple HIG / Material) — hanya di HP; di PC
+     target kecil tetap nyaman dengan pointer. */
+  header button,
+  main button,
+  [role="dialog"] button,
+  .app-sidebar nav button {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 @media print {
