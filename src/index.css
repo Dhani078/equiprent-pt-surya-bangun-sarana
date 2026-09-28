@@ -450,6 +450,18 @@ table.data-table th {
   border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
 }
+
+/* Tabel analitik laporan: kolom banyak — padding dirapatkan agar muat
+   di lebar konten tanpa menggulir horizontal (temuan audit siklus 62:
+   overflow 15px pada 1280px). */
+.table-analytics table.data-table th,
+.table-analytics table.data-table td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.table-analytics table.data-table td:last-child {
+  padding-right: 14px;
+}
 table.data-table td {
   padding: 14px 16px;
   border-bottom: 1px solid var(--color-border);
