@@ -82,3 +82,7 @@
 ## Siklus 66 — 2026-09-28
 - Responsif HP: drawer sidebar + hamburger, topbar ringkas, main minWidth 0, grid anti-overflow.
 - Sapuan CDP: 0 overflow di semua halaman (admin 9 + customer 6 + login) pada 390px & 1280px.
+
+## Siklus 67 — 2026-09-28
+- Aksesibilitas sentuh HP: lantai target 44px (header/main/dialog/sidebar) di <=767px.
+- Audit 360/320px: 0 target kecil, 0 overflow, dialog form muat; 3 role.
