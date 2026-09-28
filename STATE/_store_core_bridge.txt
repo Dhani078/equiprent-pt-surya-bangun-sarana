@@ -1,0 +1,181 @@
+// ---------------------------------------------------------------------------
+// Jembatan browser -> Edge API (penyimpanan TERPUSAT, bukan memori tab)
+// ---------------------------------------------------------------------------
+// stateStore di browser hanyalah cermin tampilan; setiap mutasi DIJEMBAT ke
+// Worker (yang sudah write-through ke TiDB). Tanpa ini, dua tab/browser beda
+// tidak pernah saling melihat data, dan reload mengembalikan seed.
+// Mode dev tanpa Worker (404/500 jaringan) -> lempar; pemanggil memutuskan
+// fallback. Mode demo murni (tanpa DATABASE_URL di Worker) tetap jalan karena
+// wt() no-op di sisi Worker.
+
+let tokenBridge: string | null = null;
+
+/** Login ulang senyap ke Edge API; mengembalikan token sesi (atau null). */
+export type LoginUserApi = {
+  id: number; username: string; full_name: string; role: string;
+  role_id: number; email: string; company_name: string | null;
+};
+
+export type LoginHasil =
+  | { ok: true; token: string; user: LoginUserApi }
+  | { ok: false; offline: true }
+  | { ok: false; offline?: undefined; message: string };
+
+/**
+ * Login ke Edge API. Membedakan tiga nasib: token diterima, server menolak
+ * (pesan dari Worker diteruskan), atau Worker tidak terjangkau (dev murni ->
+ * pemanggil boleh memakai verifikasi lokal).
+ */
+export async function loginApi(username: string, password: string): Promise<LoginHasil> {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const body = (await res.json().catch(() => null)) as
+      { token?: string; user?: LoginUserApi; error?: { message?: string } } | null;
+    if (res.ok && body?.token && body.user) return { ok: true, token: body.token, user: body.user };
+    if (res.status >= 400 && res.status < 500 && body?.error?.message) {
+      return { ok: false, message: body.error.message };
+    }
+    return { ok: false, offline: true };
+  } catch {
+    return { ok: false, offline: true };
+  }
+}
+
+/**
+ * Teruskan mutasi stateStore ke Worker. `path` endpoint, `method` HTTP,
+ * `body` payload. Melempar saat Worker menolak — stateStore sudah diubah lebih
+ * dulu oleh pemanggil, jadi pemanggil WAJIB memanggil ini sebelum menaruh
+ * hasil ke UI/refresh (urutan: tulis DB -> cermin memori -> render).
+ */
+/** Galat tingkat jaringan (fetch melempar TypeError) — bukan tolakan server. */
+function galatJaringan(e: unknown): boolean {
+  return e instanceof TypeError || /Failed to fetch|NetworkError|Load failed/i.test(String(e));
+}
+
+/** Sedang memproses flush antrean? (menahan re-antre saat kirim ulang gagal) */
+let sedangFlush = false;
+
+async function kirimKeApi(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<unknown> {
+  if (typeof window === 'undefined') return null; // sisi Worker: wt() sudah menulis
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...headerSesi(tokenBridge ? { [SESSION_HEADER]: tokenBridge } : {}),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (e) {
+    /* Siklus 70: jaringan putus -> simpan di antrean FIFO localStorage,
+       kirim ulang otomatis saat pulih (flushAntreanOffline). Urutan antar
+       mutasi terjaga karena antrean diproses berurutan dari kepala.
+       `sedangFlush` = flush yang mencoba kirim ulang: JANGAN meng-antre
+       ulang item yang sama (menyebabkan loop tanpa akhir di flush). */
+    if (galatJaringan(e) && !sedangFlush && typeof localStorage !== 'undefined') {
+      const masuk = tambahAntrean({ method, path, body, dibuatAt: Date.now() });
+      if (masuk) {
+        throw new Error('Jaringan putus — perubahan dimasukkan antrean dan akan terkirim otomatis saat pulih.');
+      }
+      throw new Error('Jaringan putus dan antrean offline penuh — perubahan tidak tersimpan.');
+    }
+    throw e;
+  }
+  const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!res.ok) {
+    const err = (json as { error?: { message?: string } } | null)?.error?.message;
+    throw new Error(err || `Gagal menyimpan ke server (HTTP ${res.status}).`);
+  }
+  return json?.item ?? json?.data ?? json;
+}
+
+/** Token sesi untuk jembatan API — diisi App setelah login. */
+export const setApiBridgeToken = (token: string | null): void => {
+  tokenBridge = token;
+};
+
+/**
+ * Guard jembatan: browser tidak lagi menulis stateStore/wt() sendiri —
+ * mutasi dilempar ke Worker (write-through TiDB), lalu cermin disegarkan.
+ * `paths` koleksi yang disalin ulang dari server setelah sukses.
+ */
+async function lewatJembatan<T>(
+  method: 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body?: unknown
+): Promise<T> {
+  const item = await kirimKeApi(method, path, body);
+  const { sinkronCermin } = await import('./fetchCollection');
+  await sinkronCermin();
+  return item as T;
+}
+
+/**
+ * Kirim ulang antrean offline secara FIFO (siklus 70). Dipanggil saat
+ * koneksi pulih. Sukses -> buang item; tolakan server (4xx/5xx terukur,
+ * mis. kode ganda/RBAC) -> buang + kumpulkan pesannya (mutasi kedaluwarsa
+ * untuk kondisi sekarang); jaringan masih putus -> stop, sisanya menunggu.
+ */
+export async function flushAntreanOffline(): Promise<{ terkirim: number; ditolak: string[] }> {
+  const terkirimList: number[] = [];
+  const ditolak: string[] = [];
+  sedangFlush = true;
+  try {
+    while (true) {
+      const antrean = bacaAntrean() as AntreanMutasi[];
+      if (antrean.length === 0) break;
+      const m = antrean[0];
+      try {
+        await kirimKeApi(m.method, m.path, m.body);
+        terkirimList.push(1);
+        buangAntreanKe(0);
+      } catch (e) {
+        if (galatJaringan(e)) break; // masih offline: simpan sisanya
+        // Server menolak secara definitif -> buang agar tidak memblokir antrean.
+        ditolak.push(String((e as Error).message || e));
+        buangAntreanKe(0);
+      }
+    }
+  } finally {
+    sedangFlush = false;
+  }
+  if (terkirimList.length > 0) {
+    const { sinkronCermin } = await import('./fetchCollection');
+    await sinkronCermin();
+  }
+  return { terkirim: terkirimList.length, ditolak };
+}
+
+// CRUD Helpers
+/** Kode + baris tagihan (UNPAID) untuk kontrak yang baru terbit. */
+function buatTagihanKontrak(
+  existing: ReadonlyArray<Payment>,
+  contract: Contract,
+  amount: number
+): Payment {
+  const tgl = new Date();
+  const ymd = tgl.toISOString().slice(0, 10).replace(/-/g, '');
+  const pref = `PAY-SBS-${ymd}-`;
+  const urut = existing.filter((p) => p.payment_code.startsWith(pref)).length + 1;
+  return {
+    id: nextId(existing),
+    payment_code: `${pref}${String(urut).padStart(3, '0')}`,
+    contract_id: contract.id,
+    contract_code: contract.contract_code,
+    customer_id: contract.customer_id,
+    customer_name: contract.customer_name,
+    amount,
+    payment_method: 'Belum dibayar',
+    status: 'UNPAID',
+    payment_date: tgl.toISOString().replace('T', ' ').slice(0, 19),
+  };
+}
+
+// ponytail: tagihan tunggal per kontrak. Naikkan ke multi-invoice (DP +
+// pelunasan + penalti) saat kebutuhan faktur parsial masuk backlog produk.

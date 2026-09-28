@@ -1,0 +1,33 @@
+
+/**
+ * Muat Cermin TiDB ke stateStore, sekali per isolate. Dipanggil middleware
+ * sebelum route apa pun menyentuh data. Mode demo (tanpa DATABASE_URL) tidak
+ * pernah masuk fungsi ini.
+ */
+/** Batas umur cermin per isolate (detik) — lihat komentar fungsi. */
+const UMUR_CERMIN = 5;
+let cerminPada = 0;
+
+/**
+ * Muat Cermin TiDB ke stateStore. Dipanggil middleware sebelum route mana pun
+ * menyentuh data. Cloudflare bisa punya BANYAK isolate hidup serentak: tanpa
+ * TTL, isolate warm yang tidak kena cold-start lagi melayani salinan basi
+ * (temuan E2E siklus 61 — unit yang baru ditulis isolat lain tak terlihat).
+ * Revalidasi maksimal tiap `UMUR_CERMIN` detik; tulis-tembus isolate ini
+ * sendiri sudah mutakhir, 9 SELECT cheap < 1 RTT extra. Mode demo no-op.
+ */
+export async function hydrasiDariTiDB(): Promise<void> {
+  if (!tidbClient) return;
+  const sekarang = Date.now();
+  if (hidrasiDimuat && sekarang - cerminPada < UMUR_CERMIN * 1000) return;
+  try {
+    await jalankanHidrasi();
+    hidrasiDimuat = true;
+    cerminPada = sekarang;
+  } catch (err) {
+    // Gagal hidrasi: biarkan seed demo melayani (jujur via getDataMode?
+    // mode pelaporan tetap TIDB karena tulis-tembus juga gagal dan meledak
+    // sendiri) — cukup catat di log Worker.
+    console.error('[persist] hidrasi TiDB gagal; state tetap seed demo:', err);
+  }
+}

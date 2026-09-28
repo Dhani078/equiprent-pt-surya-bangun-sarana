@@ -1,0 +1,610 @@
+export const db = {
+  // Users
+  getUsers: async () => stateStore.users,
+  getUserById: async (id: number) => stateStore.users.find(u => u.id === id),
+  getUserByUsername: async (username: string) => stateStore.users.find(u => u.username.toLowerCase() === username.toLowerCase()),
+
+  /**
+   * Memverifikasi kredensial login: username + password + status akun.
+   * Password di-hash dengan PBKDF2 (lihat src/lib/auth.ts).
+   *
+   * PERBAIKAN KEAMANAN: versi sebelumnya memanggil
+   * `verifyPassword(password, '', user.username)` sehingga `password_hash`
+   * milik pengguna SELALU diabaikan — hanya akun demo yang bisa login, dan
+   * pengguna sungguhan tidak pernah bisa masuk walau password benar.
+   * Sekarang hash tersimpan yang dipakai; jalur akun demo hanya berlaku bila
+   * akun belum punya hash DAN mode demo diizinkan.
+   */
+  verifyCredentials: async (
+    username: string,
+    password: string,
+    options: { allowDemoAccounts?: boolean } = {}
+  ): Promise<AuthCheck> => {
+    const user = stateStore.users.find(
+      u => u.username.toLowerCase() === username.trim().toLowerCase()
+    );
+    if (!user) return { ok: false, reason: 'NOT_FOUND' };
+
+    // Akun yang disuspend tidak boleh login meski password benar.
+    if (user.status === 'SUSPENDED') return { ok: false, reason: 'SUSPENDED' };
+
+    const allowDemoAccounts = options.allowDemoAccounts !== false;
+    const storedHash = isStoredPasswordHash(user.password_hash) ? user.password_hash : '';
+
+    // Akun tanpa hash & bukan akun demo yang diizinkan → belum bisa login.
+    if (!storedHash && !(allowDemoAccounts && isDemoAccount(user.username))) {
+      return { ok: false, reason: 'NO_PASSWORD_SET' };
+    }
+
+    const passwordOk = await verifyPassword(password, storedHash, user.username, {
+      allowDemoAccounts,
+    });
+    if (!passwordOk) return { ok: false, reason: 'BAD_PASSWORD' };
+
+    return { ok: true, user };
+  },
+
+  /**
+   * Menyetel (atau mengganti) password pengguna.
+   *
+   * Dipakai admin saat menerbitkan akun baru — `addUser()` sengaja tidak
+   * menyimpan password, sehingga akun baru tidak bisa login sampai
+   * passwordnya disetel lewat jalur ini.
+   */
+  /**
+   * Ganti password diri sendiri lewat Edge API — tersedia untuk SEMUA role
+   * (`/api/auth/change-password`), unlike /api/users/:id/password yang
+   * wewenang Admin. Password lama wajib dibuktikan server.
+   */
+  changeOwnPassword: async (oldPassword: string, newPassword: string): Promise<void> => {
+    await kirimKeApi('POST', '/api/auth/change-password', { oldPassword, newPassword });
+  },
+  setUserPassword: async (id: number, password: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('POST', `/api/users/${id}/password`, { password });
+    }
+    const user = stateStore.users.find(u => u.id === id);
+    if (!user) return undefined;
+
+    const hash = await hashPassword(password, user.username);
+    await wt('UPDATE `users` SET `password` = ? WHERE `id` = ?', [hash, id], 'setUserPassword');
+    user.password_hash = hash;
+    return user;
+  },
+  addUser: async (user: Omit<User, 'id'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('POST', '/api/users', user);
+    }
+    const newUser: User = { ...user, id: nextId(stateStore.users) };
+    await wt(
+      'INSERT INTO `users` (`id`, `role_id`, `username`, `password`, `email`, `full_name`, `phone`, `address`, `company_name`, `status`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newUser.id, newUser.role_id, newUser.username, null, newUser.email, newUser.full_name, newUser.phone, newUser.address, newUser.company_name, newUser.status],
+      'addUser'
+    );
+    stateStore.users.push(newUser);
+    return newUser;
+  },
+  /**
+   * Memperbarui data profil pengguna.
+   *
+   * Field sensitif (`id`, `username`, `role_id`, `role_name`, `status`,
+   * `password_hash`) sengaja diabaikan agar halaman "Pengaturan Akun" tidak
+   * bisa dipakai untuk menaikkan hak akses sendiri.
+   */
+  updateUser: async (id: number, data: Partial<User>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('PUT', `/api/users/${id}`, data);
+    }
+    const user = stateStore.users.find(u => u.id === id);
+    if (!user) return undefined;
+
+    const aman: Partial<User> = {};
+    if (typeof data.full_name === 'string') aman.full_name = data.full_name;
+    if (typeof data.email === 'string') aman.email = data.email;
+    if (typeof data.phone === 'string') aman.phone = data.phone;
+    if (typeof data.address === 'string') aman.address = data.address;
+    if (data.company_name === null || typeof data.company_name === 'string') {
+      aman.company_name = data.company_name;
+    }
+
+    const gabungan = { ...user, ...aman };
+    await wt(
+      'UPDATE `users` SET `email` = ?, `full_name` = ?, `phone` = ?, `address` = ?, `company_name` = ? WHERE `id` = ?',
+      [gabungan.email, gabungan.full_name, gabungan.phone, gabungan.address, gabungan.company_name, id],
+      'updateUser'
+    );
+    Object.assign(user, aman);
+    return user;
+  },
+
+  toggleUserStatus: async (id: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<User>('POST', `/api/users/${id}/toggle`);
+    }
+    const u = stateStore.users.find(x => x.id === id);
+    if (u) {
+      const baru = u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+      await wt('UPDATE `users` SET `status` = ? WHERE `id` = ?', [baru, id], 'toggleUserStatus');
+      u.status = baru;
+    }
+    return u;
+  },
+
+  // Equipments
+  getEquipments: async () => stateStore.equipments,
+  getEquipmentById: async (id: number) => stateStore.equipments.find(e => e.id === id),
+  addEquipment: async (eq: Omit<Equipment, 'id'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Equipment>('POST', '/api/equipments', eq);
+    }
+    const newEq: Equipment = { ...eq, id: nextId(stateStore.equipments) };
+    await wt(
+      'INSERT INTO `equipments` (`id`, `equipment_code`, `name`, `type`, `model`, `brand`, `hour_meter`, `rental_price_per_day`, `status`, `last_maintenance_date`, `thumbnail_url`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newEq.id, newEq.equipment_code, newEq.name, newEq.type, newEq.model, newEq.brand, newEq.hour_meter, newEq.rental_price_per_day, newEq.status, newEq.last_maintenance_date, newEq.thumbnail_url ?? null],
+      'addEquipment'
+    );
+    stateStore.equipments.unshift(newEq);
+    return newEq;
+  },
+  updateEquipment: async (id: number, data: Partial<Equipment>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Equipment>('PUT', `/api/equipments/${id}`, data);
+    }
+    const eq = stateStore.equipments.find(e => e.id === id);
+    if (eq) {
+      const gabungan = { ...eq, ...data };
+      await wt(
+        'UPDATE `equipments` SET `name` = ?, `type` = ?, `model` = ?, `brand` = ?, `hour_meter` = ?, `rental_price_per_day` = ?, `status` = ?, `last_maintenance_date` = ?, `thumbnail_url` = ? WHERE `id` = ?',
+        [gabungan.name, gabungan.type, gabungan.model, gabungan.brand, gabungan.hour_meter, gabungan.rental_price_per_day, gabungan.status, gabungan.last_maintenance_date, gabungan.thumbnail_url ?? null, id],
+        'updateEquipment'
+      );
+      Object.assign(eq, data);
+    }
+    return eq;
+  },
+  deleteEquipment: async (id: number) => {
+    // REFERENTIAL INTEGRITY: unit yang pernah dipakai dalam transaksi sewa
+    // tidak boleh dihapus secara fisik — rental, kontrak, pembayaran, dan
+    // laporan menunjuk ke equipment_id ini; menghapusnya membuat baris-baris
+    // itu kehilangan referensi (nama/kode unit hilang dari riwayat & cetakan).
+    // Lapisan API sudah memblokir unit dalam sewa AKTIF; ini menjaga
+    // RIWAYAT (COMPLETED/REJECTED) yang sah ada.
+    if (typeof window !== 'undefined') {
+      await lewatJembatan('DELETE', `/api/equipments/${id}`);
+      return true;
+    }
+    const punyaRiwayat = stateStore.rentals.some((r) => r.equipment_id === id);
+    if (punyaRiwayat) return false;
+
+    const idx = stateStore.equipments.findIndex(e => e.id === id);
+    if (idx !== -1) {
+      await wt('DELETE FROM `equipments` WHERE `id` = ?', [id], 'deleteEquipment');
+      stateStore.equipments.splice(idx, 1);
+      return true;
+    }
+    return false;
+  },
+
+  // Rentals
+  getRentals: async () => stateStore.rentals,
+  addRental: async (rental: Omit<Rental, 'id' | 'rental_code'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Rental>('POST', '/api/rentals', rental);
+    }
+    const id = nextId(stateStore.rentals);
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const code = `RNT-SBS-${dateStr}-${String(id).padStart(3, '0')}`;
+    const newRental: Rental = {
+      ...rental,
+      id,
+      rental_code: code,
+      booking_date: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      status: 'PENDING'
+    };
+    await wt(
+      'INSERT INTO `rentals` (`id`, `rental_code`, `customer_id`, `equipment_id`, `booking_date`, `start_date`, `end_date`, `total_days`, `subtotal`, `status`, `notes`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newRental.id, newRental.rental_code, newRental.customer_id, newRental.equipment_id, newRental.booking_date, newRental.start_date, newRental.end_date, newRental.total_days, newRental.subtotal, newRental.status, newRental.notes ?? null],
+      'addRental'
+    );
+    stateStore.rentals.unshift(newRental);
+    return newRental;
+  },
+  /**
+   * Mengubah status rental sekaligus menjaga konsistensi status unit terkait.
+   *
+   * ATURAN BISNIS (satu sumber kebenaran: `src/lib/rentalWorkflow.ts`):
+   * - ON_GOING   → unit dikunci menjadi RENTED (sedang di tangan pelanggan)
+   * - COMPLETED  → unit dibebaskan menjadi AVAILABLE
+   * - REJECTED   → unit dibebaskan menjadi AVAILABLE
+   * - APPROVED   → unit BELUM dikunci (sewa bisa disetujui jauh hari sebelum
+   *                mobilisasi; mengunci di sini membuat unit tidak bisa
+   *                dipesan untuk periode lain yang sebenarnya sah)
+   *
+   * Unit hanya dibebaskan bila tidak sedang beroperasi di rental lain.
+   */
+  updateRentalStatus: async (
+    id: number,
+    status: Rental['status'],
+    options: { overrideUnpaid?: boolean } = {}
+  ) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Rental>('PUT', `/api/rentals/${id}/status`, {
+        status,
+        overrideUnpaid: options.overrideUnpaid ?? false,
+      });
+    }
+    const r = stateStore.rentals.find(x => x.id === id);
+    if (!r) return undefined;
+
+    // GERBANG PEMBAYARAN (§4.3 poin 4): sewa hanya boleh BEROPERASI
+    // (ON_GOING) bila tagihannya sudah terverifikasi lunas.
+    // `overrideUnpaid` adalah wewenang ADMIN dan diteruskan apa adanya
+    // dari lapisan API — bukan sesuatu yang bisa diminta klien sembarangan.
+    if (status === 'ON_GOING' && !options.overrideUnpaid) {
+      const kontrakIds = stateStore.contracts
+        .filter(c => c.rental_id === r.id)
+        .map(c => c.id);
+      const statusBayar = summarizeRentalPayment(stateStore.payments, kontrakIds);
+
+      if (statusBayar !== 'PAID') {
+        throw new Error('TAGIHAN_BELUM_LUNAS');
+      }
+    }
+
+    await wt('UPDATE `rentals` SET `status` = ? WHERE `id` = ?', [status, id], 'updateRentalStatus');
+    r.status = status;
+
+    const dampak = getTransitionEffect(status);
+
+    if (dampak.equipmentStatus === 'RENTED') {
+      const eq = stateStore.equipments.find(e => e.id === r.equipment_id);
+      if (eq) {
+        await wt('UPDATE `equipments` SET `status` = ? WHERE `id` = ?', ['RENTED', eq.id], 'rentalKunciUnit');
+        eq.status = 'RENTED';
+      }
+    } else if (dampak.equipmentStatus === 'AVAILABLE') {
+      // Unit hanya dibebaskan bila tidak ada rental lain yang sedang
+      // beroperasi (ON_GOING) memakai unit yang sama.
+      const masihBeroperasi = stateStore.rentals.some(
+        other =>
+          other.id !== r.id &&
+          other.equipment_id === r.equipment_id &&
+          other.status === 'ON_GOING'
+      );
+      if (!masihBeroperasi) {
+        const eq = stateStore.equipments.find(e => e.id === r.equipment_id);
+        if (eq) {
+          await wt('UPDATE `equipments` SET `status` = ? WHERE `id` = ?', ['AVAILABLE', eq.id], 'rentalBebaskanUnit');
+          eq.status = 'AVAILABLE';
+        }
+      }
+    }
+
+    return r;
+  },
+
+  // Contracts
+  getContracts: async () => stateStore.contracts,
+
+  /**
+   * Menerbitkan kontrak baru untuk sebuah transaksi sewa.
+   *
+   * Kode kontrak disusun oleh `generateContractCode()` (satu-satunya
+   * tempat aturan penomoran `SBS/CONTRACT/<YYYY>/<MM>/<SEQ>` hidup) agar
+   * nomor yang tercetak di dokumen selalu identik dengan yang tersimpan.
+   */
+  createContract: async (rentalId: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Contract>('POST', '/api/contracts', { rentalId });
+    }
+    const rental = stateStore.rentals.find(r => r.id === rentalId);
+    if (!rental) return undefined;
+
+    // Satu kontrak per transaksi: menerbitkan ulang akan mengacaukan
+    // rujukan pembayaran yang sudah terlanjur menunjuk kontrak lama.
+    const existing = stateStore.contracts.find(c => c.rental_id === rentalId);
+    if (existing) {
+      throw new Error('KONTRAK_SUDAH_ADA');
+    }
+
+    const now = new Date();
+    const contractDate = now.toISOString().slice(0, 10);
+    const validUntil = rental.end_date;
+
+    const id = nextId(stateStore.contracts);
+    const contract: Contract = {
+      id,
+      contract_code: generateContractCode(stateStore.contracts, contractDate),
+      rental_id: rental.id,
+      rental_code: rental.rental_code,
+      customer_id: rental.customer_id,
+      customer_name: rental.customer_name,
+      contract_date: contractDate,
+      valid_until: validUntil,
+      // Syarat & ketentuan baku diambil dari modul kontrak, bukan
+      // ditulis ulang di sini, agar dokumen & pratinjau tidak menyimpang.
+      terms_conditions: buildContractTermsText(),
+      is_signed_customer: 0,
+      signed_at: null,
+      signer_name: null,
+      signature_data_url: null,
+    };
+
+    await wt(
+      'INSERT INTO `contracts` (`id`, `contract_code`, `rental_id`, `customer_id`, `contract_date`, `valid_until`, `terms_conditions`, `is_signed_customer`) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+      [contract.id, contract.contract_code, contract.rental_id, contract.customer_id, contract.contract_date, contract.valid_until, contract.terms_conditions],
+      'createContract'
+    );
+    stateStore.contracts.push(contract);
+
+    // Tagihan resmi dibuat SEKALIGUS dengan penerbitan kontrak. Tanpa ini
+    // kontrak baru tidak pernah punya payment -> tab Pembayaran pelanggan
+    // kosong dan alur verifikasi staf mustahil (temuan E2E siklus 61).
+    const eq = stateStore.equipments.find(x => x.id === (rental as { equipment_id?: number }).equipment_id);
+    const hari = Math.max(1, Math.round(
+      (new Date(rental.end_date).getTime() - new Date(rental.start_date).getTime()) / 86_400_000
+    ) + 1);
+    const tarif = eq?.rental_price_per_day ?? 0;
+    const tagihan = buatTagihanKontrak(stateStore.payments, contract, hari * tarif);
+    await wt(
+      'INSERT INTO `payments` (`id`, `payment_code`, `contract_id`, `customer_id`, `amount`, `payment_method`, `status`) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [tagihan.id, tagihan.payment_code, tagihan.contract_id, tagihan.customer_id, tagihan.amount, tagihan.payment_method, tagihan.status],
+      'createContract:tagihan'
+    );
+    stateStore.payments.push(tagihan);
+    return contract;
+  },
+
+  /**
+   * Memperpanjang masa berlaku kontrak yang sudah lewat batasnya.
+   *
+   * Hanya mengubah `valid_until` — kode kontrak, penandatanganan, dan
+   * tagihan yang sudah ada tetap utuh, sehingga riwayat keuangan tidak
+   * berubah hanya karena masa sewa diperpanjang.
+   */
+  perpanjangKontrak: async (contractId: number, validUntil: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Contract>('POST', `/api/contracts/${contractId}/renew`, { validUntil });
+    }
+    const c = stateStore.contracts.find(x => x.id === contractId);
+    if (!c) return undefined;
+
+    // Kontrak yang sudah ditandatangani tidak diperpanjang diam-diam:
+    // tanggal di dokumen yang beredar harus selalu sama dengan yang tersimpan.
+    if (c.is_signed_customer === 1) {
+      throw new Error('KONTRAK_SUDAH_DITANDATANGANI');
+    }
+
+    await wt(
+      'UPDATE `contracts` SET `valid_until` = ? WHERE `id` = ?',
+      [validUntil, contractId],
+      'perpanjangKontrak'
+    );
+    c.valid_until = validUntil;
+    return c;
+  },
+
+  /**
+   * Membubuhkan tanda tangan elektronik pada kontrak.
+   *
+   * `signerName` & `signature` sudah divalidasi oleh `validateContractSignature()`
+   * di lapisan API sebelum sampai ke sini.
+   */
+  signContract: async (contractId: number, signerName: string, signature: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Contract>('POST', `/api/contracts/${contractId}/sign`, { signerName, signature });
+    }
+    const c = stateStore.contracts.find(x => x.id === contractId);
+    if (!c) return undefined;
+
+    // Kontrak yang sudah ditandatangani tidak boleh ditandatangani ulang:
+    // signed_at adalah bukti waktu yang dipakai sebagai audit trail.
+    if (c.is_signed_customer === 1) {
+      throw new Error('KONTRAK_SUDAH_DITANDATANGANI');
+    }
+    // Daur-hidup: kedaluwarsa -> tolak (identik dengan guard sisi Worker).
+    if (typeof c.valid_until === 'string' && c.valid_until !== '') {
+      const batas = new Date(c.valid_until);
+      if (!Number.isNaN(batas.getTime()) && batas.getTime() < Date.now()) {
+        throw new Error('KONTRAK_KEDALUWARSA');
+      }
+    }
+
+    const signedAt = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    await wt(
+      'UPDATE `contracts` SET `is_signed_customer` = 1, `signed_at` = ?, `signer_name` = ?, `signature_data_url` = ? WHERE `id` = ?',
+      [signedAt, signerName, signature, contractId],
+      'signContract'
+    );
+    c.is_signed_customer = 1;
+    c.signed_at = signedAt;
+    c.signer_name = signerName;
+    c.signature_data_url = signature;
+    return c;
+  },
+
+  // Payments
+  getPayments: async () => stateStore.payments,
+
+  /** Hapus tagihan (UNPAID/FAILED/PENDING) beserta jejaknya. */
+  hapusPayment: async (paymentId: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Payment>('DELETE', `/api/payments/${paymentId}`);
+    }
+    const idx = stateStore.payments.findIndex(x => x.id === paymentId);
+    if (idx === -1) return undefined;
+    await wt('DELETE FROM `payments` WHERE `id` = ?', [paymentId], 'hapusPayment');
+    const [hapus] = stateStore.payments.splice(idx, 1);
+    return hapus;
+  },
+
+  /** Hapus kontrak (belum lunas ditangani; dipanggil berurutan dgn tagihannya). */
+  hapusKontrak: async (contractId: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Contract>('DELETE', `/api/contracts/${contractId}`);
+    }
+    const idx = stateStore.contracts.findIndex(x => x.id === contractId);
+    if (idx === -1) return undefined;
+    await wt('DELETE FROM `contracts` WHERE `id` = ?', [contractId], 'hapusKontrak');
+    const [hapus] = stateStore.contracts.splice(idx, 1);
+    return hapus;
+  },
+
+  /** Hapus pengajuan sewa (PENDING/Ditolak saja — dijaga rute). */
+  hapusRental: async (rentalId: number) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Rental>('DELETE', `/api/rentals/${rentalId}`);
+    }
+    const idx = stateStore.rentals.findIndex(x => x.id === rentalId);
+    if (idx === -1) return undefined;
+    await wt('DELETE FROM `rentals` WHERE `id` = ?', [rentalId], 'hapusRental');
+    const [hapus] = stateStore.rentals.splice(idx, 1);
+    return hapus;
+  },
+
+  /**
+   * Mengesahkan pembayaran menjadi PAID.
+   *
+   * Penjaga aturan bisnis (satu sumber kebenaran: `src/lib/paymentWorkflow.ts`):
+   *   1. Transisi status harus sah (PENDING_VERIFICATION → PAID);
+   *   2. Bukti transfer wajib sudah dilampirkan.
+   *
+   * Tanpa dua pemeriksaan ini, staf dapat mengesahkan tagihan yang belum
+   * pernah dibayar — pendapatan pada laporan keuangan lalu fiktif.
+   */
+  verifyPayment: async (paymentId: number, staffUserId: number, staffName: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Payment>('POST', `/api/payments/${paymentId}/verify`, { staffId: staffUserId, staffName });
+    }
+    const p = stateStore.payments.find(x => x.id === paymentId);
+    if (!p) return undefined;
+
+    const transisi = canChangePaymentStatus(p.status, 'PAID');
+    if (!transisi.allowed) throw new Error(transisi.code);
+
+    // Hanya pembayaran yang menunggu verifikasi DAN sudah melampirkan bukti
+    // transfer yang boleh ditandai PAID.
+    const adaBukti = typeof p.payment_proof_path === 'string' && p.payment_proof_path.trim() !== '';
+    if (!adaBukti) {
+      throw new Error('BUKTI_TRANSFER_BELUM_ADA');
+    }
+
+    const verifiedAt = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    await wt(
+      'UPDATE `payments` SET `status` = ?, `verified_by` = ?, `verified_at` = ? WHERE `id` = ?',
+      ['PAID', staffUserId, verifiedAt, paymentId],
+      'verifyPayment'
+    );
+    p.status = 'PAID';
+    p.verified_by = staffUserId;
+    p.verified_by_name = staffName;
+    p.verified_at = verifiedAt;
+    return p;
+  },
+
+  /**
+   * Menolak bukti transfer yang tidak sah (PENDING_VERIFICATION → FAILED).
+   *
+   * Tagihan yang ditolak dapat dilampiri ulang bukti oleh pelanggan,
+   * sehingga statusnya kembali PENDING_VERIFICATION (bukan status akhir).
+   *
+   * Kolom `verified_by*` dipakai sebagai jejak peninjau (bukan "verifikator"
+   * semata): UI merender "Ditolak oleh …" untuk status FAILED, sehingga
+   * tidak perlu menambah kolom baru pada skema yang sudah dimigrasi.
+   */
+  rejectPayment: async (paymentId: number, staffUserId: number, staffName: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Payment>('POST', `/api/payments/${paymentId}/reject`, { staffName });
+    }
+    const p = stateStore.payments.find(x => x.id === paymentId);
+    if (!p) return undefined;
+
+    const transisi = canChangePaymentStatus(p.status, 'FAILED');
+    if (!transisi.allowed) throw new Error(transisi.code);
+
+    const verifiedAt = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    await wt(
+      'UPDATE `payments` SET `status` = ?, `verified_by` = ?, `verified_at` = ? WHERE `id` = ?',
+      ['FAILED', staffUserId, verifiedAt, paymentId],
+      'rejectPayment'
+    );
+    p.status = 'FAILED';
+    p.verified_by = staffUserId;
+    p.verified_by_name = staffName;
+    p.verified_at = verifiedAt;
+    return p;
+  },
+
+  /**
+   * Melampirkan bukti transfer (UNPAID / FAILED → PENDING_VERIFICATION).
+   *
+   * `proofPath` sudah divalidasi oleh `validatePaymentProofPath()` di
+   * lapisan API sebelum sampai ke sini.
+   */
+  addPaymentProof: async (paymentId: number, proofPath: string) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Payment>('POST', `/api/payments/${paymentId}/proof`, { paymentProofPath: proofPath });
+    }
+    const p = stateStore.payments.find(x => x.id === paymentId);
+    if (!p) return undefined;
+
+    const transisi = canChangePaymentStatus(p.status, 'PENDING_VERIFICATION');
+    if (!transisi.allowed) throw new Error(transisi.code);
+
+    // Lampiran baru membatalkan peninjauan lama: nama & waktu pemeriksa
+    // sebelumnya tidak lagi menggambarkan berkas yang sedang ditinjau.
+    const buktiBerubah = (p.payment_proof_path ?? '') !== proofPath;
+
+    const bayarPada = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    await wt(
+      'UPDATE `payments` SET `payment_proof_path` = ?, `status` = ?, `payment_date` = ?, `verified_by` = NULL, `verified_at` = NULL WHERE `id` = ?',
+      [proofPath, 'PENDING_VERIFICATION', bayarPada, paymentId],
+      'addPaymentProof'
+    );
+    p.payment_proof_path = proofPath;
+    p.status = 'PENDING_VERIFICATION';
+    p.payment_date = bayarPada;
+
+    if (buktiBerubah) {
+      p.verified_by = null;
+      p.verified_by_name = undefined;
+      p.verified_at = null;
+    }
+    return p;
+  },
+
+  // Maintenance
+  getMaintenance: async () => stateStore.maintenance,
+  scheduleMaintenance: async (item: Omit<Maintenance, 'id' | 'maintenance_code'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Maintenance>('POST', '/api/maintenance', item);
+    }
+    const id = nextId(stateStore.maintenance);
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const code = `MNT-SBS-${dateStr}-${String(id).padStart(3, '0')}`;
+    const newM: Maintenance = {
+      ...item,
+      id,
+      maintenance_code: code,
+      status: 'SCHEDULED'
+    };
+    await wt(
+      'INSERT INTO `maintenance` (`id`, `maintenance_code`, `equipment_id`, `scheduled_date`, `maintenance_type`, `hour_meter_at_maintenance`, `description`, `spareparts_replaced`, `cost`, `technician_id`, `status`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newM.id, newM.maintenance_code, newM.equipment_id, newM.scheduled_date, newM.maintenance_type, newM.hour_meter_at_maintenance, newM.description, newM.spareparts_replaced ?? null, newM.cost, newM.technician_id ?? null, newM.status],
+      'scheduleMaintenance'
+    );
+    stateStore.maintenance.unshift(newM);
+    const eq = stateStore.equipments.find(e => e.id === item.equipment_id);
+    if (eq) {
+      await wt('UPDATE `equipments` SET `status` = ? WHERE `id` = ?', ['MAINTENANCE', eq.id], 'servisKunciUnit');
+      eq.status = 'MAINTENANCE';
+    }
+    return newM;
+  },
+
+  // GPS Telemetry
+  getGpsTracking: async () => stateStore.gps,
+
+  // Reports
+  getReports: async () => stateStore.reports,
+};

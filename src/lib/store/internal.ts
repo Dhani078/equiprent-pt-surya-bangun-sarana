@@ -1,0 +1,358 @@
+/**
+ * Inti penyimpanan: koneksi TiDB, cermin state di memori, dan jalur tulis.
+ *
+ * Semua modul domain (users, equipments, rentals, contracts, payments, ops)
+ * memakai berkas ini; berkas ini TIDAK mengimpor modul domain mana pun supaya
+ * tidak ada siklus impor.
+ */
+
+import { connect } from '@tidbcloud/serverless';
+import { RoleName, User, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from '../../types';
+import { hashPassword, isDemoAccount, isStoredPasswordHash, SESSION_HEADER, verifyPassword } from '../auth';
+import { headerSesi } from '../authClient';
+import { tambahAntrean, bacaAntrean, buangAntreanKe, type AntreanMutasi } from '../offlineQueue';
+import { getTransitionEffect } from '../rentalWorkflow';
+import { setLatePenaltyPerDay } from '../businessRules';
+import { canChangePaymentStatus, summarizeRentalPayment } from '../paymentWorkflow';
+import { buildContractTermsText, generateContractCode } from '../contracts';
+import {
+  GENERATED_USERS,
+  GENERATED_EQUIPMENTS,
+  GENERATED_RENTALS,
+  GENERATED_CONTRACTS,
+  GENERATED_PAYMENTS,
+  GENERATED_MAINTENANCE,
+  GENERATED_GPS,
+  GENERATED_REPORTS,
+} from '../seedGenerator';
+
+/**
+ * Data demo cadangan (dipakai bila TiDB belum terhubung). Dihasilkan
+ * `seedGenerator.ts` agar konsisten secara relasional: 50 pengguna, 50 unit,
+ * 50 rental, 50 kontrak, 50 pembayaran, 25 log servis, 55 titik GPS,
+ * 20 dokumen pelaporan.
+ */
+export const DEMO_USERS = GENERATED_USERS;
+export const DEMO_EQUIPMENTS = GENERATED_EQUIPMENTS;
+export const DEMO_RENTALS = GENERATED_RENTALS;
+export const DEMO_CONTRACTS = GENERATED_CONTRACTS;
+export const DEMO_PAYMENTS = GENERATED_PAYMENTS;
+export const DEMO_MAINTENANCE = GENERATED_MAINTENANCE;
+export const DEMO_GPS = GENERATED_GPS;
+export const DEMO_REPORTS = GENERATED_REPORTS;
+
+/** Ambil konfigurasi database dari environment secara aman untuk browser, edge, & node. */
+export function resolveEnv(): Record<string, string | undefined> {
+  const metaEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+  if (metaEnv) return metaEnv;
+
+  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+  return proc?.env ?? {};
+}
+
+const envLookup = resolveEnv();
+// HANYA `DATABASE_URL`. Prefiks `VITE_` sengaja TIDAK dipakai: nilai dengan
+// prefiks itu ikut terbawa ke bundle klien (vite memasukkannya ke kode yang
+// diunduh browser), sehingga kredensial database bocor ke publik. Worker
+// Cloudflare hanya mengikat `DATABASE_URL` (server-only).
+export const databaseUrl = envLookup.DATABASE_URL ?? '';
+
+/** Client TiDB. Null ketika DATABASE_URL belum dikonfigurasi → fallback ke in-memory store. */
+export type TidbClient = { execute: (sql: string, params: unknown[]) => Promise<unknown> };
+export let tidbClient: TidbClient | null = null;
+
+if (databaseUrl && !databaseUrl.includes('your_username')) {
+  try {
+    tidbClient = connect({ url: databaseUrl }) as unknown as TidbClient;
+  } catch {
+    // Gagal inisialisasi → diamkan. Aplikasi tetap berjalan dengan in-memory store.
+    tidbClient = null;
+  }
+}
+
+/**
+ * Worker TIDAK punya process.env — secret `DATABASE_URL` hanya datang lewat
+ * binding `c.env`. Middleware memanggil ini sekali per cold-start; setelah
+ * tidbClient terbentuk, panggilan berikut no-op.
+ */
+export const configureDatabaseUrl = (url?: string): void => {
+  if (tidbClient || !url || url.includes('your_username')) return;
+  try {
+    tidbClient = connect({ url }) as unknown as TidbClient;
+  } catch {
+    tidbClient = null;
+  }
+};
+
+/** Menandakan apakah aplikasi sedang terhubung ke database sungguhan. */
+export const isDatabaseConnected = (): boolean => tidbClient !== null;
+
+/**
+ * Mode sumber data yang sedang aktif.
+ *
+ * Dilaporkan apa adanya oleh `/api/health` agar tidak ada kesalahpahaman:
+ * pada mode `IN_MEMORY_DEMO`, seluruh perubahan hanya hidup di memori
+ * isolate yang sedang menangani request dan akan hilang saat isolate diganti.
+ */
+export type DataMode = 'TIDB' | 'IN_MEMORY_DEMO';
+
+export const getDataMode = (): DataMode => (tidbClient !== null ? 'TIDB' : 'IN_MEMORY_DEMO');
+
+/**
+ * Hasil verifikasi kredensial.
+ * Discriminated union — memaksa pemanggil mengecek `ok` sebelum memakai `user`.
+ */
+export type AuthCheck =
+  | { ok: true; user: User }
+  | { ok: false; reason: 'NOT_FOUND' | 'BAD_PASSWORD' | 'SUSPENDED' | 'NO_PASSWORD_SET' };
+
+// In-Memory Reactive Cache for Edge & Offline Simulation
+export const stateStore = {
+  users: [...DEMO_USERS] as User[],
+  equipments: [...DEMO_EQUIPMENTS] as Equipment[],
+  rentals: [...DEMO_RENTALS] as Rental[],
+  contracts: [...DEMO_CONTRACTS] as Contract[],
+  payments: [...DEMO_PAYMENTS] as Payment[],
+  maintenance: [...DEMO_MAINTENANCE] as Maintenance[],
+  gps: [...DEMO_GPS] as GpsTracking[],
+  reports: [...DEMO_REPORTS] as ReportItem[],
+};
+
+/**
+ * Menghasilkan ID baru yang bebas bentrok.
+ *
+ * Tidak memakai `panjang Array + 1`: bila sebuah baris dihapus, panjang array
+ * menyusut dan ID lama akan dipakai ulang — dua entitas berbeda lalu berbagi
+ * satu ID (data laporan & riwayat jadi kacau). `maksimum + 1` aman.
+ */
+export function nextId(daftar: ReadonlyArray<{ id: number }>): number {
+  return daftar.reduce((maks, item) => (item.id > maks ? item.id : maks), 0) + 1;
+}
+
+/**
+ * Normalisasi nilai DATE/DATETIME dari driver menjadi string.
+ * DATE -> 'YYYY-MM-DD'; DATETIME/timestamp -> 'YYYY-MM-DD HH:MM:SS'.
+ */
+export function strTanggal(v: unknown, hanyaTanggal = false): string | null {
+  if (v === null || v === undefined) return null;
+  if (v instanceof Date) {
+    const iso = v.toISOString().replace('T', ' ').replace('Z', '');
+    return hanyaTanggal ? iso.slice(0, 10) : iso.slice(0, 19);
+  }
+  const t = String(v).replace('T', ' ').replace(/Z$/, '').trim();
+  return hanyaTanggal ? t.slice(0, 10) : t;
+}
+
+/**
+ * Write-through: setiap mutasi stateStore ikut ditulis ke TiDB (safer: DB
+ * dulu, baru memori) — temuan audit siklus 59: sebelumnya CRUD hanya hidup
+ * di memori isolate, reload/p isolate lain data hilang.
+ * Menglempar PERSIST_GAGAL agar API jujur melaporkan kegagalan, bukan
+ * berpura-pura sukses lalu datanya lenyap.
+ */
+export async function wt(sql: string, params: unknown[], label: string): Promise<void> {
+  if (!tidbClient) return; // IN_MEMORY_DEMO -> tulis memori saja
+  try {
+    await tidbClient.execute(sql, params);
+  } catch (err) {
+    console.error('[persist] gagal menulis', label, err);
+    throw new Error('PERSIST_GAGAL');
+  }
+}
+
+/**
+ * Eksekusi Query SQL ke TiDB Cloud Serverless.
+ *
+ * CATATAN KEAMANAN: Parameter WAJIB dikirim terpisah (parameterized query).
+ * Jangan pernah menyisipkan nilai langsung ke dalam string SQL.
+ */
+export async function executeSql<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+  if (tidbClient) {
+    const results = await tidbClient.execute(sql, params);
+    return results as T[];
+  }
+  // Database belum dikonfigurasi → kembalikan array kosong.
+  return [] as T[];
+}
+
+// ---------------------------------------------------------------------------
+// Jembatan browser -> Edge API (penyimpanan TERPUSAT, bukan memori tab)
+// ---------------------------------------------------------------------------
+// stateStore di browser hanyalah cermin tampilan; setiap mutasi DIJEMBAT ke
+// Worker (yang sudah write-through ke TiDB). Tanpa ini, dua tab/browser beda
+// tidak pernah saling melihat data, dan reload mengembalikan seed.
+// Mode dev tanpa Worker (404/500 jaringan) -> lempar; pemanggil memutuskan
+// fallback. Mode demo murni (tanpa DATABASE_URL di Worker) tetap jalan karena
+// wt() no-op di sisi Worker.
+
+let tokenBridge: string | null = null;
+
+/** Login ulang senyap ke Edge API; mengembalikan token sesi (atau null). */
+export type LoginUserApi = {
+  id: number; username: string; full_name: string; role: string;
+  role_id: number; email: string; company_name: string | null;
+};
+
+export type LoginHasil =
+  | { ok: true; token: string; user: LoginUserApi }
+  | { ok: false; offline: true }
+  | { ok: false; offline?: undefined; message: string };
+
+/**
+ * Login ke Edge API. Membedakan tiga nasib: token diterima, server menolak
+ * (pesan dari Worker diteruskan), atau Worker tidak terjangkau (dev murni ->
+ * pemanggil boleh memakai verifikasi lokal).
+ */
+export async function loginApi(username: string, password: string): Promise<LoginHasil> {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const body = (await res.json().catch(() => null)) as
+      { token?: string; user?: LoginUserApi; error?: { message?: string } } | null;
+    if (res.ok && body?.token && body.user) return { ok: true, token: body.token, user: body.user };
+    if (res.status >= 400 && res.status < 500 && body?.error?.message) {
+      return { ok: false, message: body.error.message };
+    }
+    return { ok: false, offline: true };
+  } catch {
+    return { ok: false, offline: true };
+  }
+}
+
+/**
+ * Teruskan mutasi stateStore ke Worker. `path` endpoint, `method` HTTP,
+ * `body` payload. Melempar saat Worker menolak — stateStore sudah diubah lebih
+ * dulu oleh pemanggil, jadi pemanggil WAJIB memanggil ini sebelum menaruh
+ * hasil ke UI/refresh (urutan: tulis DB -> cermin memori -> render).
+ */
+/** Galat tingkat jaringan (fetch melempar TypeError) — bukan tolakan server. */
+export function galatJaringan(e: unknown): boolean {
+  return e instanceof TypeError || /Failed to fetch|NetworkError|Load failed/i.test(String(e));
+}
+
+/** Sedang memproses flush antrean? (menahan re-antre saat kirim ulang gagal) */
+let sedangFlush = false;
+
+export async function kirimKeApi(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<unknown> {
+  if (typeof window === 'undefined') return null; // sisi Worker: wt() sudah menulis
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...headerSesi(tokenBridge ? { [SESSION_HEADER]: tokenBridge } : {}),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (e) {
+    /* Siklus 70: jaringan putus -> simpan di antrean FIFO localStorage,
+       kirim ulang otomatis saat pulih (flushAntreanOffline). Urutan antar
+       mutasi terjaga karena antrean diproses berurutan dari kepala.
+       `sedangFlush` = flush yang mencoba kirim ulang: JANGAN meng-antre
+       ulang item yang sama (menyebabkan loop tanpa akhir di flush). */
+    if (galatJaringan(e) && !sedangFlush && typeof localStorage !== 'undefined') {
+      const masuk = tambahAntrean({ method, path, body, dibuatAt: Date.now() });
+      if (masuk) {
+        throw new Error('Jaringan putus — perubahan dimasukkan antrean dan akan terkirim otomatis saat pulih.');
+      }
+      throw new Error('Jaringan putus dan antrean offline penuh — perubahan tidak tersimpan.');
+    }
+    throw e;
+  }
+  const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!res.ok) {
+    const err = (json as { error?: { message?: string } } | null)?.error?.message;
+    throw new Error(err || `Gagal menyimpan ke server (HTTP ${res.status}).`);
+  }
+  return json?.item ?? json?.data ?? json;
+}
+
+/** Token sesi untuk jembatan API — diisi App setelah login. */
+export const setApiBridgeToken = (token: string | null): void => {
+  tokenBridge = token;
+};
+
+/**
+ * Guard jembatan: browser tidak lagi menulis stateStore/wt() sendiri —
+ * mutasi dilempar ke Worker (write-through TiDB), lalu cermin disegarkan.
+ * `paths` koleksi yang disalin ulang dari server setelah sukses.
+ */
+export async function lewatJembatan<T>(
+  method: 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body?: unknown
+): Promise<T> {
+  const item = await kirimKeApi(method, path, body);
+  const { sinkronCermin } = await import('../fetchCollection');
+  await sinkronCermin();
+  return item as T;
+}
+
+/**
+ * Kirim ulang antrean offline secara FIFO (siklus 70). Dipanggil saat
+ * koneksi pulih. Sukses -> buang item; tolakan server (4xx/5xx terukur,
+ * mis. kode ganda/RBAC) -> buang + kumpulkan pesannya (mutasi kedaluwarsa
+ * untuk kondisi sekarang); jaringan masih putus -> stop, sisanya menunggu.
+ */
+export async function flushAntreanOffline(): Promise<{ terkirim: number; ditolak: string[] }> {
+  const terkirimList: number[] = [];
+  const ditolak: string[] = [];
+  sedangFlush = true;
+  try {
+    while (true) {
+      const antrean = bacaAntrean() as AntreanMutasi[];
+      if (antrean.length === 0) break;
+      const m = antrean[0];
+      try {
+        await kirimKeApi(m.method, m.path, m.body);
+        terkirimList.push(1);
+        buangAntreanKe(0);
+      } catch (e) {
+        if (galatJaringan(e)) break; // masih offline: simpan sisanya
+        // Server menolak secara definitif -> buang agar tidak memblokir antrean.
+        ditolak.push(String((e as Error).message || e));
+        buangAntreanKe(0);
+      }
+    }
+  } finally {
+    sedangFlush = false;
+  }
+  if (terkirimList.length > 0) {
+    const { sinkronCermin } = await import('../fetchCollection');
+    await sinkronCermin();
+  }
+  return { terkirim: terkirimList.length, ditolak };
+}
+
+// CRUD Helpers
+/** Kode + baris tagihan (UNPAID) untuk kontrak yang baru terbit. */
+export function buatTagihanKontrak(
+  existing: ReadonlyArray<Payment>,
+  contract: Contract,
+  amount: number
+): Payment {
+  const tgl = new Date();
+  const ymd = tgl.toISOString().slice(0, 10).replace(/-/g, '');
+  const pref = `PAY-SBS-${ymd}-`;
+  const urut = existing.filter((p) => p.payment_code.startsWith(pref)).length + 1;
+  return {
+    id: nextId(existing),
+    payment_code: `${pref}${String(urut).padStart(3, '0')}`,
+    contract_id: contract.id,
+    contract_code: contract.contract_code,
+    customer_id: contract.customer_id,
+    customer_name: contract.customer_name,
+    amount,
+    payment_method: 'Belum dibayar',
+    status: 'UNPAID',
+    payment_date: tgl.toISOString().replace('T', ' ').slice(0, 19),
+  };
+}
+
+// ponytail: tagihan tunggal per kontrak. Naikkan ke multi-invoice (DP +
+// pelunasan + penalti) saat kebutuhan faktur parsial masuk backlog produk.

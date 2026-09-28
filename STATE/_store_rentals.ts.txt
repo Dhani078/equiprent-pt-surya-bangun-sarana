@@ -1,0 +1,98 @@
+  getRentals: async () => stateStore.rentals,
+  addRental: async (rental: Omit<Rental, 'id' | 'rental_code'>) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Rental>('POST', '/api/rentals', rental);
+    }
+    const id = nextId(stateStore.rentals);
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const code = `RNT-SBS-${dateStr}-${String(id).padStart(3, '0')}`;
+    const newRental: Rental = {
+      ...rental,
+      id,
+      rental_code: code,
+      booking_date: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      status: 'PENDING'
+    };
+    await wt(
+      'INSERT INTO `rentals` (`id`, `rental_code`, `customer_id`, `equipment_id`, `booking_date`, `start_date`, `end_date`, `total_days`, `subtotal`, `status`, `notes`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newRental.id, newRental.rental_code, newRental.customer_id, newRental.equipment_id, newRental.booking_date, newRental.start_date, newRental.end_date, newRental.total_days, newRental.subtotal, newRental.status, newRental.notes ?? null],
+      'addRental'
+    );
+    stateStore.rentals.unshift(newRental);
+    return newRental;
+  },
+  /**
+   * Mengubah status rental sekaligus menjaga konsistensi status unit terkait.
+   *
+   * ATURAN BISNIS (satu sumber kebenaran: `src/lib/rentalWorkflow.ts`):
+   * - ON_GOING   → unit dikunci menjadi RENTED (sedang di tangan pelanggan)
+   * - COMPLETED  → unit dibebaskan menjadi AVAILABLE
+   * - REJECTED   → unit dibebaskan menjadi AVAILABLE
+   * - APPROVED   → unit BELUM dikunci (sewa bisa disetujui jauh hari sebelum
+   *                mobilisasi; mengunci di sini membuat unit tidak bisa
+   *                dipesan untuk periode lain yang sebenarnya sah)
+   *
+   * Unit hanya dibebaskan bila tidak sedang beroperasi di rental lain.
+   */
+  updateRentalStatus: async (
+    id: number,
+    status: Rental['status'],
+    options: { overrideUnpaid?: boolean } = {}
+  ) => {
+    if (typeof window !== 'undefined') {
+      return await lewatJembatan<Rental>('PUT', `/api/rentals/${id}/status`, {
+        status,
+        overrideUnpaid: options.overrideUnpaid ?? false,
+      });
+    }
+    const r = stateStore.rentals.find(x => x.id === id);
+    if (!r) return undefined;
+
+    // GERBANG PEMBAYARAN (§4.3 poin 4): sewa hanya boleh BEROPERASI
+    // (ON_GOING) bila tagihannya sudah terverifikasi lunas.
+    // `overrideUnpaid` adalah wewenang ADMIN dan diteruskan apa adanya
+    // dari lapisan API — bukan sesuatu yang bisa diminta klien sembarangan.
+    if (status === 'ON_GOING' && !options.overrideUnpaid) {
+      const kontrakIds = stateStore.contracts
+        .filter(c => c.rental_id === r.id)
+        .map(c => c.id);
+      const statusBayar = summarizeRentalPayment(stateStore.payments, kontrakIds);
+
+      if (statusBayar !== 'PAID') {
+        throw new Error('TAGIHAN_BELUM_LUNAS');
+      }
+    }
+
+    await wt('UPDATE `rentals` SET `status` = ? WHERE `id` = ?', [status, id], 'updateRentalStatus');
+    r.status = status;
+
+    const dampak = getTransitionEffect(status);
+
+    if (dampak.equipmentStatus === 'RENTED') {
+      const eq = stateStore.equipments.find(e => e.id === r.equipment_id);
+      if (eq) {
+        await wt('UPDATE `equipments` SET `status` = ? WHERE `id` = ?', ['RENTED', eq.id], 'rentalKunciUnit');
+        eq.status = 'RENTED';
+      }
+    } else if (dampak.equipmentStatus === 'AVAILABLE') {
+      // Unit hanya dibebaskan bila tidak ada rental lain yang sedang
+      // beroperasi (ON_GOING) memakai unit yang sama.
+      const masihBeroperasi = stateStore.rentals.some(
+        other =>
+          other.id !== r.id &&
+          other.equipment_id === r.equipment_id &&
+          other.status === 'ON_GOING'
+      );
+      if (!masihBeroperasi) {
+        const eq = stateStore.equipments.find(e => e.id === r.equipment_id);
+        if (eq) {
+          await wt('UPDATE `equipments` SET `status` = ? WHERE `id` = ?', ['AVAILABLE', eq.id], 'rentalBebaskanUnit');
+          eq.status = 'AVAILABLE';
+        }
+      }
+    }
+
+    return r;
+  },
+
+  // Contracts

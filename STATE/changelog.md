@@ -111,3 +111,6 @@
 
 ## Siklus 74 — 2026-09-28
 - Refactor: reports.ts 1278 baris -> reports/ (13 berkas, maks 224 baris). API identik, verifikasi 11 laporan production.
+
+## Siklus 75 — 2026-09-28
+- Refactor: db.ts 1202 baris -> db/index.ts + store/ (9 berkas, maks 358 baris). Verifikasi tulis-baca TiDB production.
