@@ -226,6 +226,31 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
     [rentals, equipments]
   );
 
+  /**
+   * Drill-down baris laporan -> dokumen resmi (siklus 68).
+   * Baris dengan kode sewa membuka pratinjau BAST/Surat Jalan terkait dari
+   * arsip; bila transaksi belum berdokumen, pesan jelas ditampilkan.
+   */
+  const handleDrillDown = useCallback(
+    (rentalCode: string): void => {
+      const kandidat = reports.filter(
+        (rep) => rep.rental_code === rentalCode && documentKindFromReportType(rep.report_type) !== null
+      );
+      const urutan: ReportItem['report_type'][] = ['BAST_OUT', 'BAST_IN', 'SURAT_JALAN'];
+      const terpilih =
+        urutan.map((t) => kandidat.find((r) => r.report_type === t)).find(Boolean) ?? kandidat[0];
+      if (!terpilih) {
+        setCetakError(
+          `Transaksi ${rentalCode} belum memiliki dokumen resmi (BAST/Surat Jalan) di arsip.`
+        );
+        return;
+      }
+      setCetakError(null);
+      handlePreviewDocument(terpilih);
+    },
+    [reports, handlePreviewDocument]
+  );
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Print header — hanya tampil saat cetak */}
@@ -295,6 +320,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
 
       {/* Panel 11 Laporan Operasional */}
       <ReportAnalyticsPanel
+        onSelectRentalCode={handleDrillDown}
         result={result}
         loading={loading}
         error={error}

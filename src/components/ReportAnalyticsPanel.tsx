@@ -20,6 +20,11 @@ interface ReportAnalyticsPanelProps {
   keyword: string;
   onKeywordChange: (keyword: string) => void;
   onRetry: () => void;
+  /**
+   * Drill-down (siklus 68): kode sewa RNT-... dari baris laporan dikirim ke
+   * halaman agar dokumen BAST transaksi itu bisa langsung dibuka.
+   */
+  onSelectRentalCode?: (rentalCode: string) => void;
 }
 
 /** Warna teks ringkasan mengikuti design system: hijau positif, merah negatif. */
@@ -41,6 +46,7 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
   keyword,
   onKeywordChange,
   onRetry,
+  onSelectRentalCode,
 }) => {
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -383,7 +389,13 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {result.rows.map((row, rowIndex) => (
+                {result.rows.map((row, rowIndex) => {
+                  /* Kolom mana pun yang berisi kode sewa menjadi tombol
+                     drill-down ke dokumen BAST transaksi tersebut. */
+                  const rentalIdx = row.findIndex(
+                    (v) => typeof v === 'string' && /^RNT-/.test(v)
+                  );
+                  return (
                   <tr key={`${result.id}-${rowIndex}`}>
                     <td style={{ color: 'var(--color-secondary-light)', fontSize: '12px' }}>
                       {rowIndex + 1}
@@ -399,11 +411,35 @@ export const ReportAnalyticsPanel: React.FC<ReportAnalyticsPanelProps> = ({
                           maxWidth: '320px',
                         }}
                       >
-                        {renderCell(row[colIndex], col.format)}
+                        {colIndex === rentalIdx && onSelectRentalCode ? (
+                          <button
+                            type="button"
+                            onClick={() => onSelectRentalCode(String(row[colIndex]))}
+                            aria-label={`Buka dokumen BAST transaksi ${row[colIndex]}`}
+                            title={`Lihat dokumen resmi ${row[colIndex]}`}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: 0,
+                              fontFamily: 'inherit',
+                              fontSize: 'inherit',
+                              fontWeight: 700,
+                              color: 'var(--color-primary)',
+                              cursor: 'pointer',
+                              textDecoration: 'underline',
+                              textUnderlineOffset: '3px',
+                            }}
+                          >
+                            {renderCell(row[colIndex], col.format)}
+                          </button>
+                        ) : (
+                          renderCell(row[colIndex], col.format)
+                        )}
                       </td>
                     ))}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
