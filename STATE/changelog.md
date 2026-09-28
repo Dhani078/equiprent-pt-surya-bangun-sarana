@@ -86,3 +86,6 @@
 ## Siklus 67 — 2026-09-28
 - Aksesibilitas sentuh HP: lantai target 44px (header/main/dialog/sidebar) di <=767px.
 - Audit 360/320px: 0 target kecil, 0 overflow, dialog form muat; 3 role.
+
+## Siklus 68 — 2026-09-28
+- Fitur: drill-down baris laporan (kode RNT) -> pratinjau dokumen BAST terkait + pesan tanpa-dokumen.
