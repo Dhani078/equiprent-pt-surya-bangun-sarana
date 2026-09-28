@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import { CalendarPlus, CheckCircle2, FileSignature, FileText, PenLine, Search, X } from 'lucide-react';
+import { CalendarPlus, FileSignature, FileText, PenLine, Search } from 'lucide-react';
 import { Modal } from './Modal';
-import { SignatureCanvas } from './SignatureCanvas';
+import { ContractRenewModal } from './contract/ContractRenewModal';
+import { ContractSignModal } from './contract/ContractSignModal';
+import { ContractIssueModal } from './contract/ContractIssueModal';
 import { ContractViewer } from './ContractViewer';
 import {
   buildContractPreview,
@@ -491,267 +493,43 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
         </Modal>
       )}
 
-      {/* Modal: Perpanjangan kontrak */}
       {modal.kind === 'renew' && (
-        <Modal
-          isOpen={true}
+        <ContractRenewModal
+          contract={modal.contract}
+          renewDate={renewDate}
+          onChangeDate={setRenewDate}
+          error={renewError}
+          fieldError={formErrors.validUntil}
+          busy={isRenewing}
           onClose={tutupModal}
-          title={`Perpanjang Kontrak: ${modal.contract.contract_code}`}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div
-              style={{
-                padding: '12px 14px',
-                backgroundColor: 'var(--bg-amber-soft)',
-                border: '1px solid var(--border-amber-soft)',
-                borderRadius: '8px',
-                fontSize: '12.5px',
-                lineHeight: 1.6,
-                color: 'var(--fg-warning-deep)',
-              }}
-              role="status"
-            >
-              <strong>Kontrak ini kedaluwarsa per {modal.contract.valid_until}.</strong>{' '}
-              Menetapkan batas berlaku baru membuat dokumen dapat ditandatangani kembali oleh
-              pelanggan. Kode kontrak dan tagihan yang sudah terbit tidak berubah.
-            </div>
-
-            <div>
-              <label
-                htmlFor="renew-valid-until"
-                style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}
-              >
-                Berlaku sampai
-              </label>
-              <input
-                id="renew-valid-until"
-                type="date"
-                className="input-premium"
-                value={renewDate}
-                min={new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)}
-                onChange={(e) => setRenewDate(e.target.value)}
-                style={{ width: '100%' }}
-              />
-              {formErrors.validUntil !== undefined && (
-                <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: 'var(--fg-danger, #B42318)' }}>
-                  {formErrors.validUntil}
-                </p>
-              )}
-            </div>
-
-            {renewError !== null && (
-              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--fg-danger, #B42318)' }} role="alert">
-                {renewError}
-              </p>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <button type="button" className="btn-secondary" onClick={tutupModal} disabled={isRenewing}>
-                Batal
-              </button>
-              <button type="button" className="btn-primary" onClick={handleRenew} disabled={isRenewing}>
-                <CalendarPlus size={14} />
-                <span>{isRenewing ? 'Menyimpan...' : 'Simpan Perpanjangan'}</span>
-              </button>
-            </div>
-          </div>
-        </Modal>
+          onSubmit={() => void handleRenew()}
+        />
       )}
 
-      {/* Modal: Tanda tangan elektronik */}
       {modal.kind === 'sign' && (
-        <Modal
-          isOpen={true}
+        <ContractSignModal
+          contract={modal.contract}
+          signerName={signerName}
+          signError={signError}
+          formErrors={formErrors}
+          busy={isSubmitting}
+          onChangeSigner={setSignerName}
+          onSignature={setSignature}
           onClose={tutupModal}
-          title={`Penandatanganan Kontrak: ${modal.contract.contract_code}`}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div
-              style={{
-                padding: '12px 14px',
-                backgroundColor: 'var(--bg-raised)',
-                borderRadius: '8px',
-                border: '1px solid var(--color-border)',
-                fontSize: '12px',
-                lineHeight: 1.6,
-              }}
-            >
-              <p style={{ margin: '0 0 6px 0' }}>
-                Dengan membubuhkan tanda tangan elektronik di bawah ini,{' '}
-                <strong>{modal.contract.customer_name ?? 'Pelanggan'}</strong> menyetujui seluruh
-                ketentuan sewa alat berat PT. Surya Bangun Sarana Banjarmasin, termasuk tanggung
-                jawab operasional dan jadwal mobilisasi.
-              </p>
-              <p style={{ margin: 0, color: 'var(--color-secondary)', fontSize: '11px' }}>
-                Legalitas dokumen dijamin sah berdasarkan UU ITE Pasal 11 tentang Tanda Tangan
-                Elektronik.
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="signer-name"
-                style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}
-              >
-                Nama Penandatangan Resmi (Sesuai KTP / Perusahaan)
-              </label>
-              <input
-                id="signer-name"
-                type="text"
-                className="input-premium"
-                value={signerName}
-                onChange={(e) => setSignerName(e.target.value)}
-                aria-invalid={formErrors.signerName !== undefined}
-                aria-describedby={formErrors.signerName !== undefined ? 'signer-name-error' : undefined}
-                style={{
-                  width: '100%',
-                  borderColor: formErrors.signerName !== undefined ? 'var(--fg-danger)' : undefined,
-                }}
-              />
-              {formErrors.signerName !== undefined && (
-                <p id="signer-name-error" style={{ margin: '5px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
-                  {formErrors.signerName}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <span style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
-                Goresan Tanda Tangan Digital
-              </span>
-              <SignatureCanvas
-                onChange={setSignature}
-                ariaLabel="Kanvas tanda tangan elektronik kontrak"
-              />
-              {formErrors.signature !== undefined && (
-                <p style={{ margin: '5px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
-                  {formErrors.signature}
-                </p>
-              )}
-            </div>
-
-            {signError !== null && (
-              <div
-                role="alert"
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--bg-red-soft)',
-                  border: '1px solid var(--border-red-soft)',
-                  color: 'var(--fg-danger-deep)',
-                  fontSize: '12px',
-                }}
-              >
-                {signError}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button type="button" onClick={tutupModal} className="btn-secondary">
-                Tinjau Kembali
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSign()}
-                className="btn-primary"
-                disabled={isSubmitting}
-                style={{ opacity: isSubmitting ? 0.6 : 1 }}
-              >
-                <CheckCircle2 size={15} />
-                <span>{isSubmitting ? 'Menyimpan...' : 'Bubuhkan Tanda Tangan Digital'}</span>
-              </button>
-            </div>
-          </div>
-        </Modal>
+          onSubmit={() => void handleSign()}
+        />
       )}
 
-      {/* Modal: Terbitkan kontrak */}
       {modal.kind === 'issue' && (
-        <Modal isOpen={true} onClose={tutupModal} title="Terbitkan Kontrak Baru">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {rentalsTanpaKontrak.length === 0 ? (
-              <div
-                style={{
-                  padding: '28px 20px',
-                  textAlign: 'center',
-                  border: '1px dashed var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--bg-raised)',
-                }}
-              >
-                <CheckCircle2 size={28} style={{ color: '#CBD5E1', marginBottom: '8px' }} />
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-secondary)' }}>
-                  Semua transaksi sewa yang disetujui sudah memiliki kontrak.
-                </p>
-              </div>
-            ) : (
-              <>
-                <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--color-secondary)', lineHeight: 1.6 }}>
-                  Pilih transaksi sewa yang akan diterbitkan kontraknya. Nomor kontrak dibuat
-                  otomatis dengan format <code>SBS/CONTRACT/YYYY/MM/SEQ</code>. Hanya transaksi
-                  yang sudah disetujui dan belum punya kontrak yang ditampilkan.
-                </p>
-
-                <div>
-                  <label
-                    htmlFor="rental-pilih"
-                    style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}
-                  >
-                    Transaksi Sewa
-                  </label>
-                  <select
-                    id="rental-pilih"
-                    className="input-premium"
-                    value={selectedRentalId ?? ''}
-                    onChange={(e) => setSelectedRentalId(e.target.value === '' ? null : Number(e.target.value))}
-                    style={{ width: '100%' }}
-                  >
-                    {rentalsTanpaKontrak.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.rental_code} — {r.customer_name ?? 'Pelanggan'} — {r.equipment_name ?? '-'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
-
-            {issueError !== null && (
-              <div
-                role="alert"
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--bg-red-soft)',
-                  border: '1px solid var(--border-red-soft)',
-                  color: 'var(--fg-danger-deep)',
-                  fontSize: '12px',
-                }}
-              >
-                {issueError}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button type="button" onClick={tutupModal} className="btn-secondary">
-                <X size={15} />
-                <span>Batal</span>
-              </button>
-              {rentalsTanpaKontrak.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => void handleIssue()}
-                  className="btn-primary"
-                  disabled={isIssuing || selectedRentalId === null}
-                  style={{ opacity: isIssuing || selectedRentalId === null ? 0.6 : 1 }}
-                >
-                  <FileSignature size={15} />
-                  <span>{isIssuing ? 'Menerbitkan...' : 'Terbitkan Kontrak'}</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </Modal>
+        <ContractIssueModal
+          rentalsTanpaKontrak={rentalsTanpaKontrak}
+          selectedRentalId={selectedRentalId}
+          onSelectRental={setSelectedRentalId}
+          issueError={issueError}
+          busy={isIssuing}
+          onClose={tutupModal}
+          onSubmit={() => void handleIssue()}
+        />
       )}
     </div>
   );
