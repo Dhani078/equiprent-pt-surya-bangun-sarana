@@ -89,3 +89,6 @@
 
 ## Siklus 68 — 2026-09-28
 - Fitur: drill-down baris laporan (kode RNT) -> pratinjau dokumen BAST terkait + pesan tanpa-dokumen.
+
+## Siklus 69 — 2026-09-28
+- Fitur: banner peringatan offline (Worker tak terjangkau / perangkat putus), pulih otomatis.
