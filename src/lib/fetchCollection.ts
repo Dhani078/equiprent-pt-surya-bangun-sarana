@@ -9,6 +9,7 @@
 
 import { stateStore } from './db';
 import { headerSesi } from './authClient';
+import { tandaiOffline, tandaiOnline } from './connectionState';
 import type {
   User, Equipment, Rental, Contract, Payment, Maintenance, ReportItem, GpsTracking,
 } from '../types';
@@ -32,6 +33,7 @@ const KOLEKSI: ReadonlyArray<{ path: string; key: keyof typeof stateStore }> = [
  * diam — bukan error. Dikembalikan jumlah koleksi yang berhasil disegarkan.
  */
 export async function sinkronCermin(signal?: AbortSignal): Promise<number> {
+  if (signal?.aborted) return 0;
   const hasil = await Promise.allSettled(
     KOLEKSI.map(async ({ path, key }) => {
       const res = await fetch(path, { headers: headerSesi(), signal });
@@ -43,6 +45,11 @@ export async function sinkronCermin(signal?: AbortSignal): Promise<number> {
       return Array.isArray(arr) ? (arr as never[]) : null;
     })
   );
+  /* Akar siklus 69: hanya anggap OFFLINE bila TIDAK ADA respons HTTP sama
+     sekali (semua fetch gagal di jaringan) atau server menjawab 5xx.
+     401/403 (role menolak endpoint) tetap berarti server hidup. */
+  if (signal?.aborted) return 0;
+  const semuaGagal = hasil.every((h) => h.status === 'rejected');
   let terisi = 0;
   hasil.forEach((h, i) => {
     if (h.status === 'fulfilled' && h.value && h.value.length > 0) {
@@ -52,6 +59,11 @@ export async function sinkronCermin(signal?: AbortSignal): Promise<number> {
       terisi++;
     }
   });
+  if (semuaGagal) {
+    tandaiOffline('Server tidak terjangkau - data yang tampil mungkin basi dan perubahan Anda belum tersimpan.');
+  } else {
+    tandaiOnline();
+  }
   return terisi;
 }
 
