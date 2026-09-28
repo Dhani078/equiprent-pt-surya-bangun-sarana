@@ -35,6 +35,7 @@ bundle('src/lib/businessRules.ts', '.tmp_businessRules.mjs');
 bundle('src/lib/db.ts', '.tmp_db.mjs');
 bundle('src/lib/availability.ts', '.tmp_availability.mjs');
 bundle('src/lib/reports.ts', '.tmp_reports.mjs');
+bundle('src/lib/offlineQueue.ts', '.tmp_offlineQueue.mjs');
 bundle('src/lib/documents.ts', '.tmp_documents.mjs');
 bundle('src/server/index.ts', '.tmp_server.mjs');
 bundle('src/lib/validators.ts', '.tmp_validators.mjs');
@@ -134,6 +135,7 @@ const suites = [
   'auditLog.test.mjs',
   'settingsAndAudit.test.mjs',
   'seedData.test.mjs',
+  'offlineQueue.test.mjs',
   'fase5.test.mjs',
 ];
 
@@ -157,7 +159,7 @@ for (const suite of suites) {
 }
 
 // Bersihkan artefak bundle
-for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs', '.tmp_fleetTelemetry.mjs', '.tmp_gps.mjs', '.tmp_customerPortal.mjs', '.tmp_eqpage.mjs', '.tmp_rentpage.mjs', '.tmp_tableControls.mjs', '.tmp_tableExport.mjs', '.tmp_notifications.mjs', '.tmp_audit.mjs', '.tmp_seed.mjs', '.tmp_hmbar.mjs']) {
+for (const f of ['.tmp_businessRules.mjs', '.tmp_db.mjs', '.tmp_availability.mjs', '.tmp_reports.mjs', '.tmp_documents.mjs', '.tmp_panel.mjs', '.tmp_preview.mjs', '.tmp_printpanel.mjs', '.tmp_server.mjs', '.tmp_validators.mjs', '.tmp_dashboard.mjs', '.tmp_rentalWorkflow.mjs', '.tmp_contracts.mjs', '.tmp_contractpanel.mjs', '.tmp_paymentWorkflow.mjs', '.tmp_fleetTelemetry.mjs', '.tmp_gps.mjs', '.tmp_customerPortal.mjs', '.tmp_eqpage.mjs', '.tmp_rentpage.mjs', '.tmp_tableControls.mjs', '.tmp_tableExport.mjs', '.tmp_notifications.mjs', '.tmp_audit.mjs', '.tmp_seed.mjs', '.tmp_hmbar.mjs', '.tmp_offlineQueue.mjs']) {
   const p = join(root, f);
   if (existsSync(p)) rmSync(p);
 }

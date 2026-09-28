@@ -227,6 +227,9 @@ function galatJaringan(e: unknown): boolean {
   return e instanceof TypeError || /Failed to fetch|NetworkError|Load failed/i.test(String(e));
 }
 
+/** Sedang memproses flush antrean? (menahan re-antre saat kirim ulang gagal) */
+let sedangFlush = false;
+
 async function kirimKeApi(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<unknown> {
   if (typeof window === 'undefined') return null; // sisi Worker: wt() sudah menulis
   let res: Response;
@@ -243,8 +246,10 @@ async function kirimKeApi(method: 'POST' | 'PUT' | 'DELETE', path: string, body?
   } catch (e) {
     /* Siklus 70: jaringan putus -> simpan di antrean FIFO localStorage,
        kirim ulang otomatis saat pulih (flushAntreanOffline). Urutan antar
-       mutasi terjaga karena antrean diproses berurutan dari kepala. */
-    if (galatJaringan(e) && typeof localStorage !== 'undefined') {
+       mutasi terjaga karena antrean diproses berurutan dari kepala.
+       `sedangFlush` = flush yang mencoba kirim ulang: JANGAN meng-antre
+       ulang item yang sama (menyebabkan loop tanpa akhir di flush). */
+    if (galatJaringan(e) && !sedangFlush && typeof localStorage !== 'undefined') {
       const masuk = tambahAntrean({ method, path, body, dibuatAt: Date.now() });
       if (masuk) {
         throw new Error('Jaringan putus — perubahan dimasukkan antrean dan akan terkirim otomatis saat pulih.');
@@ -291,21 +296,25 @@ async function lewatJembatan<T>(
 export async function flushAntreanOffline(): Promise<{ terkirim: number; ditolak: string[] }> {
   const terkirimList: number[] = [];
   const ditolak: string[] = [];
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const antrean = bacaAntrean() as AntreanMutasi[];
-    if (antrean.length === 0) break;
-    const m = antrean[0];
-    try {
-      await kirimKeApi(m.method, m.path, m.body);
-      terkirimList.push(1);
-      buangAntreanKe(0);
-    } catch (e) {
-      if (galatJaringan(e)) break; // masih offline: simpan sisanya
-      // Server menolak secara definitif -> buang agar tidak memblokir antrean.
-      ditolak.push(String((e as Error).message || e));
-      buangAntreanKe(0);
+  sedangFlush = true;
+  try {
+    while (true) {
+      const antrean = bacaAntrean() as AntreanMutasi[];
+      if (antrean.length === 0) break;
+      const m = antrean[0];
+      try {
+        await kirimKeApi(m.method, m.path, m.body);
+        terkirimList.push(1);
+        buangAntreanKe(0);
+      } catch (e) {
+        if (galatJaringan(e)) break; // masih offline: simpan sisanya
+        // Server menolak secara definitif -> buang agar tidak memblokir antrean.
+        ditolak.push(String((e as Error).message || e));
+        buangAntreanKe(0);
+      }
     }
+  } finally {
+    sedangFlush = false;
   }
   if (terkirimList.length > 0) {
     const { sinkronCermin } = await import('./fetchCollection');
