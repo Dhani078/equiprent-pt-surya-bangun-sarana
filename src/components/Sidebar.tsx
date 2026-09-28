@@ -29,6 +29,8 @@ interface SidebarProps {
   activeTab: string;
   onSelectTab: (tab: string) => void;
   badges?: SidebarBadges;
+  /** Drawer mobile: true = terbuka (<= 767px). Diabaikan di layar lebar. */
+  mobileOpen?: boolean;
 }
 
 /** Dot badge bulat kecil di pojok kanan atas menu item. */
@@ -59,7 +61,7 @@ function Badge({ count, tone }: { count: number; tone: 'error' | 'warning' }) {
   );
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, badges = {} }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, badges = {}, mobileOpen = false }) => {
   const getMenuItems = () => {
     switch (role) {
       case 'ADMIN':
@@ -100,20 +102,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onSelectTab, 
   const menuItems = getMenuItems();
 
   return (
-    <aside style={{
-      width: '260px',
-      flexShrink: 0, /* cegah menyusut saat halaman bertabel lebar (bug BAST) */
-      backgroundColor: 'var(--color-surface)',
-      borderRight: '1px solid var(--color-border)',
-      height: 'calc(100vh - 64px)',
-      position: 'sticky',
-      top: '64px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      padding: '20px 12px',
-      overflowY: 'auto'
-    }}>
+    <aside
+      className={'app-sidebar' + (mobileOpen ? ' is-open' : '')}
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        borderRight: '1px solid var(--color-border)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '20px 12px',
+      }}
+    >
       <div>
         <div style={{
           fontSize: '11px',

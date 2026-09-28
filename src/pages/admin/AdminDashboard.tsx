@@ -146,7 +146,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           ))}
         </div>
         <div
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(420px, 100%), 1fr))', gap: '20px' }}
         >
           <Skeleton height="340px" />
           <Skeleton height="340px" />
@@ -410,14 +410,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           kontribusi pelanggan teratas (kanan). Keduanya dibangun dari modul
           murni `src/lib/analytics.ts` — rumus yang sama dipakai edge API. */}
       {analytics && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(460px, 100%), 1fr))', gap: '20px' }}>
           <PanelUtilisasiBulanan data={analytics.utilisasiBulanan} />
           <PanelTopCustomer data={analytics.topCustomers} />
         </div>
       )}
 
       {/* Two Column Grid: Recent Rentals & Urgent Maintenance */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(460px, 100%), 1fr))', gap: '20px' }}>
         {/* Recent Rentals Card */}
         <div className="card-premium" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>

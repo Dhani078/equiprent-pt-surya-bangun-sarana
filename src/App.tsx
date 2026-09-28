@@ -35,6 +35,8 @@ export const App: React.FC = () => {
     }
   });
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  /** Drawer navigasi HP (<= 767px). */
+  const [menuTerbuka, setMenuTerbuka] = useState(false);
 
   // Reactive State
   const [equipments, setEquipments] = useState<Equipment[]>(stateStore.equipments);
@@ -324,18 +326,28 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
         onSwitchRole={handleSwitchRole}
         notifications={notifications}
-        onSelectTab={setActiveTab}
+        onSelectTab={(tab) => { setActiveTab(tab); setMenuTerbuka(false); }}
+        onToggleSidebar={() => setMenuTerbuka((o) => !o)}
       />
 
       <div style={{ display: 'flex', flex: 1 }}>
+        {/* Backdrop drawer HP — hanya muncul saat drawer terbuka (CSS). */}
+        {menuTerbuka && (
+          <div
+            className="sidebar-backdrop"
+            onClick={() => setMenuTerbuka(false)}
+            aria-hidden="true"
+          />
+        )}
         <Sidebar
           role={currentUser.role_name || 'ADMIN'}
           activeTab={activeTab}
-          onSelectTab={setActiveTab}
+          onSelectTab={(tab) => { setActiveTab(tab); setMenuTerbuka(false); }}
           badges={sidebarBadges}
+          mobileOpen={menuTerbuka}
         />
 
-        <main style={{ flex: 1, padding: '24px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+        <main style={{ flex: 1, minWidth: 0, padding: '24px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
           {/* T-0072: boundary per-rute — crash satu halaman hanya mengganti
               area kontennya, navbar/sidebar tetap hidup. Ganti rute/tab
               otomatis me-reset boundary (resetKey). */}
