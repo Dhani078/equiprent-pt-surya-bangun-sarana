@@ -1,0 +1,38 @@
+// ---------------------------------------------------------------------------
+// Helper Agregasi Baris
+// ---------------------------------------------------------------------------
+
+/**
+ * Ringkasan laporan DIHITUNG DARI BARIS, bukan dari sumber mentah.
+ *
+ * Alasannya: setelah baris disaring kata kunci (lihat `filterReportRows`),
+ * ringkasan harus menggambarkan baris yang masih terlihat. Bila ringkasan
+ * dihitung dari sumber aslinya, pengguna yang mencari satu pelanggan akan
+ * melihat nilai total seluruh transaksi — kesalahan fatal pada laporan
+ * keuangan yang akan langsung dipertanyakan penguji.
+ */
+
+/** Menjumlahkan nilai numerik pada satu indeks kolom. Sel bermasalah diabaikan. */
+function sumColumn(rows: readonly ReportCellValue[][], index: number): number {
+  let total = 0;
+  for (const row of rows) {
+    const value = Number(row[index]);
+    if (Number.isFinite(value)) total += value;
+  }
+  return total;
+}
+
+/** Menghitung baris yang nilainya pada kolom `index` persis sama dengan `needle`. */
+function countWhere(
+  rows: readonly ReportCellValue[][],
+  index: number,
+  needle: string
+): number {
+  let n = 0;
+  for (const row of rows) {
+    if (String(row[index] ?? '') === needle) n += 1;
+  }
+  return n;
+}
+
+// ---------------------------------------------------------------------------

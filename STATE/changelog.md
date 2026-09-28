@@ -108,3 +108,6 @@
 - Refactor: server/index.ts dipecah jadi http.ts + context.ts + routes/* (7 domain).
 - Fitur: perpanjangan kontrak kedaluwarsa + validator tanggal nyata (31 Feb ditolak).
 - Insiden: harness memperpanjang 13 kontrak produksi; dipulihkan; harness diberi kontrak uji sendiri.
+
+## Siklus 74 — 2026-09-28
+- Refactor: reports.ts 1278 baris -> reports/ (13 berkas, maks 224 baris). API identik, verifikasi 11 laporan production.

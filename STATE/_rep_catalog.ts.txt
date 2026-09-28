@@ -1,0 +1,115 @@
+// ---------------------------------------------------------------------------
+// Konstanta Laporan
+// ---------------------------------------------------------------------------
+
+/**
+ * Tarif pajak & biaya operasional yang dipotong dari pendapatan kotor
+ * pada Laporan Pendapatan Bersih. Mengikuti referensi
+ * `6_3_report_pendapatan_bersih_slim.php` (10%).
+ */
+export const OPERATIONAL_TAX_RATE = 0.1;
+
+/**
+ * Batas panjang kata kunci pencarian (lihat `normalizeKeyword`).
+ * Dipakai untuk mencegah pencarian yang sangat panjang menguras CPU
+ * tanpa menghasilkan manfaat bagi pengguna.
+ */
+export const MAX_KEYWORD_LENGTH = 100;
+
+/**
+ * Status rental yang diakui sebagai pendapatan.
+ * Referensi PHP hanya memakai `APPROVED`; daftar ini diperluas dengan
+ * `ON_GOING` dan `COMPLETED` karena keduanya juga merupakan pesanan yang
+ * sudah disetujui dan menghasilkan penerimaan nyata.
+ */
+const REVENUE_STATUSES: readonly Rental['status'][] = ['APPROVED', 'ON_GOING', 'COMPLETED'];
+
+/** Status pembayaran yang masih menjadi piutang (belum diterima). */
+const RECEIVABLE_STATUSES: readonly Payment['status'][] = ['UNPAID', 'PENDING_VERIFICATION'];
+
+// ---------------------------------------------------------------------------
+// Katalog Laporan
+// ---------------------------------------------------------------------------
+
+export interface ReportDefinition {
+  id: ReportId;
+  title: string;
+  description: string;
+  /** False bila laporan bersifat snapshot (tidak bergantung rentang tanggal). */
+  supportsDateFilter: boolean;
+}
+
+/** 11 laporan operasional sesuai dokumen skripsi. */
+export const REPORT_CATALOG: readonly ReportDefinition[] = [
+  {
+    id: 'RENTAL_BULANAN',
+    title: 'Laporan Rental Bulanan',
+    description: 'Seluruh transaksi sewa berdasarkan tanggal mulai sewa.',
+    supportsDateFilter: true,
+  },
+  {
+    id: 'PEMBAYARAN_PIUTANG',
+    title: 'Laporan Pembayaran & Piutang',
+    description: 'Rekapitulasi penerimaan dan tagihan yang belum lunas.',
+    supportsDateFilter: true,
+  },
+  {
+    id: 'PENDAPATAN_BERSIH',
+    title: 'Laporan Pendapatan Bersih',
+    description: 'Laba rugi per periode setelah biaya servis dan pajak operasional.',
+    supportsDateFilter: true,
+  },
+  {
+    id: 'MAINTENANCE_SERVIS',
+    title: 'Laporan Maintenance & Servis',
+    description: 'Seluruh jadwal dan riwayat perawatan unit alat berat.',
+    supportsDateFilter: true,
+  },
+  {
+    id: 'UTILISASI_HM',
+    title: 'Laporan Utilisasi & Hour Meter',
+    description: 'Akumulasi jam operasi (HM) dan servis terakhir tiap unit.',
+    supportsDateFilter: false,
+  },
+  {
+    id: 'KERUSAKAN_UNIT',
+    title: 'Laporan Kerusakan Unit',
+    description: 'Perbaikan korektif beserta biaya penanganannya.',
+    supportsDateFilter: true,
+  },
+  {
+    id: 'TELEMETRI_GPS',
+    title: 'Laporan Histori Telemetri GPS',
+    description: 'Rekaman posisi, kecepatan, dan status mesin armada.',
+    supportsDateFilter: true,
+  },
+  {
+    id: 'KINERJA_STAF',
+    title: 'Laporan Kinerja Staf & Operator',
+    description: 'Beban kerja staf: verifikasi pembayaran dan penanganan servis.',
+    supportsDateFilter: true,
+  },
+  {
+    id: 'SUKU_CADANG',
+    title: 'Laporan Pemakaian Suku Cadang',
+    description: 'Komponen yang diganti beserta biaya penggantiannya.',
+    supportsDateFilter: true,
+  },
+  {
+    id: 'KEPUASAN_PELANGGAN',
+    title: 'Laporan Kepuasan & Umpan Balik Pelanggan',
+    description: 'Catatan evaluasi yang ditinggalkan pelanggan pada transaksi sewa.',
+    supportsDateFilter: true,
+  },
+  {
+    id: 'AUDIT_TRAIL',
+    title: 'Laporan Audit Trail & Log Sistem',
+    description: 'Jejak dokumen resmi yang diterbitkan beserta penerbitnya.',
+    supportsDateFilter: true,
+  },
+];
+
+/** Definisi laporan berdasarkan id. `undefined` bila id tidak dikenal. */
+export function getReportDefinition(id: ReportId): ReportDefinition | undefined {
+  return REPORT_CATALOG.find((r) => r.id === id);
+}
