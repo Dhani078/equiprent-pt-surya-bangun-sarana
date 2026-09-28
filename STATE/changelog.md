@@ -129,3 +129,6 @@
 
 ## Siklus 80 — 2026-09-28
 - Refactor: MaintenanceManagement.tsx -> maintenance/{ServiceHistoryPanel,MaintenanceFormModal}.tsx. Terverifikasi production.
+
+## Siklus 81 — 2026-09-28
+- Refactor: validators.ts -> validators/{core,rules,fields,forms,contract,index}. Barrel menjaga 8 consumer lama tanpa edit.

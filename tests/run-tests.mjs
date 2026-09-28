@@ -38,7 +38,7 @@ bundle('src/lib/reports/index.ts', '.tmp_reports.mjs');
 bundle('src/lib/offlineQueue.ts', '.tmp_offlineQueue.mjs');
 bundle('src/lib/documents.ts', '.tmp_documents.mjs');
 bundle('src/server/index.ts', '.tmp_server.mjs');
-bundle('src/lib/validators.ts', '.tmp_validators.mjs');
+bundle('src/lib/validators/index.ts', '.tmp_validators.mjs');
 bundle('src/lib/dashboard.ts', '.tmp_dashboard.mjs');
 bundle('src/lib/rentalWorkflow.ts', '.tmp_rentalWorkflow.mjs');
 bundle('src/lib/contracts.ts', '.tmp_contracts.mjs');
