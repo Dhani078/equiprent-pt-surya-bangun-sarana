@@ -1,0 +1,104 @@
+/**
+ * Rute API domain Audit trail.
+ *
+ * Dipisah dari `server/index.ts` supaya berkas rute tetap ringkas dan
+ * terbaca sebagai daftar endpoint; kerangka aplikasi (CORS, auth, error
+ * handler, fallback aset) tetap tinggal di `index.ts`.
+ */
+import type { Hono } from 'hono';
+import {
+  BAD_ID,
+  BAD_JSON,
+  badValidation,
+  db,
+  getAuditLog,
+  hydrateAuditLog,
+  parseId,
+} from '../context';
+import type {
+  AuditEntry,
+} from '../context';
+import type { AppEnv } from '../http';
+
+export function daftarAudit(app: Hono<AppEnv>): void {
+// ---------------------------------------------------------------------------
+// Audit Trail API
+// Hanya ADMIN (lihat RBAC_MATRIX di src/lib/auth.ts): catatan ini memuat
+// jejak seluruh pengguna, termasuk IP dan aktivitas akun lain.
+//
+// Filter (opsional):
+//   action   - kode aksi persis, mis. PAYMENT_VERIFIED (boley beberapa, koma)
+//   entity   - nama entitas, mis. rental|payment|equipment|user|contract|maintenance
+//   user_id  - hanya entri pelaku ini
+//
+// ponytail: filter rentang waktu (from/to) ditambah saat tabel audit_log
+// permanen dipakai; filter kode aksi sudah cukup untuk demo sidang.
+// ---------------------------------------------------------------------------
+app.get('/api/audit-log', async (c) => {
+  // Pemeriksaan eksplisit di sini menjaga aturan tetap berlaku seandainya
+  // matriks RBAC kelak diperluas (misal STAFF diizinkan GET saja).
+  if (c.get('role') !== 'ADMIN') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Hanya Administrator yang dapat melihat catatan audit trail.',
+        },
+      },
+      403
+    );
+  }
+
+  const limitRaw = c.req.query('limit');
+  const limit = limitRaw ? Math.min(1000, Math.max(1, Number(limitRaw) || 100)) : 100;
+
+  // Penyaringan opsional. Dipisah koma, dirapikan, lalu cocok persis (bukan
+  // substring) supaya `entity=rental` tidak ikut menarik `rental_history`.
+  const actions = (c.req.query('action') ?? '')
+    .split(',')
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => s.length > 0);
+  const entities = (c.req.query('entity') ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length > 0);
+  const userIdRaw = c.req.query('user_id');
+  const userId = userIdRaw && Number.isFinite(Number(userIdRaw)) ? Number(userIdRaw) : null;
+
+  // Muat riwayat permanen dari DB ke cache memori (sekali per isolate) agar
+  // entri yang ditulis isolate lain juga terlihat. Bila DB belum terhubung,
+  // fungsi segera kembali dan buffer memori menjadi satu-satunya sumber.
+  await hydrateAuditLog();
+
+  const entries = getAuditLog(1000).filter((e) => {
+    if (actions.length > 0 && !actions.includes(e.action)) return false;
+    if (entities.length > 0 && !entities.includes(e.entity.toLowerCase())) return false;
+    if (userId !== null && e.user_id !== userId) return false;
+    return true;
+  });
+
+  return c.json({
+    success: true,
+    data: entries.slice(0, limit),
+    meta: {
+      total: entries.length,
+      filters: { actions, entities, user_id: userId },
+    },
+  });
+});
+
+/**
+ * Telemetri armada: satu titik TERBARU per unit + ringkasan + penyaringan.
+ *
+ * RBAC: ADMIN & STAFF melihat seluruh armada. CUSTOMER hanya melihat unit
+ * yang sedang ia sewa (ON_GOING / APPROVED) — diputuskan di server, bukan
+ * di klien, sehingga pelanggan tidak dapat melacak armada pelanggan lain.
+ *
+ * Query (semua opsional & dinormalkan):
+ *   engine   = ALL | ON | OFF
+ *   movement = ALL | BERGERAK | DIAM
+ *   fuel     = ALL | KRITIS | RENDAH | NORMAL
+ *   search   = kata kunci (kode unit / nama unit / ID unit)
+ */
+}

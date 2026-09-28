@@ -103,3 +103,8 @@
 ## Siklus 72 — 2026-09-28
 - Fitur: daur-hidup kontrak - status Kedaluwarsa, guard tanda tangan 409, tombol disembunyikan, filter+badge.
 - Insiden: 13 tagihan terhapus oleh harness; dipulihkan dari seed kanonik; harness diberi pengaman cakupan + sidik jari.
+
+## Siklus 73 — 2026-09-28
+- Refactor: server/index.ts dipecah jadi http.ts + context.ts + routes/* (7 domain).
+- Fitur: perpanjangan kontrak kedaluwarsa + validator tanggal nyata (31 Feb ditolak).
+- Insiden: harness memperpanjang 13 kontrak produksi; dipulihkan; harness diberi kontrak uji sendiri.

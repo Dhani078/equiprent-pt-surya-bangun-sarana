@@ -1,0 +1,1 @@
+import fs from 'node:fs';import {connect} from '@tidbcloud/serverless';const u=fs.readFileSync('.dev.vars','utf8').match(/DATABASE_URL\s*=\s*"?([^"\r\n]+)"?/)[1];const c=connect({url:u});const r=await c.execute(process.env.Q,JSON.parse(process.env.P));console.log(JSON.stringify(r));

@@ -1,0 +1,28 @@
+app.post('/api/users/:id/toggle', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json(BAD_ID, 400);
+
+  // Mencegah admin menonaktifkan akunnya sendiri (bisa mengunci sistem).
+  const operatorId = c.get('userId');
+  if (typeof operatorId === 'number' && operatorId === id) {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Anda tidak dapat menonaktifkan akun sendiri.' } },
+      403
+    );
+  }
+
+  const updated = await db.toggleUserStatus(id);
+  if (!updated) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Pengguna tidak ditemukan.' } }, 404);
+
+  // Audit trail: mengaktifkan/menonaktifkan akun adalah aksi sensitif
+  // (bisa melarikan pengguna keluar sistem), pelakunya wajib tercatat.
+  auditLog({
+    ...auditActor(c),
+    action: 'USER_STATUS_TOGGLE',
+    entity: 'user',
+    entity_id: id,
+    detail: `Status akun ${updated.username} diubah menjadi ${updated.status}`,
+  });
+
+  return c.json({ success: true, item: ringkasUser(updated) });
+});

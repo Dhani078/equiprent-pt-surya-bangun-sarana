@@ -317,6 +317,17 @@ export const App: React.FC = () => {
     refreshData();
   };
 
+  /**
+   * Perpanjangan kontrak kedaluwarsa (Admin/Staf).
+   *
+   * db.perpanjangKontrak melempar dengan pesan dari server bila ditolak
+   * (mis. kontrak sudah ditandatangani) — pesan itu yang ditampilkan panel.
+   */
+  const handleRenewContract = async (contractId: number, validUntil: string) => {
+    await db.perpanjangKontrak(contractId, validUntil);
+    refreshData();
+  };
+
   const handleVerifyPayment = async (paymentId: number, staffId: number, staffName: string) => {
     await db.verifyPayment(paymentId, staffId, staffName);
     refreshData();
@@ -502,6 +513,7 @@ export const App: React.FC = () => {
                   onUpdateRentalStatus={handleUpdateRentalStatus}
                   onCreateContract={handleCreateContract}
                   onSignContract={handleSignContract}
+                  onRenewContract={handleRenewContract}
                   onNotify={notify}
                   isLoading={dataLoading}
                 />
@@ -567,6 +579,7 @@ export const App: React.FC = () => {
                   onUpdateRentalStatus={handleUpdateRentalStatus}
                   onCreateContract={handleCreateContract}
                   onSignContract={handleSignContract}
+                  onRenewContract={handleRenewContract}
                   onNotify={notify}
                   activeMenu={activeTab}
                 />
@@ -617,6 +630,7 @@ export const App: React.FC = () => {
                 trackingData={trackingData}
                 onAddRental={handleAddRental}
                 onSignContract={handleSignContract}
+                  onRenewContract={handleRenewContract}
                 onUploadPaymentProof={handleUploadPaymentProof}
               />
             </>

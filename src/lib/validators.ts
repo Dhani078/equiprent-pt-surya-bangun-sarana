@@ -416,6 +416,21 @@ export function validateMaintenanceType(raw: unknown): ValidationResult<Maintena
 }
 
 /**
+ * Memastikan string `YYYY-MM-DD` benar-benar ada di kalender.
+ *
+ * `new Date('2027-02-31')` TIDAK gagal di JavaScript — nilainya bergulir
+ * menjadi 3 Maret. Tanggal seperti itu harus ditolak, bukan diterima
+ * diam-diam sebagai tanggal lain.
+ */
+function parseTanggalNyata(value: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T12:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  // Bandingkan balik: tanggal bergulir menghasilkan tanggal yang berbeda.
+  return parsed.toISOString().slice(0, 10) === value ? parsed : null;
+}
+
+/**
  * Tanggal servis terakhir (`YYYY-MM-DD`). Opsional: unit baru boleh belum
  * pernah diservis.
  */
@@ -423,12 +438,8 @@ export function validateMaintenanceDate(raw: unknown, fieldLabel = 'Tanggal serv
   const value = sanitizeText(raw);
   if (value === '') return ok(null);
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return fail('INVALID_FORMAT', `${fieldLabel} harus berformat YYYY-MM-DD.`);
-  }
-
-  const parsed = new Date(`${value}T12:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) {
+  const parsed = parseTanggalNyata(value);
+  if (parsed === null) {
     return fail('INVALID_FORMAT', `${fieldLabel} bukan tanggal yang valid.`);
   }
 
@@ -657,6 +668,61 @@ export function validateSignerName(raw: unknown): ValidationResult<string> {
 }
 
 /**
+ * Tanggal berlaku baru untuk perpanjangan kontrak (`YYYY-MM-DD`).
+ *
+ * Berbeda dari `validateMaintenanceDate`, tanggal ini WAJIB ada dan HARUS
+ * di masa depan: memperpanjang kontrak berarti menetapkan batas berlaku yang
+ * belum terlewat, bukan mencatat kejadian yang sudah terjadi.
+ */
+export function validateContractValidUntil(raw: unknown, fieldLabel = 'Berlaku sampai'): ValidationResult<string> {
+  const value = sanitizeText(raw);
+  if (value === '') return fail('REQUIRED', `${fieldLabel} wajib diisi.`);
+
+  const parsed = parseTanggalNyata(value);
+  if (parsed === null) {
+    return fail('INVALID_FORMAT', `${fieldLabel} bukan tanggal yang valid.`);
+  }
+
+  const hariIni = new Date();
+  const batasBawah = new Date(Date.UTC(hariIni.getUTCFullYear(), hariIni.getUTCMonth(), hariIni.getUTCDate()) + 86_400_000);
+  if (parsed < batasBawah) {
+    return fail('OUT_OF_RANGE', `${fieldLabel} harus tanggal setelah hari ini.`);
+  }
+
+  return ok(value);
+}
+
+/**
+ * Payload perpanjangan kontrak: tanggal berlaku baru + alasan (opsional).
+ *
+ * Kedua sisi (server & klien) memakai fungsi ini supaya pesan galat identik.
+ */
+export function validateContractRenewal(
+  raw: unknown
+): FormValidationResult<ValidatedContractRenewal, keyof ValidatedContractRenewal> {
+  const src: Record<string, unknown> =
+    typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+
+  const validUntil = validateContractValidUntil(src.validUntil);
+  const reason = validateText(src.reason, 'Alasan perpanjangan', {
+    required: false,
+    min: 0,
+    max: LIMIT_TERMS_MAX,
+  });
+
+  const errors = collect<keyof ValidatedContractRenewal>([
+    ['validUntil', validUntil],
+    ['reason', reason],
+  ]);
+
+  if (errors) return { ok: false, errors };
+  return {
+    ok: true,
+    value: { validUntil: unwrap(validUntil), reason: unwrap(reason) },
+  };
+}
+
+/**
  * Goresan tanda tangan elektronik (`data:image/png;base64,...`).
  *
  * Boleh kosong: sistem tetap menerima kontrak yang disahkan tanpa goresan
@@ -737,6 +803,12 @@ export function validateContractSignature(
       signature: unwrap(signature),
     },
   };
+}
+
+/** Hasil validasi payload perpanjangan kontrak. */
+export interface ValidatedContractRenewal {
+  validUntil: string;
+  reason: string;
 }
 
 /** Field yang divalidasi saat penandatanganan kontrak. */
