@@ -31,7 +31,7 @@ import {
   validateMaintenanceType,
   validateContractSignature,
 } from '../lib/validators';
-import { buildContractPreview, renderContractHtml } from '../lib/contracts';
+import { isContractActive, isContractSigned, buildContractPreview, renderContractHtml } from '../lib/contracts';
 import type { ValidatedEquipmentInput, ValidatedUserInput } from '../lib/validators';
 import {
   FIELD_BUKTI,
@@ -1381,6 +1381,23 @@ app.post('/api/contracts/:id/sign', async (c) => {
 
   const role = c.get('role');
   const userId = c.get('userId');
+
+  // Daur-hidup: kontrak yang melewati batas berlaku tidak sah untuk
+  // ditandatangani — dokumen harus diterbitkan ulang dengan tanggal baru.
+  // Kontrakyang SUDAH sah dilewati di sini agar pesannya tetap akurat
+  // ("sudah ditandatangani"), bukan terbaca seolah tanda tangannya gugur.
+  if (!isContractSigned(kontrak) && !isContractActive(kontrak)) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'CONTRACT_EXPIRED',
+          message: `Kontrak ini kedaluwarsa per ${kontrak.valid_until}. Hubungi staf untuk penerbitan ulang.`,
+        },
+      },
+      409
+    );
+  }
 
   if ((await maySignContract(kontrak, role, userId)) !== true) {
     return c.json(
