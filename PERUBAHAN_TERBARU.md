@@ -66,3 +66,39 @@ Status verifikasi: `npm run type-check` → **0 error**, `npm test` → **Semua 
 3. Isi `.env` lokal mengikuti `.env.example`; jangan pernah commit `.env`.
 4. Perintah kerja: `npm install`, `npm run dev`, `npm run type-check`, `npm test`, `npm run build`.
 5. Di PowerShell Windows gunakan `;` sebagai pemisah perintah (bukan `&&`) dan bungkus path berspasi dengan tanda kutip.
+
+---
+
+## 5. Refactor Modular Besar — Siklus 73–88 (September 2026)
+
+Seluruh berkas >600 baris dipecah menjadi paket modul terfokus. **Tidak ada tanda tangan fungsi publik yang berubah** — semua consumer tetap resolve lewat barrel `index.ts`.
+
+### a. Paket `src/lib/`
+| Modul lama | Jadi | Isi |
+|---|---|---|
+| `validators.ts` (820) | `validators/` | `core` (tipe `ValidationResult`/`FormValidationResult`), `rules` (batas kolom TiDB + regex), `fields`, `forms`, `contract`, `index` |
+| `customerPortal.ts` (829) | `portal/` | `core`, `ownership`, `catalog`, `requestCheck`, `journey`, `billing`, `index` |
+| `contracts.ts` (664) | `contracts/` | `constants`, `numbering`, `status`, `preview`, `render`, `index` |
+| `reports.ts` (1278) | `reports/` | 13 submodule (kpi, chart, export, pivot, forecast, anomaly, insights, alert, drilldown, dashboard, range, index) |
+| `db.ts` (1202) | `db/` | `index` + `store/` (9 berkas, maks 358 baris) |
+
+### b. Komponen UI terpisah
+| Halaman | Baris | Modul baru |
+|---|---|---|
+| `admin/RentalManagement.tsx` | 907 → 634 | `rental/AddRentalModal.tsx`, `rental/StatusConfirmModal.tsx` |
+| `admin/MaintenanceManagement.tsx` | 808 → 581 | `maintenance/ServiceHistoryPanel.tsx`, `maintenance/MaintenanceFormModal.tsx` |
+| `admin/GpsTrackingPage.tsx` | 745 → 590 | `gps/GeofenceAlertBanner.tsx`, `gps/TelemetryFilterPanel.tsx` |
+| `customer/CustomerPortal.tsx` | 1013 → 844 | `customer/RentBookingModal.tsx`, `customer/PaymentProofModal.tsx` |
+| `staff/StaffDashboard.tsx` | 761 → 587 | `staff/components/DueNotificationPanel.tsx`, `staff/components/PaymentProofViewerModal.tsx` |
+| `components/ContractPanel.tsx` | 760 → 538 | `contract/ContractSignModal.tsx`, `contract/ContractIssueModal.tsx`, `contract/ContractRenewModal.tsx` |
+| `pages/Login.tsx` | 696 → 533 | `login/RegisterModal.tsx` |
+
+### c. Fitur baru terkait kontrak
+- `POST /api/contracts/:id/renew` — perpanjang kontrak kedaluwarsa (ADMIN/STAFF saja; tolak `409` bila kontrak sudah ditandatangani, `400` bila tanggal tidak nyata).
+- Pratinjau kontrak viewer: badge `Belum ditandatangani` (amber) vs `Ditandatangani` (hijau), nama + waktu tanda tangan, kartu `Perpanjang Kontrak` di dashboard admin.
+- Modal tanda tangan digital customer (canvas + nama penanda tangan), modal terbitkan kontrak (dropdown sewa disetujui tanpa kontrak, disabled saat kosong — perilaku benar).
+
+### d. Verifikasi
+- `npm run type-check` → 0 error, `npm test` → **30/30 suite** lulus.
+- Audit visual CDP production (chrome `--remote-debugging-port=9222`) tiap siklus: 0 overflow horizontal, konsol bersih, tiap modal & alur dibuka lewat UI asli.
+- `bundle()` di `tests/run-tests.mjs` kini menunjuk `validators/index.ts`, `portal/index.ts`, `contracts/index.ts`.
