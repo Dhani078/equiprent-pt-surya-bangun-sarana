@@ -6,8 +6,8 @@ import {
   getContractStatusTone,
   isSafeSignatureDataUrl,
   renderContractHtml,
-} from '../lib/contracts';
-import type { ContractPreview } from '../lib/contracts';
+} from '../lib/contracts/index';
+import type { ContractPreview } from '../lib/contracts/index';
 
 /**
  * Pratinjau Kontrak Digital

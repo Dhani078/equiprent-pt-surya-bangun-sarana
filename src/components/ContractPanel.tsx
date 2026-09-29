@@ -11,7 +11,7 @@ import {
   getContractStatusLabel,
   getContractStatusTone,
   isContractSigned,
-} from '../lib/contracts';
+} from '../lib/contracts/index';
 import { validateContractRenewal, validateContractSignature } from '../lib/validators';
 import type { Contract, Equipment, Rental, User } from '../types';
 
