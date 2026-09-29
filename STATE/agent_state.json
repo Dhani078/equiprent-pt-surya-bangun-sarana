@@ -4,25 +4,26 @@
   "current_task_id": null,
   "current_phase": "FASE 5: INOVASI",
   "completed_this_cycle": [
-    "S91-01 refactor GpsTrackingPage -> gps/{FleetSummaryGrid,UnitTelemetryPanel,FleetMapPanel} + smoke UI"
+    "S91-01 refactor GpsTrackingPage -> gps/{FleetSummaryGrid,UnitTelemetryPanel,FleetMapPanel} + smoke UI",
+    "S91-02 refactor StaffDashboard -> staff/components/{StaffActionBadges,PaymentVerificationTable,RentalApprovalTable} + fix grid mobile ovf=13"
   ],
-  "session_summary": "SIKLUS 91 p1 (2026-09-29): GpsTrackingPage.tsx 592->172 -> pages/admin/gps/{FleetSummaryGrid 149 (8 kartu agregat + EngineBadge/FuelBadge), UnitTelemetryPanel 226 (kartu unit + daftar armada), FleetMapPanel 100 (lazy Leaflet + heatmap toggle)}. breachIds Set<number>. Smoke CDP STATE/smoke_gps_91.py: 8/8 kartu, 40 pilih-unit, unit switch ubah serial, heatmap OK, 46 marker, mobile 375 bersih. Build 5.37s index 447.31kB. Deploy ead77bc2-3f4e-48b9-b01b-52eb2856a874. Commit 08b69f7. (Siklus 90 penuh: CustomerPortal 844->339, RentalManagement 634->339, ReportsPage 599->361, manualChunks index 620->447kB.)",
+  "session_summary": "SIKLUS 91 p1 (2026-09-29): GpsTrackingPage.tsx 592->172 -> pages/admin/gps/{FleetSummaryGrid 149 (8 kartu agregat + EngineBadge/FuelBadge), UnitTelemetryPanel 226 (kartu unit + daftar armada), FleetMapPanel 100 (lazy Leaflet + heatmap toggle)}. breachIds Set<number>. Smoke CDP STATE/smoke_gps_91.py: 8/8 kartu, 40 pilih-unit, unit switch ubah serial, heatmap OK, 46 marker, mobile 375 bersih. Build 5.37s index 447.31kB. Deploy ead77bc2-3f4e-48b9-b01b-52eb2856a874. Commit 08b69f7. p2: StaffDashboard.tsx 587->260 -> staff/components/{StaffActionBadges 80, PaymentVerificationTable 222, RentalApprovalTable 96}. Fix responsif: grid inline repeat(3,1fr) -> ovf=13 di 375px, ganti auto-fit minmax(190px,1fr). Smoke staff/staff via CDP: 3 badges, 20 rows, sub-tab booking/kontrak OK, modal bukti OK, mobile ovf=0. Deploy 0cc7832b-d3df-44ea-a547-4c496b5d06e9. Commit 49b073d. GOTCHA BARU: inline grid kolom tetap wajib auto-fit minmax; session CDP lama early-return LOGGED -> logout manual saat ganti akun. (Siklus 90 penuh: CustomerPortal 844->339, RentalManagement 634->339, ReportsPage 599->361, manualChunks index 620->447kB.)",
   "quality_gate": {
     "type_check": "PASS (0 error)",
     "test": "PASS (30/30 suite)",
-    "build": "PASS (vite 5.37s; index 447.31kB gzip 117)",
-    "deploy_version": "ead77bc2-3f4e-48b9-b01b-52eb2856a874",
-    "verified_at": "2026-09-29T05:10:00Z"
+    "build": "PASS (vite 5.24s; index 447.75kB gzip 117)",
+    "deploy_version": "0cc7832b-d3df-44ea-a547-4c496b5d06e9",
+    "verified_at": "2026-09-29T05:45:00Z"
   },
   "test_suites": 30,
   "commits": 49,
   "deploy": {
     "status": "DEPLOYED",
-    "version": "ead77bc2-3f4e-48b9-b01b-52eb2856a874",
+    "version": "0cc7832b-d3df-44ea-a547-4c496b5d06e9",
     "url": "https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev"
   },
-  "next_focus": "Siklus 91 p2: StaffDashboard.tsx (587) -> staff/ panels, lalu MaintenanceManagement.tsx (581), UserManagement.tsx (574). App.tsx 678 terakhir (custom hooks).",
-  "updated": "2026-09-29T05:10:00",
-  "last_summary": "Siklus 91 p1: GpsTrackingPage split + smoke UI (unit switch, heatmap, 46 marker, mobile bersih). deploy ead77bc2.",
+  "next_focus": "Siklus 91 p3: MaintenanceManagement.tsx (581) lalu UserManagement.tsx (574). App.tsx 678 terakhir.",
+  "updated": "2026-09-29T05:45:00",
+  "last_summary": "Siklus 91 p2: StaffDashboard split + fix grid mobile ovf=13. deploy 0cc7832b.",
   "updated_at": "2026-09-29"
 }
