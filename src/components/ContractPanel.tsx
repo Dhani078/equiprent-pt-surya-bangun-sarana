@@ -1,15 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
-import { CalendarPlus, FileSignature, FileText, PenLine, Search } from 'lucide-react';
+import { FileSignature } from 'lucide-react';
 import { Modal } from './Modal';
 import { ContractRenewModal } from './contract/ContractRenewModal';
 import { ContractSignModal } from './contract/ContractSignModal';
 import { ContractIssueModal } from './contract/ContractIssueModal';
+import { ContractFilterBar } from './contract/ContractFilterBar';
+import { ContractTable } from './contract/ContractTable';
 import { ContractViewer } from './ContractViewer';
 import {
   buildContractPreview,
   getContractLifecycleStatus,
-  getContractStatusLabel,
-  getContractStatusTone,
   isContractSigned,
 } from '../lib/contracts/index';
 import { validateContractRenewal, validateContractSignature } from '../lib/validators';
@@ -30,15 +30,6 @@ import type { Contract, Equipment, Rental, User } from '../types';
  * induknya. Karena itu panel dapat dipakai baik di halaman Admin/Staf
  * maupun di portal Pelanggan tanpa perubahan.
  */
-
-/** Warna badge status mengikuti design system §7. */
-const TONE_STYLE: Record<string, { backgroundColor: string; color: string; borderColor: string }> = {
-  success: { backgroundColor: 'var(--bg-green-soft)', color: 'var(--fg-success-deeper)', borderColor: '#A7F3D0' },
-  warning: { backgroundColor: 'var(--bg-amber-soft)', color: 'var(--fg-warning-deep)', borderColor: 'var(--border-amber-soft)' },
-  info: { backgroundColor: 'var(--bg-blue-soft)', color: 'var(--fg-info-deep)', borderColor: 'var(--border-blue-soft)' },
-  neutral: { backgroundColor: 'var(--bg-subtle)', color: 'var(--text-body)', borderColor: 'var(--color-border)' },
-  danger: { backgroundColor: 'var(--bg-red-soft, #FEF2F2)', color: 'var(--fg-danger, #B42318)', borderColor: '#FECACA' },
-};
 
 export interface ContractPanelProps {
   /** Seluruh kontrak yang boleh dilihat pengguna ini. */
@@ -326,161 +317,24 @@ export const ContractPanel: React.FC<ContractPanelProps> = ({
         )}
       </div>
 
-      {/* Pencarian & penyaringan */}
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: '1 1 240px', minWidth: '200px' }}>
-          <Search
-            size={15}
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              left: '10px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--text-faint)',
-            }}
-          />
-          <input
-            type="search"
-            className="input-premium"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="Cari kode kontrak, pelanggan, atau unit..."
-            aria-label="Cari kontrak"
-            style={{ paddingLeft: '32px', width: '100%' }}
-          />
-        </div>
+      <ContractFilterBar
+        keyword={keyword}
+        filterStatus={filterStatus}
+        onKeyword={setKeyword}
+        onStatus={setFilterStatus}
+      />
 
-        <select
-          className="input-premium"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as 'ALL' | 'SIGNED' | 'AWAITING')}
-          aria-label="Saring status tanda tangan"
-          style={{ width: 'auto', minWidth: '190px' }}
-        >
-          <option value="ALL">Semua Status</option>
-          <option value="AWAITING">Menunggu Tanda Tangan</option>
-          <option value="EXPIRED">Kedaluwarsa</option>
-          <option value="SIGNED">Telah Ditandatangani</option>
-        </select>
-      </div>
-
-      {/* Tabel kontrak */}
-      {daftarKontrak.length === 0 ? (
-        <div
-          style={{
-            padding: '36px 20px',
-            textAlign: 'center',
-            border: '1px dashed var(--color-border)',
-            borderRadius: '8px',
-            backgroundColor: 'var(--bg-raised)',
-          }}
-        >
-          <FileText size={30} style={{ color: '#CBD5E1', marginBottom: '10px' }} />
-          <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: 'var(--color-secondary)' }}>
-            {contracts.length === 0
-              ? 'Belum ada kontrak yang diterbitkan.'
-              : 'Tidak ada kontrak yang cocok dengan pencarian.'}
-          </p>
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left' }}>
-                <th style={{ padding: '10px 8px', color: 'var(--color-secondary)' }}>Kode Kontrak</th>
-                <th style={{ padding: '10px 8px', color: 'var(--color-secondary)' }}>Transaksi</th>
-                <th style={{ padding: '10px 8px', color: 'var(--color-secondary)' }}>Pelanggan</th>
-                <th style={{ padding: '10px 8px', color: 'var(--color-secondary)' }}>Berlaku Sampai</th>
-                <th style={{ padding: '10px 8px', color: 'var(--color-secondary)' }}>Status</th>
-                <th style={{ padding: '10px 8px', color: 'var(--color-secondary)', textAlign: 'right' }}>
-                  Aksi
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {daftarKontrak.map((kontrak) => {
-                const status = getContractLifecycleStatus(kontrak);
-                const tone = TONE_STYLE[getContractStatusTone(status)] ?? TONE_STYLE.neutral;
-                const rental = rentals.find((r) => r.id === kontrak.rental_id);
-
-                return (
-                  <tr key={kontrak.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontWeight: 700 }}>
-                      {kontrak.contract_code}
-                    </td>
-                    <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontSize: '11.5px' }}>
-                      {kontrak.rental_code ?? '-'}
-                      {rental !== undefined && (
-                        <div style={{ fontFamily: 'inherit', color: 'var(--color-secondary)' }}>
-                          {rental.equipment_name ?? '-'}
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '10px 8px' }}>{kontrak.customer_name ?? '-'}</td>
-                    <td style={{ padding: '10px 8px' }}>{kontrak.valid_until ?? '-'}</td>
-                    <td style={{ padding: '10px 8px' }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          padding: '3px 9px',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          border: `1px solid ${tone.borderColor}`,
-                          ...tone,
-                        }}
-                      >
-                        {getContractStatusLabel(status)}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => setModal({ kind: 'preview', contract: kontrak })}
-                          aria-label={`Tinjau kontrak ${kontrak.contract_code}`}
-                          style={{ padding: '5px 9px', fontSize: '11.5px' }}
-                        >
-                          <FileText size={13} />
-                          <span>Tinjau</span>
-                        </button>
-
-                        {canIssue && status === 'EXPIRED' && onRenewContract !== undefined && (
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            onClick={() => bukaPerpanjang(kontrak)}
-                            aria-label={`Perpanjang kontrak ${kontrak.contract_code} yang kedaluwarsa`}
-                            style={{ padding: '5px 9px', fontSize: '11.5px' }}
-                          >
-                            <CalendarPlus size={13} />
-                            <span>Perpanjang</span>
-                          </button>
-                        )}
-
-                        {canSign && status === 'AWAITING' && (
-                          <button
-                            type="button"
-                            className="btn-primary"
-                            onClick={() => bukaTandaTangan(kontrak)}
-                            aria-label={`Tanda tangani kontrak ${kontrak.contract_code}`}
-                            style={{ padding: '5px 9px', fontSize: '11.5px' }}
-                          >
-                            <PenLine size={13} />
-                            <span>Tanda Tangani</span>
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <ContractTable
+        daftarKontrak={daftarKontrak}
+        kosongTotal={contracts.length === 0}
+        rentals={rentals}
+        canIssue={canIssue}
+        canSign={canSign}
+        canRenew={onRenewContract !== undefined}
+        onPreview={(c) => setModal({ kind: 'preview', contract: c })}
+        onRenew={bukaPerpanjang}
+        onSign={bukaTandaTangan}
+      />
 
       {/* Modal: Tinjau kontrak */}
       {modal.kind === 'preview' && (
