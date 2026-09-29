@@ -278,10 +278,11 @@ t('komponen pratinjau tidak memakai tipe any', !/:\s*any\b|\bas any\b|<any>/.tes
 // ---------------------------------------------------------------------------
 console.log('\n== Integrasi Halaman Laporan ==');
 const halaman = readFileSync(join(ROOT, 'src', 'pages', 'admin', 'ReportsPage.tsx'), 'utf8');
+const arsipTabel = readFileSync(join(ROOT, 'src', 'pages', 'admin', 'reports', 'ReportArchiveTable.tsx'), 'utf8');
 t('halaman memuat panel dokumen', halaman.includes('DocumentPrintPanel'));
 t('halaman memuat komponen pratinjau', halaman.includes('DocumentPreview'));
 t('halaman memanggil printDocument', halaman.includes('printDocument'));
-t('tombol cetak A4 ada pada tabel arsip', halaman.includes('Cetak A4'));
+t('tombol cetak A4 ada pada tabel arsip', arsipTabel.includes('Cetak A4'));
 t('halaman menerima prop equipments', halaman.includes('equipments={equipments}'));
 
 const css = readFileSync(join(ROOT, 'src', 'index.css'), 'utf8');

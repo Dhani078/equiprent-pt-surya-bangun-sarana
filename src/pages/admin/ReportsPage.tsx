@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ReportItem, Rental, Equipment, ReportId, ReportResult, DateRangeFilter } from '../../types';
-import { FileText, Download, Printer, Eye, CheckCircle2, ShieldCheck, TrendingUp, Wallet, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Download, Printer, AlertTriangle } from 'lucide-react';
+import { FinancialSummaryCards } from './reports/FinancialSummaryCards';
+import { ReportArchiveTable } from './reports/ReportArchiveTable';
+import { GenericDocumentPreviewModal } from './reports/GenericDocumentPreviewModal';
 import { Modal } from '../../components/Modal';
 import { ReportAnalyticsPanel } from '../../components/ReportAnalyticsPanel';
 import { DocumentPrintPanel } from '../../components/DocumentPrintPanel';
-import { formatRupiah, getLatePenaltyPerDay } from '../../lib/businessRules';
+import { getLatePenaltyPerDay } from '../../lib/businessRules';
 import { REPORT_CATALOG } from '../../lib/reports';
 import { fetchReport } from '../../lib/reportsClient';
 import { documentKindFromReportType, buildDocument, type DocumentKind, type OfficialDocument } from '../../lib/documents';
@@ -12,7 +15,6 @@ import { printDocument } from '../../lib/documentPrinter';
 import { DocumentPreview } from '../../components/DocumentPreview';
 import { exportTable } from '../../lib/tableExport';
 import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
-import { EmptyState } from '../../components/EmptyState';
 
 interface ReportsPageProps {
   reports: ReportItem[];
@@ -138,10 +140,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
       totalTransaksi: diproses.length,
     };
   }, [rentals]);
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   /**
    * Mencetak berkas A4 mandiri untuk dokumen operasional (BAST IN/OUT,
@@ -274,49 +272,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
       </div>
 
       {/* Ringkasan Finansial */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '14px'
-      }}>
-        <div className="card-premium" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(5, 150, 105, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Wallet size={20} color="var(--fg-success-deep)" />
-          </div>
-          <div>
-            <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600 }}>PENDAPATAN KOTOR</p>
-            <p style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: 'var(--color-primary)' }}>
-              {formatRupiah(ringkasan.pendapatanKotor)}
-            </p>
-          </div>
-        </div>
-
-        <div className="card-premium" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(220, 38, 38, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <AlertCircle size={20} color="var(--fg-danger)" />
-          </div>
-          <div>
-            <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600 }}>
-              DENDA KETERLAMBATAN (Rp {getLatePenaltyPerDay().toLocaleString('id-ID')}/HARI)
-            </p>
-            <p style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: 'var(--fg-danger)' }}>
-              {formatRupiah(ringkasan.totalDenda)}
-            </p>
-          </div>
-        </div>
-
-        <div className="card-premium" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(37, 99, 235, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <TrendingUp size={20} color="#2563eb" />
-          </div>
-          <div>
-            <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600 }}>TRANSAKSI DIPROSES</p>
-            <p style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: 'var(--color-primary)' }}>
-              {ringkasan.totalTransaksi} <span style={{ fontSize: '12px', fontWeight: 500 }}>({ringkasan.terlambat} terlambat)</span>
-            </p>
-          </div>
-        </div>
-      </div>
+      <FinancialSummaryCards ringkasan={ringkasan} />
 
       {/* Panel 11 Laporan Operasional */}
       <ReportAnalyticsPanel
@@ -357,210 +313,16 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ reports, rentals, equi
         </div>
       )}
 
-      {/* Ekspor arsip dokumen */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() => handleExportArsip('csv')}
-          title="Unduh arsip dokumen dalam format CSV"
-          style={{ height: '38px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-        >
-          <Download size={15} /> CSV
-        </button>
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() => handleExportArsip('excel')}
-          title="Unduh arsip dokumen dalam format Excel"
-          style={{ height: '38px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-        >
-          <FileText size={15} /> Excel
-        </button>
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() => handleExportArsip('pdf')}
-          title="Cetak atau simpan arsip dokumen sebagai PDF"
-          style={{ height: '38px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-        >
-          <Printer size={15} /> PDF
-        </button>
-      </div>
-
-      {/* Reports Table */}
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Kode Dokumen</th>
-              <th>Jenis Laporan</th>
-              <th>Terkait Transaksi</th>
-              <th>Diterbitkan Oleh</th>
-              <th>Tanggal Terbit</th>
-              <th>Aksi & Pratinjau</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.map((rep) => (
-              <tr key={rep.id}>
-                <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                  {rep.report_code}
-                </td>
-                <td>
-                  <span className="badge badge-info" style={{ fontSize: '11px' }}>
-                    {rep.report_type.replace(/_/g, ' ')}
-                  </span>
-                </td>
-                <td className="serial-code" style={{ fontSize: '12.5px' }}>
-                  {rep.rental_code || `RNT-SBS-2026-${String(rep.rental_id || 1).padStart(3, '0')}`}
-                </td>
-                <td style={{ fontSize: '13px' }}>
-                  <strong>{rep.generated_by_name || 'Hendra Wijaya (Staf)'}</strong>
-                </td>
-                <td style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
-                  {rep.generated_at}
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => handlePreviewDocument(rep)}
-                      className="btn-secondary"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                      aria-label={`Buka pratinjau dokumen ${rep.report_code}`}
-                    >
-                      <Eye size={13} />
-                      <span>Buka Dokumen</span>
-                    </button>
-                    <button
-                      onClick={() => handlePrintDocument(rep)}
-                      className="btn-primary"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                      aria-label={`Cetak dokumen ${rep.report_code} ke kertas A4`}
-                    >
-                      <Printer size={13} />
-                      <span>Cetak A4</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {reports.length === 0 && (
-          <EmptyState
-            pesan="Belum ada dokumen laporan diterbitkan"
-            keterangan="Dokumen BAST, Surat Jalan, dan ringkasan finansial akan tercatat di sini setelah transaksi selesai dan dicetak."
-            ariaLabel="Daftar dokumen laporan kosong"
-            ikon={FileText}
-          />
-        )}
-      </div>
+      <ReportArchiveTable
+        reports={reports}
+        onPreview={handlePreviewDocument}
+        onPrint={handlePrintDocument}
+        onExport={handleExportArsip}
+      />
 
       {/* Official Document Preview Modal */}
       {selectedReport && (
-        <Modal
-          isOpen={true}
-          onClose={() => setSelectedReport(null)}
-          title={`Dokumen Resmi: ${selectedReport.report_code}`}
-        >
-          <div style={{
-            padding: '24px',
-            backgroundColor: '#FAFAFA',
-            border: '2px solid var(--color-border)',
-            borderRadius: '8px',
-            fontFamily: 'serif',
-            color: 'var(--text-strong)',
-            lineHeight: 1.6
-          }}>
-            {/* Kop Surat PT SBS */}
-            <div style={{ textAlign: 'center', borderBottom: '3px double var(--color-primary)', paddingBottom: '16px', marginBottom: '20px' }}>
-              <h2 style={{ fontFamily: 'var(--font-primary)', fontSize: '18px', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
-                PT. SURYA BANGUN SARANA BANJARMASIN
-              </h2>
-              <p style={{ fontFamily: 'var(--font-primary)', fontSize: '12px', color: 'var(--text-body)', margin: '4px 0 0 0' }}>
-                Heavy Equipment Rental, Earthmoving Contractor & Fleet Monitoring System<br />
-                Jl. Ahmad Yani KM 5, Banjarmasin, Kalimantan Selatan &bull; Telp: (0511) 7890123
-              </p>
-            </div>
-
-            {/* Document Title */}
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, textDecoration: 'underline', margin: 0, textTransform: 'uppercase' }}>
-                {selectedReport.report_type.replace(/_/g, ' ')}
-              </h3>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                Nomor: {selectedReport.report_code}
-              </span>
-            </div>
-
-            {/* Content Body */}
-            <div style={{ fontSize: '13px', marginBottom: '24px' }}>
-              <p>
-                Pada hari ini, tanggal <strong>{selectedReport.generated_at.slice(0, 10)}</strong>, bertempat di Kantor Operasional PT. Surya Bangun Sarana Banjarmasin, telah diterbitkan dokumen resmi terkait penyewaan alat berat dengan rincian sebagai berikut:
-              </p>
-              <table style={{ width: '100%', margin: '14px 0', fontSize: '12.5px' }}>
-                <tbody>
-                  <tr>
-                    <td style={{ width: '180px', fontWeight: 600 }}>Kode Transaksi Sewa:</td>
-                    <td>{selectedReport.rental_code || 'RNT-SBS-20260501-001'}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600 }}>Jenis Dokumen:</td>
-                    <td>{selectedReport.report_type}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600 }}>Pejabat Penerbit:</td>
-                    <td>{selectedReport.generated_by_name || 'Hendra Wijaya'} (Staf Logistik PT. SBS)</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600 }}>Status Integritas:</td>
-                    <td style={{ color: 'var(--fg-success-deep)', fontWeight: 700 }}>VALID & TERCATAT PADA SISTEM</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p>
-                Dokumen ini merupakan bukti otentik yang sah dalam sistem monitoring operasional dan diakui secara resmi oleh manajemen PT. Surya Bangun Sarana Banjarmasin.
-              </p>
-            </div>
-
-            {/* Signature Area */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px', padding: '0 20px', textAlign: 'center', fontSize: '12.5px' }}>
-              <div>
-                <div>Pihak Penyewa / Rekanan</div>
-                <div style={{ height: '50px' }} />
-                <div style={{ fontWeight: 700 }}>( .................................... )</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Pimpinan Proyek Lapangan</div>
-              </div>
-              <div>
-                <div>PT. Surya Bangun Sarana</div>
-                <div style={{ height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShieldCheck size={36} color="var(--color-primary)" />
-                </div>
-                <div style={{ fontWeight: 700 }}>( Hendra Wijaya )</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Staf Operasional & Logistik</div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
-            <button
-              type="button"
-              onClick={() => setSelectedReport(null)}
-              className="btn-secondary"
-            >
-              Tutup
-            </button>
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="btn-primary"
-            >
-              <Printer size={15} />
-              <span>Cetak / Simpan PDF</span>
-            </button>
-          </div>
-        </Modal>
+        <GenericDocumentPreviewModal report={selectedReport} onClose={() => setSelectedReport(null)} />
       )}
 
       {/* Pratinjau Dokumen BAST / Surat Jalan — isi identik dengan hasil cetak A4 */}
