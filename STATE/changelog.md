@@ -165,7 +165,7 @@
 - Deploy Version e04d73f8 (refactor) -> 2f0a46d7-854f-436a-8e63-ba796a3c217f (final, fix responsif). tsc 0; 30/30 suite; vite build 7.93s. Commits e16ea19, 0f564df, d22f478, c21d285; main lokal ff-only + push origin/main (sebelumnya tertinggal 77 commit).
 
 ## Siklus 90 — 2026-09-29 (part 1)
-- Refactor: CustomerPortal.tsx 844 -> 316. Katalog (filter+kartu unit), riwayat sewa, tagihan, dan lacak unit pindah ke pages/customer/portal/{CatalogTab,MyRentalsTab,PaymentsTab,TrackingTab}.tsx; lazy Leaflet ikut ke TrackingTab. State form tetap di induk.
+- Refactor: CustomerPortal.tsx 844 -> 339. Katalog (filter+kartu unit), riwayat sewa, tagihan, dan lacak unit pindah ke pages/customer/portal/{CatalogTab,MyRentalsTab,PaymentsTab,TrackingTab}.tsx; lazy Leaflet ikut ke TrackingTab. State form tetap di induk.
 - Bug tertangkap saat splice: blok `my_rentals` ikut terbuang (lompat indeks i_rent..i_con) -> dipasang ulang; terverifikasi UI (tabel 3 transaksi muncul).
 - Build: vite manualChunks vendor-react (133.93kB) + vendor-icons (41.65kB) -> chunk index 620.86 -> 446.63kB (gzip 116.46). Peringatan >500kB hilang.
 - Smoke UI production via CDP (STATE/smoke_portal_90.py): login role Pelanggan (klik tab 'Pelanggan' dulu, user/user) -> 5 tab portal bersih desktop 1280 & mobile 375 (ovf=0, 0 target<44px di main, peta Leaflet render 3 marker).
