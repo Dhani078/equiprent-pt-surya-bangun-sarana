@@ -155,3 +155,11 @@
 - Refactor: contracts.ts 664 -> paket lib/contracts/ (constants, numbering, status, preview, render, index). Consumer (ContractPanel, ContractViewer, server/context, run-tests) dialihkan; tidak ada tanda tangan publik berubah.
 - Deploy Version 225b5c26-49ab-43b7-b740-515267a44ae7. tsc 0; npm test 30/30; build 5.48s. Commit fb417be (fix/security-audit + main).
 - Dokumentasi disinkronkan: AGENT24T.md (rujukan lib/db -> paket lib/db/), PERUBAHAN_TERBARU.md (bagian 5: tabel split siklus 73-88, endpoint renew, verifikasi CDP).
+
+## Siklus 89 — 2026-09-29
+- Refactor: EquipmentManagement.tsx 730 -> 472. Kartu unit, tabel ringkas+paginasi, dan bento stats pindah ke pages/admin/equipment/{EquipmentCardGrid,EquipmentTable,EquipmentBentoStats}.tsx (murni props; state form tetap induk).
+- Refactor: AdminDashboard.tsx 693 -> 236. Banner servis (gabungKode ikut), grid 8 StatCard, dan feed aktivitas (transaksi terbaru, antrean servis, top-5 unit) pindah ke pages/admin/dashboard/{ServiceAlertBanner,DashboardStatGrid,DashboardActivityFeeds}.tsx.
+- Refactor: server/index.ts 1172 -> 423. Rute dashboard, equipments, rentals, maintenance jadi routes/{dashboard,equipments,rentals,maintenance}.ts; /api/tracking + /api/gps mengisi routes/tracking.ts (stub kosong selama ini). index tinggal kerangka + 11 panggilan daftar*().
+- Audit CDP responsif (STATE/viewport_cdp_89.py): temuan overflow 10px SEMUA tab mobile — inline style tombol bahasa Navbar menang atas media query .navbar-lang{display:none}; overflow 147px halaman GPS — grid inline '360px 1fr' kaku. Fix di index.css @media 767px (navbar-lang !important, .gps-layout 1fr, lantai sentuh 44px untuk kontrol zoom/popup Leaflet). Hasil akhir: 375x812 -> 0 overflow & 0 target<44px di 8 tab; 1280x800 -> 0 overflow.
+- Smoke API production pasca-refactor: 11 endpoint GET 200 (equipments, rentals, maintenance, tracking, gps, dashboard/stats, dashboard/analytics, bookable, availability, payments, contracts) + PUT /api/equipments/:id 200.
+- Deploy Version e04d73f8 (refactor) -> 2f0a46d7-854f-436a-8e63-ba796a3c217f (final, fix responsif). tsc 0; 30/30 suite; vite build 7.93s. Commits e16ea19, 0f564df, d22f478, c21d285; main lokal ff-only + push origin/main (sebelumnya tertinggal 77 commit).
