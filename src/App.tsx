@@ -1,20 +1,10 @@
 import { bacaTokenSesi, hapusTokenSesi } from './lib/authClient';
 import { setApiBridgeToken } from './lib/db';
-import React, { useState, useEffect, useCallback } from 'react';
-import { User, RoleName, Equipment, Rental, Contract, Payment, Maintenance, GpsTracking, ReportItem } from './types';
-import { db, stateStore } from './lib/db';
-import { sinkronCermin } from './lib/fetchCollection';
-import {
-  berlanggananKoneksi, bacaKoneksi, tandaiOffline, tandaiOnline,
-  type InfoKoneksi,
-} from './lib/connectionState';
-import { flushAntreanOffline } from './lib/db';
-import {
-  berlanggananAntrean, jumlahAntrean, type AntreanMutasi,
-} from './lib/offlineQueue';
+import React, { useState, useEffect } from 'react';
+import { User, RoleName } from './types';
+import { stateStore } from './lib/db';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
-import type { SidebarBadges } from './components/Sidebar';
 import { Login } from './pages/Login';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { EquipmentManagement } from './pages/admin/EquipmentManagement';
@@ -27,10 +17,13 @@ import { AuditLogPanel } from './components/AuditLogPanel';
 import { StaffDashboard } from './pages/staff/StaffDashboard';
 import { CustomerPortal } from './pages/customer/CustomerPortal';
 import { AccountSettings } from './pages/AccountSettings';
-import type { ProfilePatch } from './pages/AccountSettings';
 import { buildNotifications } from './lib/notifications';
 import { CommandPalette } from './components/CommandPalette';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { useAppData } from './hooks/useAppData';
+import { OfflineBanner } from './components/layout/OfflineBanner';
+import { DataErrorBanner } from './components/layout/DataErrorBanner';
+import { ToastNotif } from './components/layout/ToastNotif';
 
 export const App: React.FC = () => {
   // Default to null so the user always enters via the authentic Login Screen
@@ -45,31 +38,23 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   /** Drawer navigasi HP (<= 767px). */
   const [menuTerbuka, setMenuTerbuka] = useState(false);
-
-  // Reactive State
-  const [equipments, setEquipments] = useState<Equipment[]>(stateStore.equipments);
-  const [rentals, setRentals] = useState<Rental[]>(stateStore.rentals);
-  const [contracts, setContracts] = useState<Contract[]>(stateStore.contracts);
-  const [payments, setPayments] = useState<Payment[]>(stateStore.payments);
-  const [maintenance, setMaintenance] = useState<Maintenance[]>(stateStore.maintenance);
-  const [trackingData, setTrackingData] = useState<GpsTracking[]>(stateStore.gps);
-  const [reports, setReports] = useState<ReportItem[]>(stateStore.reports);
-  const [users, setUsers] = useState<User[]>(stateStore.users);
-
-  /** Notifikasi sederhana di pojok kanan atas (sukses / galat). */
-  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
-
-  /** Memuat data dari edge API; state lokal jadi fallback bila API tidak ada. */
-  const [dataLoading, setDataLoading] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  /* Siklus 69: status keterjangkauan Worker untuk banner peringatan. */
-  const [koneksi, setKoneksi] = useState<InfoKoneksi>(bacaKoneksi);
-
-  const handleReloadData = useCallback(() => setReloadKey((k) => k + 1), []);
-
   /** Palet perintah Ctrl/⌘ + K. */
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  /* Siklus 91 p5: seluruh data reaktif, cermin Worker, antrean offline,
+     dan handler CRUD hidup di hook terpisah — App tinggal sesi & routing. */
+  const data = useAppData(currentUser, (u) => setCurrentUser(u));
+  const {
+    equipments, rentals, contracts, payments, maintenance, trackingData, reports, users,
+    toast, dataLoading, dataError, koneksi, jumlahAntre, sidebarBadges,
+    notify, handleReloadData,
+    handleAddEquipment, handleUpdateEquipment, handleDeleteEquipment,
+    handleAddRental, handleUpdateRentalStatus, handleScheduleMaintenance,
+    handleAddUser, handleToggleUserStatus,
+    handleCreateContract, handleSignContract, handleRenewContract,
+    handleVerifyPayment, handleRejectPayment, handleUploadPaymentProof,
+    handleSaveProfile, handleChangeOwnPassword,
+  } = data;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -81,162 +66,6 @@ export const App: React.FC = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-
-  /**
-   * Pemuatan awal: ambil koleksi dari edge API (sumber kebenaran produksi).
-   *
-   * Serverless: db.ts tidak punya method "muat semua" — data sudah di-cache
-   * secara reaktif. Fungsinya tetap Async karena resolver HTTP memang async,
-   * sehingga skeleton benar-benar terlihat saat demo di sidang.
-   */
-  useEffect(() => {
-    const controller = new AbortController();
-    let aktif = true;
-
-    const muat = async () => {
-      setDataLoading(true);
-      setDataError(null);
-      try {
-        // Cermin PENUH dari Worker (users/equipments/rentals/contracts/
-        // payments/maintenance/gps/reports) — bukan hanya dua koleksi lama,
-        // supaya kontrak/pembayaran/servis ikut tersimpan permanen.
-        setApiBridgeToken(bacaTokenSesi());
-        const terisi = await sinkronCermin(controller.signal);
-        if (!aktif) return;
-        if (terisi === 0) {
-          // Worker tidak menjawab sama sekali -> biarkan seed demo melayani.
-          setDataError(null);
-        }
-        refreshData();
-      } catch (err) {
-        if (!aktif) return;
-        setDataError(err instanceof Error ? err.message : 'Gagal memuat data dari server.');
-      } finally {
-        if (aktif) setDataLoading(false);
-      }
-    };
-
-    muat();
-
-    return () => {
-      aktif = false;
-      controller.abort();
-    };
-  }, [reloadKey]);
-
-  /* Akar siklus 61 #3: effect mount di atas sempat berjalan SEBELUM token
-     sesi ada (login terjadi setelahnya) sehingga cermin menganggur di seed
-     demo — pelanggan tak melihat unit yang baru dibuat admin. Setiap kali
-     user berganti (login), tarik ulang cermin penuh dengan token sah. */
-  useEffect(() => {
-    if (!currentUser) return;
-    setApiBridgeToken(bacaTokenSesi());
-    let aktif = true;
-    void sinkronCermin()
-      .then((n) => {
-        if (aktif && n > 0) refreshData();
-      })
-      .catch(() => {
-        /* Worker mati: seed lokal tetap melayani */
-      });
-    return () => {
-      aktif = false;
-    };
-  }, [currentUser?.id]);
-
-  /* Siklus 65: cermin LIVE. Perubahan dari pengguna lain (admin menambah
-     unit, pelanggan mengajukan sewa) terlihat tanpa reload — pull ulang
-     tiap 30 dtk saat tab terlihat, plus penyegaran segera ketika tab kembali
-     fokus. Tab tersembunyi tidak menarik apa pun (hemat kuota worker). */
-  useEffect(() => {
-    if (!currentUser) return;
-    let batal = false;
-    const tarik = () => {
-      if (document.hidden) return;
-      void sinkronCermin()
-        .then((n) => {
-          if (!batal && n > 0) refreshData();
-        })
-        .catch(() => {});
-    };
-    const id = window.setInterval(tarik, 30_000);
-    const saatFokus = () => tarik();
-    window.addEventListener('focus', saatFokus);
-    document.addEventListener('visibilitychange', saatFokus);
-    return () => {
-      batal = true;
-      window.clearInterval(id);
-      window.removeEventListener('focus', saatFokus);
-      document.removeEventListener('visibilitychange', saatFokus);
-    };
-  }, [currentUser?.id]);
-
-  /* Siklus 70: jumlah mutasi tertahan di antrean offline (badge banner). */
-  const [jumlahAntre, setJumlahAntre] = useState<number>(() => jumlahAntrean());
-  useEffect(() => {
-    const lepas = berlanggananKoneksi(() => setKoneksi(bacaKoneksi()));
-    const lepas2 = berlanggananAntrean(() => setJumlahAntre(jumlahAntrean()));
-    const saatOffline = () =>
-      tandaiOffline('Perangkat tidak terhubung internet - perubahan menunggu jaringan pulih.');
-    const saatOnline = () => {
-      /* Pulih: kirim ulang antrean FIFO dulu (baru cermin) agar perubahan
-         tertahan tidak tertimpa data server yang lebih baru. */
-      void flushAntreanOffline()
-        .then(({ terkirim, ditolak }) => {
-          if (terkirim > 0) {
-            notify(`${terkirim} perubahan tertahan terkirim ke server.`, 'success');
-          }
-          if (ditolak.length > 0) {
-            notify(
-              `${ditolak.length} perubahan tertahan ditolak server & dibuang: ${ditolak[0]}`,
-              'error'
-            );
-          }
-          void sinkronCermin().catch(() => {});
-        })
-        .catch(() => {});
-    };
-    window.addEventListener('offline', saatOffline);
-    window.addEventListener('online', saatOnline);
-    /* Jaga-jala: beberapa browser tidak event 'online' bila tab tersembunyi;
-       cek berkala saat antrean menumpuk. */
-    const idPemeriksa = window.setInterval(() => {
-      if (jumlahAntrean() > 0 && navigator.onLine) saatOnline();
-    }, 20_000);
-    return () => {
-      lepas();
-      lepas2();
-      window.clearInterval(idPemeriksa);
-      window.removeEventListener('offline', saatOffline);
-      window.removeEventListener('online', saatOnline);
-    };
-  }, []);
-
-  /** Badge counter Sidebar — dihitung dari state reaktif yang sudah ada. */
-  const sidebarBadges: SidebarBadges = {
-    payments: payments.filter((p) => p.status === 'PENDING_VERIFICATION').length,
-    rentals: rentals.filter((r) => r.status === 'PENDING').length,
-    maintenance: maintenance.filter(
-      (m) => m.status === 'SCHEDULED' || m.status === 'IN_PROGRESS'
-    ).length,
-  };
-
-  const notify = (message: string, tone: 'success' | 'error') => {
-    setToast({ message, tone });
-    window.setTimeout(() => setToast(null), 4000);
-  };
-
-  // Refresh reactive state
-  const refreshData = () => {
-    setEquipments([...stateStore.equipments]);
-    setRentals([...stateStore.rentals]);
-    setContracts([...stateStore.contracts]);
-    setPayments([...stateStore.payments]);
-    setMaintenance([...stateStore.maintenance]);
-    setTrackingData([...stateStore.gps]);
-    setReports([...stateStore.reports]);
-    setUsers([...stateStore.users]);
-  };
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
@@ -266,109 +95,6 @@ export const App: React.FC = () => {
     }
   };
 
-  // State handlers
-  const handleAddEquipment = async (item: Omit<Equipment, 'id'>) => {
-    await db.addEquipment(item);
-    refreshData();
-  };
-
-  const handleUpdateEquipment = async (id: number, data: Partial<Equipment>) => {
-    await db.updateEquipment(id, data);
-    refreshData();
-  };
-
-  const handleDeleteEquipment = async (id: number) => {
-    await db.deleteEquipment(id);
-    refreshData();
-  };
-
-  const handleAddRental = async (item: Omit<Rental, 'id' | 'rental_code'>) => {
-    await db.addRental(item);
-    refreshData();
-  };
-
-  const handleUpdateRentalStatus = async (id: number, status: Rental['status']) => {
-    await db.updateRentalStatus(id, status);
-    refreshData();
-  };
-
-  const handleScheduleMaintenance = async (item: Omit<Maintenance, 'id' | 'maintenance_code'>) => {
-    await db.scheduleMaintenance(item);
-    refreshData();
-  };
-
-  const handleAddUser = async (user: Omit<User, 'id'>) => {
-    await db.addUser(user);
-    refreshData();
-  };
-
-  const handleToggleUserStatus = async (id: number) => {
-    await db.toggleUserStatus(id);
-    refreshData();
-  };
-
-  const handleCreateContract = async (rentalId: number) => {
-    await db.createContract(rentalId);
-    refreshData();
-  };
-
-  const handleSignContract = async (contractId: number, signerName: string, signature: string) => {
-    await db.signContract(contractId, signerName, signature);
-    refreshData();
-  };
-
-  /**
-   * Perpanjangan kontrak kedaluwarsa (Admin/Staf).
-   *
-   * db.perpanjangKontrak melempar dengan pesan dari server bila ditolak
-   * (mis. kontrak sudah ditandatangani) — pesan itu yang ditampilkan panel.
-   */
-  const handleRenewContract = async (contractId: number, validUntil: string) => {
-    await db.perpanjangKontrak(contractId, validUntil);
-    refreshData();
-  };
-
-  const handleVerifyPayment = async (paymentId: number, staffId: number, staffName: string) => {
-    await db.verifyPayment(paymentId, staffId, staffName);
-    refreshData();
-  };
-
-  const handleRejectPayment = async (paymentId: number, staffId: number, staffName: string) => {
-    await db.rejectPayment(paymentId, staffId, staffName);
-    refreshData();
-  };
-
-  const handleUploadPaymentProof = async (paymentId: number, proofPath: string) => {
-    await db.addPaymentProof(paymentId, proofPath);
-    refreshData();
-  };
-
-  /**
-   * Menyimpan perubahan profil pengguna yang sedang masuk.
-   * Hanya field non-sensitif yang diteruskan (lihat `db.updateUser`).
-   */
-  const handleSaveProfile = async (patch: ProfilePatch) => {
-    if (!currentUser) return;
-    const diperbarui = await db.updateUser(currentUser.id, patch);
-    if (!diperbarui) throw new Error('Pengguna tidak ditemukan.');
-    setCurrentUser({ ...currentUser, ...patch });
-    sessionStorage.setItem('sbs_active_user', JSON.stringify({ ...currentUser, ...patch }));
-    refreshData();
-  };
-
-  /** Mengganti password akun sendiri. */
-  const handleChangeOwnPassword = async (passwordBaru: string, passwordLama: string) => {
-    if (!currentUser) return;
-    if (currentUser.role_name === 'ADMIN') {
-      const hasil = await db.setUserPassword(currentUser.id, passwordBaru);
-      if (!hasil) throw new Error('Pengguna tidak ditemukan.');
-      return;
-    }
-    // STAFF/CUSTOMER: endpoint admin (/api/users/:id/password) dilarang untuk
-    // mereka; pakai jalur mandiri yang membuktikan password lama di server.
-    await db.changeOwnPassword(passwordLama, passwordBaru);
-  };
-
   if (!currentUser) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
@@ -392,48 +118,7 @@ export const App: React.FC = () => {
         onToggleSidebar={() => setMenuTerbuka((o) => !o)}
       />
 
-      {koneksi.status === 'OFFLINE' && (
-        <div
-          role="status"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 24px',
-            background: 'rgba(217, 119, 6, 0.12)',
-            borderBottom: '1px solid rgba(217, 119, 6, 0.35)',
-            color: 'var(--color-warning-text, #B45309)',
-            fontSize: '12.5px',
-            fontWeight: 600,
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="1" y1="1" x2="23" y2="23" />
-            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
-            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
-            <path d="M10.71 5.05A16 16 0 0 1 22.58 9" />
-            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
-            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-            <line x1="12" y1="20" x2="12.01" y2="20" />
-          </svg>
-          <span>{koneksi.pesan}</span>
-          {jumlahAntre > 0 && (
-            <span
-              style={{
-                marginLeft: 'auto',
-                background: 'rgba(217, 119, 6, 0.18)',
-                border: '1px solid rgba(217, 119, 6, 0.4)',
-                borderRadius: '999px',
-                padding: '2px 10px',
-                fontSize: '11.5px',
-                fontWeight: 700,
-              }}
-            >
-              {jumlahAntre} perubahan tertahan
-            </span>
-          )}
-        </div>
-      )}
+      <OfflineBanner koneksi={koneksi} jumlahAntre={jumlahAntre} />
 
       <div style={{ display: 'flex', flex: 1 }}>
         {/* Backdrop drawer HP — hanya muncul saat drawer terbuka (CSS). */}
@@ -457,189 +142,164 @@ export const App: React.FC = () => {
               area kontennya, navbar/sidebar tetap hidup. Ganti rute/tab
               otomatis me-reset boundary (resetKey). */}
           <ErrorBoundary resetKey={`${currentUser.role_name}:${activeTab}`}>
-          {/* Notifikasi galat pemuatan data awal — bisa dicoba ulang. */}
-          {dataError && !dataLoading && (
-            <div
-              role="alert"
-              className="card-premium animate-fade-in"
-              style={{
-                marginBottom: '20px',
-                padding: '14px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                flexWrap: 'wrap',
-                borderLeft: '4px solid var(--color-error)',
-              }}
-            >
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#991B1B', flex: '1 1 240px' }}>
-                {dataError}
-              </span>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={handleReloadData}
-                style={{ padding: '7px 14px', fontSize: '12.5px' }}
-              >
-                Coba Ulang
-              </button>
-            </div>
-          )}
-          {/* ADMIN SCREENS */}
-          {currentUser.role_name === 'ADMIN' && (
-            <>
-              {activeTab === 'dashboard' && (
-                <AdminDashboard onNavigate={setActiveTab} />
-              )}
-              {activeTab === 'equipment' && (
-                <EquipmentManagement
-                  equipments={equipments}
-                  maintenance={maintenance}
-                  onAddEquipment={handleAddEquipment}
-                  onUpdateEquipment={handleUpdateEquipment}
-                  onDeleteEquipment={handleDeleteEquipment}
-                  onScheduleMaintenance={handleScheduleMaintenance}
-                  onNotify={notify}
-                  isLoading={dataLoading}
-                />
-              )}
-              {activeTab === 'rentals' && (
-                <RentalManagement
-                  rentals={rentals}
-                  equipments={equipments}
-                  users={users}
-                  contracts={contracts}
-                  onAddRental={handleAddRental}
-                  onUpdateRentalStatus={handleUpdateRentalStatus}
-                  onCreateContract={handleCreateContract}
-                  onSignContract={handleSignContract}
-                  onRenewContract={handleRenewContract}
-                  onNotify={notify}
-                  isLoading={dataLoading}
-                />
-              )}
-              {activeTab === 'maintenance' && (
-                <MaintenanceManagement
-                  maintenance={maintenance}
-                  equipments={equipments}
-                  users={users}
-                  onScheduleMaintenance={handleScheduleMaintenance}
-                  onNotify={notify}
-                />
-              )}
-              {activeTab === 'tracking' && (
-                <GpsTrackingPage
-                  trackingData={trackingData}
-                />
-              )}
-              {activeTab === 'reports' && (
-                <ReportsPage
-                  reports={reports}
-                  rentals={rentals}
-                  equipments={equipments}
-                  onNotify={notify}
-                />
-              )}
-              {activeTab === 'users' && (
-                <UserManagement
-                  users={users}
-                  onAddUser={handleAddUser}
-                  onToggleStatus={handleToggleUserStatus}
-                  onNotify={notify}
-                />
-              )}
-              {activeTab === 'audit' && (
-                <AuditLogPanel />
-              )}
-              {activeTab === 'settings' && (
-                <AccountSettings
-                  currentUser={currentUser}
-                  onSaveProfile={handleSaveProfile}
-                  onChangePassword={handleChangeOwnPassword}
-                  onNotify={notify}
-                />
-              )}
-            </>
-          )}
+            {/* Notifikasi galat pemuatan data awal — bisa dicoba ulang. */}
+            {dataError && !dataLoading && (
+              <DataErrorBanner pesan={dataError} onRetry={handleReloadData} />
+            )}
+            {/* ADMIN SCREENS */}
+            {currentUser.role_name === 'ADMIN' && (
+              <>
+                {activeTab === 'dashboard' && (
+                  <AdminDashboard onNavigate={setActiveTab} />
+                )}
+                {activeTab === 'equipment' && (
+                  <EquipmentManagement
+                    equipments={equipments}
+                    maintenance={maintenance}
+                    onAddEquipment={handleAddEquipment}
+                    onUpdateEquipment={handleUpdateEquipment}
+                    onDeleteEquipment={handleDeleteEquipment}
+                    onScheduleMaintenance={handleScheduleMaintenance}
+                    onNotify={notify}
+                    isLoading={dataLoading}
+                  />
+                )}
+                {activeTab === 'rentals' && (
+                  <RentalManagement
+                    rentals={rentals}
+                    equipments={equipments}
+                    users={users}
+                    contracts={contracts}
+                    onAddRental={handleAddRental}
+                    onUpdateRentalStatus={handleUpdateRentalStatus}
+                    onCreateContract={handleCreateContract}
+                    onSignContract={handleSignContract}
+                    onRenewContract={handleRenewContract}
+                    onNotify={notify}
+                    isLoading={dataLoading}
+                  />
+                )}
+                {activeTab === 'maintenance' && (
+                  <MaintenanceManagement
+                    maintenance={maintenance}
+                    equipments={equipments}
+                    users={users}
+                    onScheduleMaintenance={handleScheduleMaintenance}
+                    onNotify={notify}
+                  />
+                )}
+                {activeTab === 'tracking' && (
+                  <GpsTrackingPage
+                    trackingData={trackingData}
+                  />
+                )}
+                {activeTab === 'reports' && (
+                  <ReportsPage
+                    reports={reports}
+                    rentals={rentals}
+                    equipments={equipments}
+                    onNotify={notify}
+                  />
+                )}
+                {activeTab === 'users' && (
+                  <UserManagement
+                    users={users}
+                    onAddUser={handleAddUser}
+                    onToggleStatus={handleToggleUserStatus}
+                    onNotify={notify}
+                  />
+                )}
+                {activeTab === 'audit' && (
+                  <AuditLogPanel />
+                )}
+                {activeTab === 'settings' && (
+                  <AccountSettings
+                    currentUser={currentUser}
+                    onSaveProfile={handleSaveProfile}
+                    onChangePassword={handleChangeOwnPassword}
+                    onNotify={notify}
+                  />
+                )}
+              </>
+            )}
 
-          {/* STAFF SCREENS */}
-          {currentUser.role_name === 'STAFF' && (
-            <>
-              {(activeTab === 'dashboard' || activeTab === 'payments' || activeTab === 'contracts' || activeTab === 'rentals') && (
-                <StaffDashboard
+            {/* STAFF SCREENS */}
+            {currentUser.role_name === 'STAFF' && (
+              <>
+                {(activeTab === 'dashboard' || activeTab === 'payments' || activeTab === 'contracts' || activeTab === 'rentals') && (
+                  <StaffDashboard
+                    rentals={rentals}
+                    contracts={contracts}
+                    payments={payments}
+                    maintenance={maintenance}
+                    equipments={equipments}
+                    users={users}
+                    currentUser={currentUser}
+                    onVerifyPayment={handleVerifyPayment}
+                    onRejectPayment={handleRejectPayment}
+                    onUpdateRentalStatus={handleUpdateRentalStatus}
+                    onCreateContract={handleCreateContract}
+                    onSignContract={handleSignContract}
+                    onRenewContract={handleRenewContract}
+                    onNotify={notify}
+                    activeMenu={activeTab}
+                  />
+                )}
+                {activeTab === 'maintenance' && (
+                  <MaintenanceManagement
+                    maintenance={maintenance}
+                    equipments={equipments}
+                    users={users}
+                    onScheduleMaintenance={handleScheduleMaintenance}
+                    onNotify={notify}
+                  />
+                )}
+                {activeTab === 'tracking' && (
+                  <GpsTrackingPage
+                    trackingData={trackingData}
+                  />
+                )}
+                {activeTab === 'reports' && (
+                  <ReportsPage
+                    reports={reports}
+                    rentals={rentals}
+                    equipments={equipments}
+                    onNotify={notify}
+                  />
+                )}
+                {activeTab === 'settings' && (
+                  <AccountSettings
+                    currentUser={currentUser}
+                    onSaveProfile={handleSaveProfile}
+                    onChangePassword={handleChangeOwnPassword}
+                    onNotify={notify}
+                  />
+                )}
+              </>
+            )}
+
+            {/* CUSTOMER SCREENS */}
+            {currentUser.role_name === 'CUSTOMER' && (
+              <>
+                <CustomerPortal
+                  currentUser={currentUser}
+                  activeMenu={activeTab}
+                  equipments={equipments}
                   rentals={rentals}
                   contracts={contracts}
                   payments={payments}
-                  maintenance={maintenance}
-                  equipments={equipments}
-                  users={users}
-                  currentUser={currentUser}
-                  onVerifyPayment={handleVerifyPayment}
-                  onRejectPayment={handleRejectPayment}
-                  onUpdateRentalStatus={handleUpdateRentalStatus}
-                  onCreateContract={handleCreateContract}
+                  trackingData={trackingData}
+                  onAddRental={handleAddRental}
                   onSignContract={handleSignContract}
                   onRenewContract={handleRenewContract}
-                  onNotify={notify}
-                  activeMenu={activeTab}
+                  onUploadPaymentProof={handleUploadPaymentProof}
                 />
-              )}
-              {activeTab === 'maintenance' && (
-                <MaintenanceManagement
-                  maintenance={maintenance}
-                  equipments={equipments}
-                  users={users}
-                  onScheduleMaintenance={handleScheduleMaintenance}
-                  onNotify={notify}
-                />
-              )}
-              {activeTab === 'tracking' && (
-                <GpsTrackingPage
-                  trackingData={trackingData}
-                />
-              )}
-              {activeTab === 'reports' && (
-                <ReportsPage
-                  reports={reports}
-                  rentals={rentals}
-                  equipments={equipments}
-                  onNotify={notify}
-                />
-              )}
-              {activeTab === 'settings' && (
-                <AccountSettings
-                  currentUser={currentUser}
-                  onSaveProfile={handleSaveProfile}
-                  onChangePassword={handleChangeOwnPassword}
-                  onNotify={notify}
-                />
-              )}
-            </>
-          )}
-
-          {/* CUSTOMER SCREENS */}
-          {currentUser.role_name === 'CUSTOMER' && (
-            <>
-              <CustomerPortal
-                currentUser={currentUser}
-                activeMenu={activeTab}
-                equipments={equipments}
-                rentals={rentals}
-                contracts={contracts}
-                payments={payments}
-                trackingData={trackingData}
-                onAddRental={handleAddRental}
-                onSignContract={handleSignContract}
-                  onRenewContract={handleRenewContract}
-                onUploadPaymentProof={handleUploadPaymentProof}
-              />
-            </>
-          )}
+              </>
+            )}
           </ErrorBoundary>
         </main>
       </div>
 
-      {/* Notifikasi global: muncul setelah aksi berhasil / gagal. */}
       <CommandPalette
         role={currentUser.role_name || 'ADMIN'}
         open={paletteOpen}
@@ -647,30 +307,7 @@ export const App: React.FC = () => {
         onSelect={setActiveTab}
       />
 
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            zIndex: 10000,
-            maxWidth: '380px',
-            padding: '14px 18px',
-            borderRadius: 'var(--radius-eight)',
-            boxShadow: 'var(--shadow-lg)',
-            backgroundColor: toast.tone === 'success' ? '#ECFDF5' : '#FEF2F2',
-            border: `1px solid ${toast.tone === 'success' ? '#A7F3D0' : '#FECACA'}`,
-            color: toast.tone === 'success' ? '#065F46' : '#991B1B',
-            fontSize: '13px',
-            fontWeight: 600,
-            lineHeight: 1.5,
-          }}
-        >
-          {toast.message}
-        </div>
-      )}
+      <ToastNotif toast={toast} />
     </div>
   );
 };
