@@ -320,7 +320,7 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
       />
 
       {/* Main Grid: Telemetry Sidebar & Leaflet Map */}
-      <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '20px' }}>
+      <div className="gps-layout" style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '20px' }}>
         {/* Unit Telemetry List & Details */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Active Unit Telemetry Card */}

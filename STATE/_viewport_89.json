@@ -1,0 +1,171 @@
+[
+ {
+  "viewport": "375x812",
+  "login": "LOGGED"
+ },
+ {
+  "viewport": "375x812",
+  "tab": "Dashboard",
+  "h1": "Dashboard Eksekutif Administrator",
+  "overflow": 0,
+  "smallCount": 0,
+  "small": []
+ },
+ {
+  "viewport": "375x812",
+  "tab": "Inventaris",
+  "h1": "Inventaris Alat Berat & Pemantauan Armada",
+  "overflow": 0,
+  "smallCount": 0,
+  "small": []
+ },
+ {
+  "viewport": "375x812",
+  "tab": "Transaksi",
+  "h1": "Manajemen Transaksi Penyewaan",
+  "overflow": 0,
+  "smallCount": 0,
+  "small": []
+ },
+ {
+  "viewport": "375x812",
+  "tab": "Perawatan",
+  "h1": "Manajemen Perawatan & Servis Armada (Hour Mete",
+  "overflow": 0,
+  "smallCount": 0,
+  "small": []
+ },
+ {
+  "viewport": "375x812",
+  "tab": "GPS",
+  "h1": "Pelacakan Telemetri GPS Alat Berat (Real-time)",
+  "overflow": 0,
+  "smallCount": 3,
+  "small": [
+   "Close popup 24x24",
+   "Zoom in 30x30",
+   "Zoom out 30x30"
+  ]
+ },
+ {
+  "viewport": "375x812",
+  "tab": "Pengguna",
+  "h1": "Manajemen Pengguna Sistem (Multi-Role RBAC)",
+  "overflow": 0,
+  "smallCount": 0,
+  "small": []
+ },
+ {
+  "viewport": "375x812",
+  "tab": "Audit",
+  "h1": "Audit Trail \u2014 Catatan Mutasi Sistem",
+  "overflow": 0,
+  "smallCount": 0,
+  "small": []
+ },
+ {
+  "viewport": "375x812",
+  "tab": "Laporan",
+  "h1": "Laporan Resmi & Dokumen Berita Acara (BAST)",
+  "overflow": 0,
+  "smallCount": 0,
+  "small": []
+ },
+ {
+  "viewport": "1280x800",
+  "login": "LOGGED"
+ },
+ {
+  "viewport": "1280x800",
+  "tab": "Dashboard",
+  "h1": "Dashboard Eksekutif Administrator",
+  "overflow": 0,
+  "smallCount": 1,
+  "small": [
+   "Pusat notifikasi \u2014 60 pemberitahuan, 54 mendesak 37x31"
+  ]
+ },
+ {
+  "viewport": "1280x800",
+  "tab": "Inventaris",
+  "h1": "Inventaris Alat Berat & Pemantauan Armada",
+  "overflow": 0,
+  "smallCount": 1,
+  "small": [
+   "Pusat notifikasi \u2014 60 pemberitahuan, 54 mendesak 37x31"
+  ]
+ },
+ {
+  "viewport": "1280x800",
+  "tab": "Transaksi",
+  "h1": "Manajemen Transaksi Penyewaan",
+  "overflow": 0,
+  "smallCount": 6,
+  "small": [
+   "Pusat notifikasi \u2014 60 pemberitahuan, 54 mendesak 37x31",
+   "Halaman sebelumnya 32x26",
+   "Halaman 1 32x26",
+   "Halaman 2 32x28",
+   "Halaman 3 32x28",
+   "Halaman berikutnya 32x26"
+  ]
+ },
+ {
+  "viewport": "1280x800",
+  "tab": "Perawatan",
+  "h1": "Manajemen Perawatan & Servis Armada (Hour Mete",
+  "overflow": 0,
+  "smallCount": 1,
+  "small": [
+   "Pusat notifikasi \u2014 60 pemberitahuan, 54 mendesak 37x31"
+  ]
+ },
+ {
+  "viewport": "1280x800",
+  "tab": "GPS",
+  "h1": "Pelacakan Telemetri GPS Alat Berat (Real-time)",
+  "overflow": 0,
+  "smallCount": 4,
+  "small": [
+   "Pusat notifikasi \u2014 60 pemberitahuan, 54 mendesak 37x31",
+   "Close popup 24x24",
+   "Zoom in 30x30",
+   "Zoom out 30x30"
+  ]
+ },
+ {
+  "viewport": "1280x800",
+  "tab": "Pengguna",
+  "h1": "Manajemen Pengguna Sistem (Multi-Role RBAC)",
+  "overflow": 0,
+  "smallCount": 6,
+  "small": [
+   "Pusat notifikasi \u2014 60 pemberitahuan, 54 mendesak 37x31",
+   "Halaman sebelumnya 32x26",
+   "Halaman 1 32x26",
+   "Halaman 2 32x28",
+   "Halaman 3 32x28",
+   "Halaman berikutnya 32x26"
+  ]
+ },
+ {
+  "viewport": "1280x800",
+  "tab": "Audit",
+  "h1": "Audit Trail \u2014 Catatan Mutasi Sistem",
+  "overflow": 0,
+  "smallCount": 1,
+  "small": [
+   "Pusat notifikasi \u2014 60 pemberitahuan, 54 mendesak 37x31"
+  ]
+ },
+ {
+  "viewport": "1280x800",
+  "tab": "Laporan",
+  "h1": "Laporan Resmi & Dokumen Berita Acara (BAST)",
+  "overflow": 0,
+  "smallCount": 1,
+  "small": [
+   "Pusat notifikasi \u2014 60 pemberitahuan, 54 mendesak 37x31"
+  ]
+ }
+]

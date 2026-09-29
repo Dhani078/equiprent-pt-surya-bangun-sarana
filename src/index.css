@@ -549,6 +549,19 @@ table.data-table tbody tr:hover {
   .navbar-company { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42vw; }
   .navbar-subtitle { display: none; }
   .navbar-lang, .navbar-theme-label, .navbar-username, .navbar-role-chip { display: none; }
+  /* Tombol bahasa menyetel display:inline lewat style React — menang atas
+     rule di atas tanpa !important, sehingga grup kanan navbar meluber 10px. */
+  header .navbar-lang { display: none !important; }
+  .gps-layout { grid-template-columns: 1fr !important; }
+  /* Kontrol bawaan Leaflet (zoom/close popup) di bawah lantai sentuh 44px. */
+  .leaflet-control-zoom a,
+  .leaflet-container a.leaflet-popup-close-button {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   main { padding: 14px !important; }
   /* Lantai sentuh 44px (pedoman Apple HIG / Material) — hanya di HP; di PC
      target kecil tetap nyaman dengan pointer. */
