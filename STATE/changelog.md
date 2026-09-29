@@ -213,3 +213,9 @@
 - Perbaikan kode: onError guard (dataset.fb anti-loop) -> src=getEquipmentImage(code,type) di EquipmentCardGrid, EquipmentTable, CatalogTab, RentBookingModal.
 - Verifikasi: CDP re-count total 20 img dead=0; screenshot STATE/imgfix_equip_91.png (vision: semua thumbnail normal). tsc 0; 30/30; deploy 06d4546d-9416-4136-8682-1a891198b156. Commit e23c357.
 - Catatan sesi: kredensial admin/admin API login DITOLAK (BAD_PASSWORD) — harness CDP tetap jalan pakai sessionStorage sbs_session_token per-tab. Password seed berubah di beberapa siklus; jangan andalkan memory lama untuk creds.
+
+## Siklus 91 — 2026-09-29 (part 5, pamungkas)
+- Refactor pamungkas: App.tsx 678 -> 315. Seluruh data reaktif (8 koleksi), 4 efek cermin Worker (muat awal/re-sinkron login/cermin live 30dtk/offline-antrean-FIFO), sidebarBadges, dan 17 handler CRUD pindah ke hooks/useAppData.ts (295). JSX presentational pindah ke components/layout/: OfflineBanner.tsx (54), DataErrorBanner.tsx (35), ToastNotif.tsx (34). App tinggal sesi (login/logout/switch role), routing tab, palette Ctrl+K, ErrorBoundary per-rute.
+- Verifikasi smoke CDP lintas peran (STATE/smoke_app_91.py): ADMIN 4 rute render (Dashboard 14 cards, Inventaris 26, Transaksi 20 rows, Laporan 100 rows) ovf=0 semua; palette Ctrl+K OPEN; users 20 rows; mobile 375 ovf=0 small=0. STAFF login UI -> 'Terminal Staf Operasional & Verifikasi' 20 rows ovf=0. CUSTOMER login UI -> portal 'Selamat Datang, Budi Santoso' katalog 48 img ovf=0. CATATAN PENTING: login API via curl admin/admin ditolak padahal login UI admin/admin LOGGED — beda jalur/kebutuhan payload; sesi admin dipulihkan di akhir harness.
+- Build: vite 5.46s; index 449.81kB (gzip 118.23). Deploy ea6bad0f-9291-4fa5-9624-50719e3a3d2d. tsc 0; 30/30 suite. Commit a2a06b4.
+- Status target: semua halaman role admin/staff/customer < 500. Tersisa >500: pages/Login.tsx 533, components/ContractPanel.tsx 538, lib/seedGenerator.ts 639, lib/documents.ts 575, lib/auth.ts 525.
