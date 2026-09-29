@@ -176,3 +176,9 @@
 - Smoke UI production via CDP (STATE/smoke_rental_90.py, admin/admin): 7 kolom, 20 baris/halaman, pencarian 'SBZ' -> 0 baris + EmptyState, penyaring status OK, tombol 'Selesai' ON_GOING -> modal konfirmasi tampil & Batal menutup (unmount riil), sub-tab Kontrak Digital render, mobile 375 ovf=0 target-kecil=0.
 - Build: vite 5.52s; index 447.02kB (gzip 116.47) — tidak berubah berarti (split hanya relokasi kode).
 - Deploy 14ada3b8-c216-4c88-9150-bc55d5a76fcf. tsc 0; 30/30 suite. Commit 5c9495b.
+
+## Siklus 90 — 2026-09-29 (part 3)
+- Refactor: ReportsPage.tsx 599 -> 361. Tiga kartu ringkasan finansial ke pages/admin/reports/FinancialSummaryCards.tsx (56); bar ekspor + tabel arsip dokumen ke ReportArchiveTable.tsx (116); modal pratinjau generik FINANCIAL_SUMMARY (kop surat + integritas + tanda tangan) ke GenericDocumentPreviewModal.tsx (103). Logic fetch laporan/drill-down/print BAST tetap di induk.
+- Test: documents.test.mjs assert 'Cetak A4' kini baca ReportArchiveTable.tsx (source-grep mengikuti relokasi); handlePrint mati dihapus.
+- Smoke UI production via CDP (STATE/smoke_reports_90.py, admin): 100 baris arsip, 50x 'Buka Dokumen' + 'Cetak A4', modal generik tampil->Tutup menutup riil, modal BAST tampil, mobile 375 ovf=0 target-kecil=0.
+- Build: vite 5.40s; index 446.90kB (gzip 116.96). Deploy 4e42649a-155a-4a70-95e5-988f234edd12. tsc 0; 30/30 suite. Commit 28cf542.
