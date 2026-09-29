@@ -182,3 +182,8 @@
 - Test: documents.test.mjs assert 'Cetak A4' kini baca ReportArchiveTable.tsx (source-grep mengikuti relokasi); handlePrint mati dihapus.
 - Smoke UI production via CDP (STATE/smoke_reports_90.py, admin): 100 baris arsip, 50x 'Buka Dokumen' + 'Cetak A4', modal generik tampil->Tutup menutup riil, modal BAST tampil, mobile 375 ovf=0 target-kecil=0.
 - Build: vite 5.40s; index 446.90kB (gzip 116.96). Deploy 4e42649a-155a-4a70-95e5-988f234edd12. tsc 0; 30/30 suite. Commit 28cf542.
+
+## Siklus 91 — 2026-09-29 (part 1)
+- Refactor: GpsTrackingPage.tsx 592 -> 172. Delapan kartu agregat + EngineBadge/FuelBadge/SummaryCard ke gps/FleetSummaryGrid.tsx (149); kartu telemetri unit terpilih + daftar armada (selection, badge breach/stale) ke gps/UnitTelemetryPanel.tsx (226); toggle heatmap + Suspense Leaflet + kaki legenda ke gps/FleetMapPanel.tsx (100) — lazy Leaflet kini hidup di panel itu saja. breachIds jadi Set<number> (dulu Map ke objek breach).
+- Smoke UI production via CDP (STATE/smoke_gps_91.py, admin): 8/8 kartu agregat, 40 tombol 'Pilih unit', klik unit -> kartu detail berganti serial (EXCA-HIT-ZX200-01 -> EXCA-KOB-SK200-01), heatmap toggle Tampilkan<->Sembunyikan, leaflet-container + 46 marker, mobile 375 ovf=0 target-kecil=0. 'Daftar Armada Terhubung' tak terbaca lowercase karena text-transform uppercase (bukan bug).
+- Build: vite 5.37s; index 447.31kB (gzip 117.06). Deploy ead77bc2-3f4e-48b9-b01b-52eb2856a874. tsc 0; 30/30 suite. Commit 08b69f7.
