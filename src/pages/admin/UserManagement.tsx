@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
+import { Plus } from 'lucide-react';
 import { User, RoleName } from '../../types';
-import { Plus, Search, Shield, ToggleLeft, ToggleRight, AlertCircle, Users as UsersIcon } from 'lucide-react';
-import { Modal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { getUserAvatar } from '../../lib/stitchAssets';
 import { validateUserInput } from '../../lib/validators';
 import type { ValidatedUserInput } from '../../lib/validators';
-import { Paginator, usePagination } from '../../components/Paginator';
 import { exportTable } from '../../lib/tableExport';
 import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
-import { Download, FileSpreadsheet, FileText } from 'lucide-react';
-import { EmptyState } from '../../components/EmptyState';
-
-const PAGE_SIZE_USERS = 20;
+import { UserFilterBar } from './user/UserFilterBar';
+import { UserTable } from './user/UserTable';
+import { AddUserModal } from './user/AddUserModal';
 
 interface UserManagementProps {
   users: User[];
@@ -56,6 +52,12 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     setIsModalOpen(false);
     setFormErrors({});
     setFormError(null);
+  };
+
+  /** Ubah satu field form + bersihkan galat field terkait. */
+  const handleFieldChange = (field: string, value: string | number) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -151,397 +153,34 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         </button>
       </div>
 
-      {/* Filter Bar */}
-      <div className="card-premium" style={{ padding: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ position: 'relative', flex: '1 1 300px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-secondary-light)' }} />
-          <input
-            type="text"
-            className="input-premium"
-            placeholder="Cari nama pengguna, username, email, atau perusahaan..."
-            value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-            style={{ paddingLeft: '36px', height: '40px' }}
-          />
-        </div>
+      <UserFilterBar
+        searchTerm={searchTerm}
+        filterRole={filterRole}
+        onSearchChange={(v) => { setSearchTerm(v); setPage(1); }}
+        onRoleChange={(v) => { setFilterRole(v); setPage(1); }}
+        onExport={handleExport}
+      />
 
-        <select
-          className="input-premium"
-          style={{ width: 'auto', height: '40px', padding: '0 12px' }}
-          value={filterRole}
-          onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
-        >
-          <option value="ALL">Semua Hak Akses</option>
-          <option value="ADMIN">ADMIN (Superuser)</option>
-          <option value="STAFF">STAFF (Staf Operasional)</option>
-          <option value="CUSTOMER">CUSTOMER (Pelanggan Sewa)</option>
-        </select>
+      <UserTable
+        filteredUsers={filteredUsers}
+        page={page}
+        onPageChange={setPage}
+        onAskToggle={setConfirmToggleUser}
+        onResetFilter={() => { setSearchTerm(''); setFilterRole('ALL'); setPage(1); }}
+        onOpenAddModal={() => setIsModalOpen(true)}
+        hasActiveFilter={Boolean(searchTerm) || filterRole !== 'ALL'}
+      />
 
-        {/* Ekspor data sesuai filter aktif */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleExport('csv')}
-            title="Unduh CSV"
-            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-          >
-            <Download size={15} /> CSV
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleExport('excel')}
-            title="Unduh Excel"
-            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-          >
-            <FileSpreadsheet size={15} /> Excel
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleExport('pdf')}
-            title="Cetak / simpan PDF"
-            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-          >
-            <FileText size={15} /> PDF
-          </button>
-        </div>
-      </div>
-
-      {/* Users Table with Avatars */}
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Pengguna & Profil</th>
-              <th>Username</th>
-              <th>Peran / Role</th>
-              <th>Kontak & Perusahaan</th>
-              <th style={{ textAlign: 'center' }}>Status</th>
-              <th style={{ textAlign: 'center' }}>Aksi Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usePagination(filteredUsers, PAGE_SIZE_USERS, page).map((u) => {
-              const avatar = getUserAvatar(u.role_name);
-              return (
-                <tr key={u.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <img
-                        src={avatar}
-                        alt={u.full_name}
-                        style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-border)' }}
-                      />
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-strong)' }}>{u.full_name}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{u.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '12.5px' }}>
-                    {u.username}
-                  </td>
-                  <td>
-                    <span className="badge badge-info" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Shield size={11} />
-                      {u.role_name}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: '12px' }}>
-                    <div>{u.company_name || 'Pelanggan Perorangan'}</div>
-                    <div style={{ color: 'var(--color-secondary)', fontSize: '11px' }}>{u.phone || '-'}</div>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span className={u.status === 'ACTIVE' ? 'badge badge-available' : 'badge badge-unavailable'}>
-                      {u.status}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button
-                      onClick={() => setConfirmToggleUser(u)}
-                      className="btn-secondary"
-                      style={{ padding: '5px 10px', fontSize: '12px' }}
-                      title={u.status === 'ACTIVE' ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
-                      aria-label={u.status === 'ACTIVE' ? `Nonaktifkan akun ${u.full_name}` : `Aktifkan akun ${u.full_name}`}
-                    >
-                      {u.status === 'ACTIVE' ? (
-                        <span style={{ color: '#EF4444', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <ToggleRight size={16} /> Nonaktifkan
-                        </span>
-                      ) : (
-                        <span style={{ color: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <ToggleLeft size={16} /> Aktifkan
-                        </span>
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {filteredUsers.length === 0 && (
-          <EmptyState
-            pesan={searchTerm || filterRole !== 'ALL'
-              ? 'Tidak ada pengguna yang cocok'
-              : 'Belum ada pengguna terdaftar'}
-            keterangan={searchTerm || filterRole !== 'ALL'
-              ? 'Ubah kata kunci pencarian atau pilih hak akses lain pada penyaring di atas.'
-              : 'Tambahkan pengguna pertama untuk mulai mengatur hak akses sistem.'}
-            ariaLabel="Daftar pengguna kosong"
-            ikon={UsersIcon}
-            aksi={searchTerm || filterRole !== 'ALL' ? (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => { setSearchTerm(''); setFilterRole('ALL'); setPage(1); }}
-                style={{ marginTop: '4px', padding: '7px 14px', fontSize: '12.5px' }}
-              >
-                Reset Penyaring
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => setIsModalOpen(true)}
-                style={{ marginTop: '4px', padding: '7px 14px', fontSize: '12.5px' }}
-              >
-                <Plus size={14} /> Tambah Pengguna Baru
-              </button>
-            )}
-          />
-        )}
-        <Paginator
-          total={filteredUsers.length}
-          page={page}
-          limit={PAGE_SIZE_USERS}
-          onPageChange={setPage}
-        />
-      </div>
-
-      {/* Modal Add User */}
-      <Modal
+      <AddUserModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title="Pendaftaran Pengguna Baru"
-      >
-        <form onSubmit={handleFormSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Ringkasan galat dari server (username/email sudah dipakai). */}
-          {formError && (
-            <div
-              role="alert"
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '8px',
-                padding: '10px 12px',
-                borderRadius: '8px',
-                backgroundColor: 'var(--bg-red-soft)',
-                border: '1px solid var(--border-red-soft)',
-                color: 'var(--fg-danger-deep)',
-                fontSize: '12.5px',
-                lineHeight: 1.5,
-              }}
-            >
-              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
-              <span>{formError}</span>
-            </div>
-          )}
-
-          <p
-            style={{
-              margin: 0,
-              padding: '10px 12px',
-              borderRadius: '8px',
-              backgroundColor: 'var(--bg-blue-soft)',
-              border: '1px solid var(--border-blue-soft)',
-              color: '#1E40AF',
-              fontSize: '12px',
-              lineHeight: 1.5,
-            }}
-          >
-            Password tidak ditetapkan di sini. Admin mendaftarkan identitas akun,
-            lalu pemilik akun menetapkan password sendiri melalui alur registrasi
-            (disimpan sebagai hash PBKDF2, tidak pernah dalam bentuk teks biasa).
-          </p>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Nama Lengkap
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Contoh: Budi Santoso"
-              className="input-premium"
-              value={formData.full_name}
-              onChange={(e) => {
-                setFormData({ ...formData, full_name: e.target.value });
-                setFormErrors({ ...formErrors, full_name: undefined });
-              }}
-              aria-invalid={Boolean(formErrors.full_name)}
-              aria-label="Nama lengkap pengguna"
-              style={formErrors.full_name ? { borderColor: '#F87171' } : undefined}
-            />
-            {formErrors.full_name && (
-              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
-                {formErrors.full_name}
-              </p>
-            )}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Username Login
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="budisantoso"
-                className="input-premium"
-                value={formData.username}
-                onChange={(e) => {
-                  setFormData({ ...formData, username: e.target.value });
-                  setFormErrors({ ...formErrors, username: undefined });
-                }}
-                aria-invalid={Boolean(formErrors.username)}
-                aria-label="Username login"
-                style={formErrors.username ? { borderColor: '#F87171' } : undefined}
-              />
-              {formErrors.username && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
-                  {formErrors.username}
-                </p>
-              )}
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Hak Akses (Role)
-              </label>
-              <select
-                className="input-premium"
-                value={formData.role_id}
-                onChange={(e) => setFormData({ ...formData, role_id: Number(e.target.value) })}
-                aria-label="Hak akses pengguna"
-              >
-                <option value={1}>ADMIN (Administrator Superuser)</option>
-                <option value={2}>STAFF (Staf Operasional Lapangan)</option>
-                <option value={3}>CUSTOMER (Pelanggan / Perusahaan)</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Alamat Email Resmi
-              </label>
-              <input
-                type="email"
-                required
-                placeholder="budi@antang.co.id"
-                className="input-premium"
-                value={formData.email}
-                onChange={(e) => {
-                  setFormData({ ...formData, email: e.target.value });
-                  setFormErrors({ ...formErrors, email: undefined });
-                }}
-                aria-invalid={Boolean(formErrors.email)}
-                aria-label="Alamat email resmi"
-                style={formErrors.email ? { borderColor: '#F87171' } : undefined}
-              />
-              {formErrors.email && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
-                  {formErrors.email}
-                </p>
-              )}
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-                Nomor Telepon / WhatsApp
-              </label>
-              <input
-                type="tel"
-                placeholder="08115009876"
-                className="input-premium"
-                value={formData.phone}
-                onChange={(e) => {
-                  setFormData({ ...formData, phone: e.target.value });
-                  setFormErrors({ ...formErrors, phone: undefined });
-                }}
-                aria-invalid={Boolean(formErrors.phone)}
-                aria-label="Nomor telepon"
-                style={formErrors.phone ? { borderColor: '#F87171' } : undefined}
-              />
-              {formErrors.phone && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
-                  {formErrors.phone}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Alamat Domisili / Kantor
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Jl. Ahmad Yani KM 5, Banjarmasin"
-              className="input-premium"
-              value={formData.address}
-              onChange={(e) => {
-                setFormData({ ...formData, address: e.target.value });
-                setFormErrors({ ...formErrors, address: undefined });
-              }}
-              aria-invalid={Boolean(formErrors.address)}
-              aria-label="Alamat"
-              style={formErrors.address ? { borderColor: '#F87171' } : undefined}
-            />
-            {formErrors.address && (
-              <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--fg-danger)' }}>
-                {formErrors.address}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '4px' }}>
-              Nama Instansi / Perusahaan (Opsional untuk Pelanggan)
-            </label>
-            <input
-              type="text"
-              placeholder="PT. Aneka Tambang Kalimantan"
-              className="input-premium"
-              value={formData.company_name}
-              onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-              aria-label="Nama instansi"
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-            <button
-              type="button"
-              onClick={handleCloseModal}
-              className="btn-secondary"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={isSubmitting}
-              style={isSubmitting ? { opacity: 0.6, cursor: 'wait' } : undefined}
-            >
-              {isSubmitting ? 'Mendaftarkan...' : 'Simpan & Daftarkan Pengguna'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+        formData={formData}
+        onFieldChange={handleFieldChange}
+        formErrors={formErrors}
+        formError={formError}
+        isSubmitting={isSubmitting}
+        onSubmit={handleFormSubmit}
+      />
 
       {/* Konfirmasi Toggle Status Akun */}
       <ConfirmDialog
