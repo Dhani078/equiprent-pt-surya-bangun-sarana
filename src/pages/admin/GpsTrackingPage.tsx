@@ -1,53 +1,22 @@
-import React, { useState, useMemo, useCallback, Suspense, lazy } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { GpsTracking } from '../../types';
-
-/**
- * Peta Leaflet dimuat MALAMU (T-0064).
- *
- * Leaflet ~150 kB hanya dipakai di halaman ini; memuatnya statis membuat
- * seluruh aplikasi (termasuk Login) ikut berat. `React.lazy` memisahkannya
- * ke chunk terpisah yang baru diunduh saat halaman pelacakan dibuka.
- *
- * Tipe props diimpor terpisah agar tetap tersedia di modul ini tanpa
- * menarik Leaflet ke dalam bundel awal.
- */
-const LeafletMap = lazy(() => import('../../components/LeafletMap').then((m) => ({ default: m.LeafletMap })));
-
-import {
-  MapPin,
-  Navigation,
-  Fuel,
-  Power,
-  Radio,
-  Clock,
-  AlertTriangle,
-  RefreshCw,
-  Gauge,
-  Layers,
-  ShieldAlert,
-} from 'lucide-react';
+import { Radio } from 'lucide-react';
 import {
   DEFAULT_FLEET_FILTER,
   buildFleetTelemetry,
-  formatCoordinate,
-  formatSpeed,
-  getFuelLabel,
-  getMovementLabel,
-  SEARCH_MAX_LENGTH,
 } from '../../lib/fleetTelemetry';
-import type {
-  FleetTelemetryFilter,
-  FleetTelemetryRow,
-  FleetTelemetrySummary,
-} from '../../lib/fleetTelemetry';
+import type { FleetTelemetryFilter } from '../../lib/fleetTelemetry';
 import {
   DEFAULT_SITE_ZONES,
   detectGeofenceBreaches,
   summarizeGeofence,
 } from '../../lib/geofencing';
-import type { GeofenceBreach, SiteZone } from '../../lib/geofencing';
+import type { SiteZone } from '../../lib/geofencing';
 import { GeofenceAlertBanner } from './gps/GeofenceAlertBanner';
 import { TelemetryFilterPanel } from './gps/TelemetryFilterPanel';
+import { FleetSummaryGrid } from './gps/FleetSummaryGrid';
+import { UnitTelemetryPanel } from './gps/UnitTelemetryPanel';
+import { FleetMapPanel } from './gps/FleetMapPanel';
 
 /**
  * Zona site yang dipakai halaman ini.
@@ -76,85 +45,13 @@ interface GpsTrackingPageProps {
 }
 
 /**
- * Kartu ringkasan agregat di kepala halaman.
- * Dipisah menjadi komponen kecil agar badan halaman tetap mudah dibaca.
+ * Halaman pelacakan GPS.
+ *
+ * Mesin tampilan (`fleetTelemetry.ts`) sama dengan edge API `GET /api/tracking`
+ * — layar tidak pernah berbeda dari keputusan server. Render dipecah ke
+ * gps/{FleetSummaryGrid, UnitTelemetryPanel, FleetMapPanel}; Leaflet lazy
+ * hidup di FleetMapPanel.
  */
-function SummaryCard({
-  label,
-  value,
-  tone,
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  tone?: 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
-  icon: React.ReactNode;
-}) {
-  const colors: Record<string, string> = {
-    primary: 'var(--color-primary)',
-    success: 'var(--fg-success-deep)',
-    warning: 'var(--fg-amber)',
-    danger: 'var(--fg-danger)',
-    neutral: 'var(--color-secondary)',
-  };
-  const warna = colors[tone ?? 'neutral'];
-
-  return (
-    <div
-      style={{
-        padding: '12px 14px',
-        backgroundColor: 'var(--bg-raised)',
-        borderRadius: '8px',
-        border: '1px solid var(--color-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-secondary-light)', fontWeight: 600 }}>
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div style={{ fontSize: '19px', fontWeight: 800, color: warna, lineHeight: 1.1 }}>
-        {value}
-      </div>
-    </div>
-  );
-}
-
-/** Badge status mesin mengikuti design system (hijau=ON, abu=OFF). */
-function EngineBadge({ status }: { status: 'ON' | 'OFF' }) {
-  return (
-    <span className={`badge badge-${status === 'ON' ? 'active' : 'suspended'}`} style={{ fontSize: '10px', padding: '2px 6px' }}>
-      MESIN {status}
-    </span>
-  );
-}
-
-/** Badge kelas bahan bakar — merah kritis, kuning rendah, hijau aman. */
-function FuelBadge({ kelas }: { kelas: FleetTelemetryRow['fuel'] }) {
-  const gaya: Record<FleetTelemetryRow['fuel'], { latar: string; teks: string }> = {
-    KRITIS: { latar: 'var(--bg-red-soft)', teks: 'var(--fg-danger-deep)' },
-    RENDAH: { latar: 'var(--bg-amber-soft)', teks: 'var(--fg-warning-deep)' },
-    NORMAL: { latar: 'var(--bg-green-soft)', teks: 'var(--fg-success-deeper)' },
-  };
-  const s = gaya[kelas];
-  return (
-    <span
-      style={{
-        fontSize: '10px',
-        fontWeight: 700,
-        padding: '2px 6px',
-        borderRadius: '4px',
-        backgroundColor: s.latar,
-        color: s.teks,
-      }}
-    >
-      {getFuelLabel(kelas)}
-    </span>
-  );
-}
-
 export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
   trackingData,
   title = 'Pelacakan Telemetri GPS Alat Berat (Real-time)',
@@ -166,12 +63,6 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
     ...(initialFilter ?? {}),
   }));
 
-  /**
-   * Tampilan telemetri dihitung dari SATU modul murni
-   * (`src/lib/fleetTelemetry.ts`) — mesin yang sama dipakai edge API
-   * `GET /api/tracking`. Karena itu apa yang tampil di layar tidak pernah
-   * berbeda dengan keputusan server.
-   */
   const view = useMemo(
     () => buildFleetTelemetry(trackingData, { role: 'ADMIN', equipmentIds: null }, filter),
     [trackingData, filter]
@@ -185,11 +76,9 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
   const [showHeatmap, setShowHeatmap] = useState(false);
 
   /**
-   * Pelanggaran geofencing (T-0060).
-   *
-   * Dihitung dengan `useMemo` dari baris telemetri + zona site sehingga
-   * banner alert selalu sinkron dengan data yang sedang tampil — unit
-   * yang tersaring hidup tidak pernah memunculkan false positive.
+   * Pelanggaran geofencing (T-0060) dihitung dari baris telemetri + zona
+   * site sehingga banner selalu sinkron dengan data tampil — unit yang
+   * tersaring hidup tidak pernah memunculkan false positive.
    */
   const alertZona = useMemo(
     () => detectGeofenceBreaches(rows, SITE_ZONES),
@@ -199,11 +88,10 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
     () => summarizeGeofence(alertZona, SITE_ZONES),
     [alertZona]
   );
-  const zonaBreachMap = useMemo(() => {
-    const peta = new Map<number, GeofenceBreach>();
-    for (const b of alertZona) peta.set(b.equipmentId, b);
-    return peta;
-  }, [alertZona]);
+  const breachIds = useMemo(
+    () => new Set(alertZona.map((b) => b.equipmentId)),
+    [alertZona]
+  );
 
   const ubahFilter = useCallback(
     (perubahan: Partial<FleetTelemetryFilter>) => setFilter((lama) => ({ ...lama, ...perubahan })),
@@ -216,7 +104,6 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
   }, []);
 
   const tidakAdaData = trackingData.length === 0;
-  const hasilKosong = !tidakAdaData && rows.length === 0;
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -247,68 +134,9 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
         </div>
       </div>
 
-      {/* Ringkasan Agregat */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-        gap: '12px',
-        padding: '16px',
-        backgroundColor: 'var(--color-surface)',
-        borderRadius: 'var(--radius-eight)',
-        border: '1px solid var(--color-border)',
-      }}>
-        <SummaryCard
-          label="Unit Terlacak"
-          value={`${summary.totalUnits} Unit`}
-          tone="primary"
-          icon={<MapPin size={12} color="var(--color-primary)" />}
-        />
-        <SummaryCard
-          label="Mesin Menyala"
-          value={`${summary.engineOnCount} / ${summary.totalUnits}`}
-          tone="success"
-          icon={<Power size={12} color="var(--fg-success-deep)" />}
-        />
-        <SummaryCard
-          label="Sedang Bergerak"
-          value={`${summary.movingCount} Unit`}
-          tone="primary"
-          icon={<Navigation size={12} color="var(--color-primary)" />}
-        />
-        <SummaryCard
-          label="Rata-rata Kecepatan"
-          value={formatSpeed(summary.averageSpeed)}
-          tone="neutral"
-          icon={<Gauge size={12} color="var(--color-secondary)" />}
-        />
-        <SummaryCard
-          label="Rata-rata BBM"
-          value={`${String(summary.averageFuel).replace('.', ',')}%`}
-          tone={summary.averageFuel < 25 ? 'warning' : 'success'}
-          icon={<Fuel size={12} color="#F59E0B" />}
-        />
-        <SummaryCard
-          label="BBM Kritis / Rendah"
-          value={`${summary.criticalFuelCount} / ${summary.lowFuelCount}`}
-          tone={summary.criticalFuelCount > 0 ? 'danger' : 'neutral'}
-          icon={<AlertTriangle size={12} color={summary.criticalFuelCount > 0 ? 'var(--fg-danger)' : 'var(--color-secondary)'} />}
-        />
-        <SummaryCard
-          label="Titik Data Lama (>6 jam)"
-          value={`${summary.staleCount} Unit`}
-          tone={summary.staleCount > 0 ? 'warning' : 'neutral'}
-          icon={<Clock size={12} color="var(--fg-amber)" />}
-        />
-        <SummaryCard
-          label="Keluar Zona Site"
-          value={`${ringkasanZona.jumlahBreach} Unit`}
-          tone={ringkasanZona.jumlahBreach > 0 ? 'danger' : 'success'}
-          icon={<ShieldAlert size={12} color={ringkasanZona.jumlahBreach > 0 ? 'var(--fg-danger)' : 'var(--fg-success-deep)'} />}
-        />
-      </div>
+      <FleetSummaryGrid summary={summary} geofence={ringkasanZona} />
 
-
-      {/* Banner alert geofencing (T-0060) — dirender komponen gps/GeofenceAlertBanner. */}
+      {/* Banner alert geofencing (T-0060). */}
       <GeofenceAlertBanner breaches={alertZona} summary={ringkasanZona} />
 
       <TelemetryFilterPanel
@@ -321,271 +149,23 @@ export const GpsTrackingPage: React.FC<GpsTrackingPageProps> = ({
 
       {/* Main Grid: Telemetry Sidebar & Leaflet Map */}
       <div className="gps-layout" style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '20px' }}>
-        {/* Unit Telemetry List & Details */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Active Unit Telemetry Card */}
-          {selectedUnit && (
-            <div className="card-premium" style={{ padding: '20px', borderLeft: '4px solid var(--color-primary)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '8px', flexWrap: 'wrap' }}>
-                <span className="serial-code" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                  {selectedUnit.equipmentCode}
-                </span>
-                <EngineBadge status={selectedUnit.engineStatus} />
-              </div>
-
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-strong)', margin: '0 0 12px 0' }}>
-                {selectedUnit.equipmentName}
-              </h3>
-
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                <FuelBadge kelas={selectedUnit.fuel} />
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    backgroundColor: selectedUnit.movement === 'BERGERAK' ? 'var(--bg-blue-soft)' : 'var(--bg-subtle)',
-                    color: selectedUnit.movement === 'BERGERAK' ? 'var(--color-primary)' : 'var(--color-secondary)',
-                  }}
-                >
-                  {getMovementLabel(selectedUnit.movement)}
-                </span>
-                {/* Titik yang sudah usang ditandai agar operator tidak
-                    mengira posisinya masih aktual. */}
-                {selectedUnit.isStale && (
-                  <span
-                    style={{
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      backgroundColor: 'var(--bg-amber-soft)',
-                      color: 'var(--fg-warning-deep)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                    }}
-                  >
-                    <AlertTriangle size={10} />
-                    Titik Data Lama
-                  </span>
-                )}
-                {/* Unit di luar semua zona site (T-0060). */}
-                {zonaBreachMap.has(selectedUnit.equipmentId) && (
-                  <span
-                    style={{
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      backgroundColor: 'var(--bg-red-soft)',
-                      color: 'var(--fg-danger-deep)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                    }}
-                  >
-                    <ShieldAlert size={10} />
-                    Keluar Zona
-                  </span>
-                )}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ padding: '12px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-secondary-light)', marginBottom: '4px' }}>
-                    <Navigation size={12} color="var(--color-primary)" />
-                    <span>Kecepatan</span>
-                  </div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-primary)' }}>
-                    {String(selectedUnit.speed).replace('.', ',')} <span style={{ fontSize: '12px', fontWeight: 500 }}>km/h</span>
-                  </div>
-                </div>
-
-                <div style={{ padding: '12px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-secondary-light)', marginBottom: '4px' }}>
-                    <Fuel size={12} color="#F59E0B" />
-                    <span>Level Solar</span>
-                  </div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#F59E0B' }}>
-                    {selectedUnit.fuelLevelPercent}%
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--color-border)' }}>
-                  <span>Latitude:</span>
-                  <span className="gps-coordinates" style={{ fontWeight: 600 }}>{formatCoordinate(selectedUnit.latitude)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--color-border)' }}>
-                  <span>Longitude:</span>
-                  <span className="gps-coordinates" style={{ fontWeight: 600 }}>{formatCoordinate(selectedUnit.longitude)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                  <span>Pembaruan Terakhir:</span>
-                  <span style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>{selectedUnit.recordedAt}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Unit List Selection */}
-          <div className="card-premium" style={{ padding: '16px', maxHeight: '380px', overflowY: 'auto' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '10px', textTransform: 'uppercase' }}>
-              Daftar Armada Terhubung ({rows.length} Unit)
-            </div>
-
-            {/* Empty state: tidak ada titik sama sekali */}
-            {tidakAdaData && (
-              <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--color-secondary)', fontSize: '12.5px' }}>
-                Belum ada data telemetri GPS yang diterima dari perangkat armada.
-              </div>
-            )}
-
-            {/* Empty state: ada data, tetapi tersaring habis */}
-            {hasilKosong && (
-              <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--color-secondary)', fontSize: '12.5px' }}>
-                Tidak ada unit yang cocok dengan penyaringan ini. Ubah filter atau tekan <strong>Reset Filter</strong>.
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {rows.map((item) => {
-                const isSelected = selectedUnit?.equipmentId === item.equipmentId;
-                const diLuarZona = zonaBreachMap.has(item.equipmentId);
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedUnitId(item.equipmentId)}
-                    aria-label={`Pilih unit ${item.equipmentCode} ${item.equipmentName}${diLuarZona ? ' — di luar zona site' : ''}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '8px',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: diLuarZona
-                        ? '2px solid var(--fg-danger)'
-                        : isSelected
-                          ? '2px solid var(--color-primary)'
-                          : '1px solid var(--color-border)',
-                      backgroundColor: diLuarZona
-                        ? 'var(--bg-red-soft)'
-                        : isSelected
-                          ? 'var(--bg-blue-soft)'
-                          : 'var(--color-surface)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'var(--transition-base)'
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: diLuarZona ? 'var(--fg-danger-deep)' : isSelected ? 'var(--color-primary)' : 'var(--text-strong)' }}>
-                        {item.equipmentName}
-                      </div>
-                      <div className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary-light)' }}>
-                        {item.equipmentCode}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
-                      <EngineBadge status={item.engineStatus} />
-                      {diLuarZona ? (
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 800,
-                            color: 'var(--fg-danger-deep)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                          }}
-                        >
-                          <ShieldAlert size={10} />
-                          Keluar Zona
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '10px', color: 'var(--color-secondary-light)' }}>
-                          {formatSpeed(item.speed)}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Interactive Leaflet Map */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div className="card-premium" style={{ padding: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setShowHeatmap((v) => !v)}
-                className={showHeatmap ? 'btn-primary' : 'btn-secondary'}
-                style={{ padding: '6px 12px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                aria-pressed={showHeatmap}
-                aria-label="Toggle overlay heatmap kepadatan armada"
-              >
-                <Layers size={13} />
-                <span>{showHeatmap ? 'Sembunyikan Heatmap' : 'Tampilkan Heatmap'}</span>
-              </button>
-            </div>
-            <Suspense
-              fallback={
-                <div
-                  role="status"
-                  aria-busy="true"
-                  aria-label="Memuat peta pelacakan armada"
-                  className="map-container"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12.5px',
-                    color: 'var(--color-secondary)',
-                    backgroundColor: 'var(--bg-subtle)',
-                    gap: '8px',
-                  }}
-                >
-                  <RefreshCw size={14} className="animate-pulse" />
-                  <span>Memuat peta armada…</span>
-                </div>
-              }
-            >
-              <LeafletMap
-                trackingData={rows}
-                selectedUnitId={selectedUnit?.equipmentId ?? null}
-                onSelectUnit={(id) => setSelectedUnitId(id)}
-                heatmapData={trackingData}
-                showHeatmap={showHeatmap}
-                siteZones={SITE_ZONES}
-              />
-            </Suspense>
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            flexWrap: 'wrap',
-            padding: '10px 16px',
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--radius-eight)',
-            border: '1px solid var(--color-border)',
-            fontSize: '12px',
-            color: 'var(--color-secondary)'
-          }}>
-            <span>Klik marker pin pada peta untuk melihat data telemetri rinci unit.</span>
-            <span>Wilayah Operasional: <strong>Kalsel (Banjarmasin - Banjarbaru - Batola - Tanah Bumbu - Tabalong)</strong></span>
-            <span>Zona site: <strong>{ringkasanZona.jumlahZona} zona geofencing aktif</strong></span>
-          </div>
-        </div>
+        <UnitTelemetryPanel
+          rows={rows}
+          selectedUnit={selectedUnit}
+          breachIds={breachIds}
+          onSelectUnit={setSelectedUnitId}
+          noData={tidakAdaData}
+        />
+        <FleetMapPanel
+          rows={rows}
+          selectedUnitId={selectedUnit?.equipmentId ?? null}
+          onSelectUnit={setSelectedUnitId}
+          heatmapData={trackingData}
+          showHeatmap={showHeatmap}
+          onToggleHeatmap={() => setShowHeatmap((v) => !v)}
+          siteZones={SITE_ZONES}
+          geofence={ringkasanZona}
+        />
       </div>
     </div>
   );
