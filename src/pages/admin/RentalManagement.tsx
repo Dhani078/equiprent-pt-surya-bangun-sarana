@@ -3,31 +3,22 @@ import { Rental, Equipment, User, Contract } from '../../types';
 import { ContractPanel } from '../../components/ContractPanel';
 import { StatusConfirmModal } from './rental/StatusConfirmModal';
 import { AddRentalModal } from './rental/AddRentalModal';
-import { Plus, Search, CheckCircle, XCircle, Truck, CircleCheck, TriangleAlert, Hourglass, ClipboardList } from 'lucide-react';
-import { Modal } from '../../components/Modal';
-import { getEquipmentImage } from '../../lib/stitchAssets';
-import { formatRupiah, formatTanggal, getLatePenaltyPerDay } from '../../lib/businessRules';
+import { RentalTable } from './rental/RentalTable';
+import { RentalFilterBar } from './rental/RentalFilterBar';
+import { LatePenaltySummaryBar } from './rental/LatePenaltySummaryBar';
+import { Plus } from 'lucide-react';
 import {
   buildEquipmentAvailability,
   describeBlockedReason,
   summarizeAvailability,
 } from '../../lib/availability';
 import {
-  getAllowedNextStatuses,
   getLateReturnInfo,
-  getRentalStatusLabel,
-  getRentalStatusTone,
   summarizeLatePenalties,
 } from '../../lib/rentalWorkflow';
 import type { RentalStatus } from '../../lib/rentalWorkflow';
-import { Paginator, usePagination } from '../../components/Paginator';
-import { SkeletonRows } from '../../components/Skeleton';
-import { EmptyState } from '../../components/EmptyState';
 import { exportTable } from '../../lib/tableExport';
 import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
-import { Download, FileSpreadsheet, FileText } from 'lucide-react';
-
-const PAGE_SIZE_RENTAL = 20;
 
 interface RentalManagementProps {
   rentals: Rental[];
@@ -57,30 +48,6 @@ const SUB_TABS: readonly { id: SubTab; label: string }[] = [
   { id: 'transaksi', label: 'Daftar Transaksi' },
   { id: 'kontrak', label: 'Kontrak Digital' },
 ];
-
-/** Warna badge mengikuti design system §7 (hijau=aktif, kuning=pending, dst). */
-const TONE_STYLE: Record<string, { backgroundColor: string; color: string; borderColor: string }> = {
-  success: { backgroundColor: 'var(--bg-green-soft)', color: 'var(--fg-success-deeper)', borderColor: '#A7F3D0' },
-  info: { backgroundColor: 'var(--bg-blue-soft)', color: 'var(--fg-info-deep)', borderColor: 'var(--border-blue-soft)' },
-  warning: { backgroundColor: 'var(--bg-amber-soft)', color: 'var(--fg-warning-deep)', borderColor: 'var(--border-amber-soft)' },
-  danger: { backgroundColor: 'var(--bg-red-soft)', color: 'var(--fg-danger-deep)', borderColor: 'var(--border-red-soft)' },
-  neutral: { backgroundColor: 'var(--bg-subtle)', color: 'var(--text-body)', borderColor: 'var(--color-border)' },
-};
-
-/** Label & ikon untuk tombol aksi — mengikuti matriks transisi terpusat. */
-const ACTION_META: Record<string, { label: string; tone: 'success' | 'danger' | 'info' | 'neutral' }> = {
-  APPROVED: { label: 'Setujui', tone: 'success' },
-  REJECTED: { label: 'Tolak', tone: 'danger' },
-  ON_GOING: { label: 'Mobilisasi', tone: 'info' },
-  COMPLETED: { label: 'Selesai', tone: 'success' },
-};
-
-const TOMBOL_STYLE: Record<string, React.CSSProperties> = {
-  success: { backgroundColor: '#10B981', borderColor: '#10B981', color: '#FFFFFF' },
-  danger: { backgroundColor: 'var(--color-surface)', borderColor: 'var(--border-red-soft)', color: '#EF4444' },
-  info: { backgroundColor: 'var(--color-primary)', borderColor: 'var(--color-primary)', color: '#FFFFFF' },
-  neutral: {},
-};
 
 export const RentalManagement: React.FC<RentalManagementProps> = ({
   rentals,
@@ -251,60 +218,6 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
     onNotify?.(hasil.message, hasil.ok ? 'success' : 'error');
   };
 
-  const [rentalPage, setRentalPage] = useState(1);
-  React.useEffect(() => setRentalPage(1), [searchTerm, filterStatus]);
-  const pagedRentals = usePagination(filteredRentals, PAGE_SIZE_RENTAL, rentalPage);
-
-  /** Baris status + tombol aksi untuk satu rental. */
-  const renderAksi = (r: Rental) => {
-    const tujuan = getAllowedNextStatuses(r.status);
-
-    if (tujuan.length === 0) {
-      return (
-        <span
-          style={{
-            fontSize: '12px',
-            fontWeight: 600,
-            color: r.status === 'COMPLETED' ? 'var(--fg-success-deep)' : 'var(--color-secondary)',
-          }}
-        >
-          {r.status === 'COMPLETED' ? 'Tuntas ✓' : 'Ditolak'}
-        </span>
-      );
-    }
-
-    return (
-      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
-        {tujuan.map((next) => {
-          const meta = ACTION_META[next];
-          const Ikon =
-            next === 'APPROVED' ? CheckCircle
-              : next === 'REJECTED' ? XCircle
-                : next === 'ON_GOING' ? Truck
-                  : CircleCheck;
-
-          return (
-            <button
-              key={next}
-              onClick={() => mintaKonfirmasi(r, next)}
-              className={next === 'REJECTED' ? 'btn-secondary' : 'btn-primary'}
-              style={{
-                padding: '5px 10px',
-                fontSize: '11.5px',
-                ...TOMBOL_STYLE[meta.tone],
-              }}
-              aria-label={`${meta.label} transaksi ${r.rental_code}`}
-              title={`${meta.label} — ${getRentalStatusLabel(next)}`}
-            >
-              <Ikon size={12} />
-              <span>{meta.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    );
-  };
-
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
@@ -376,257 +289,49 @@ export const RentalManagement: React.FC<RentalManagementProps> = ({
 
       {subTab === 'transaksi' && (
         <>
+          <LatePenaltySummaryBar denda={dendaBerjalan} />
 
-      {/* Ringkasan Keterlambatan Berjalan */}
-      <div
-        className="card-premium"
-        style={{
-          padding: '14px 16px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: '8px 18px',
-          borderLeft: `4px solid ${dendaBerjalan.lateCount > 0 ? '#EF4444' : '#10B981'}`,
-        }}
-        aria-label="Ringkasan denda keterlambatan berjalan"
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Hourglass size={16} style={{ color: 'var(--color-primary)' }} />
-          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)' }}>
-            Denda Keterlambatan Berjalan
-          </span>
-        </div>
-        <span style={{ fontSize: '12.5px', color: 'var(--color-secondary)' }}>
-          {dendaBerjalan.lateCount} unit lewat jatuh tempo · tarif {formatRupiah(getLatePenaltyPerDay())}/hari
-        </span>
-        <strong
-          style={{
-            marginLeft: 'auto',
-            fontSize: '15px',
-            fontFamily: 'monospace',
-            color: dendaBerjalan.penaltyTotal > 0 ? 'var(--fg-danger-deep)' : 'var(--fg-success-deep)',
-          }}
-        >
-          {formatRupiah(dendaBerjalan.penaltyTotal)}
-        </strong>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="card-premium" style={{ padding: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ position: 'relative', flex: '1 1 300px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-secondary-light)' }} />
-          <input
-            type="text"
-            className="input-premium"
-            placeholder="Cari kode sewa, pelanggan, perusahaan, atau nama alat..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: '36px', height: '40px' }}
-            aria-label="Cari transaksi penyewaan"
+          <RentalFilterBar
+            searchTerm={searchTerm}
+            filterStatus={filterStatus}
+            onSearch={setSearchTerm}
+            onFilterStatus={setFilterStatus}
+            onExport={handleExport}
           />
-        </div>
 
-        <select
-          className="input-premium"
-          style={{ width: 'auto', height: '40px', padding: '0 12px' }}
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          aria-label="Saring transaksi berdasarkan status"
-        >
-          <option value="ALL">Semua Status Transaksi</option>
-          <option value="PENDING">Menunggu Persetujuan</option>
-          <option value="APPROVED">Disetujui</option>
-          <option value="ON_GOING">Sedang Berjalan</option>
-          <option value="COMPLETED">Selesai</option>
-          <option value="REJECTED">Ditolak</option>
-        </select>
-
-        {/* Ekspor data sesuai filter aktif */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleExport('csv')}
-            title="Unduh CSV"
-            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-          >
-            <Download size={15} /> CSV
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleExport('excel')}
-            title="Unduh Excel"
-            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-          >
-            <FileSpreadsheet size={15} /> Excel
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleExport('pdf')}
-            title="Cetak / simpan PDF"
-            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-          >
-            <FileText size={15} /> PDF
-          </button>
-        </div>
-      </div>
-
-      {/* Table with Thumbnails */}
-      <div className="table-container">
-        {isLoading ? (
-          <SkeletonRows
-            ariaLabel="Memuat daftar transaksi penyewaan"
-            count={5}
-            height={56}
-            gap={12}
+          <RentalTable
+            rentals={filteredRentals}
+            petaDenda={petaDenda}
+            isLoading={isLoading}
+            searchTerm={searchTerm}
+            filterStatus={filterStatus}
+            onResetFilter={() => { setSearchTerm(''); setFilterStatus('ALL'); }}
+            onAskConfirm={mintaKonfirmasi}
           />
-        ) : (
-        <>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Kode Sewa</th>
-              <th>Pelanggan & Korporasi</th>
-              <th>Unit Alat Berat</th>
-              <th>Periode Sewa</th>
-              <th style={{ textAlign: 'right' }}>Total Biaya</th>
-              <th style={{ textAlign: 'center' }}>Status</th>
-              <th style={{ textAlign: 'center' }}>Aksi Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pagedRentals.map((r) => {
-              const imgUrl = getEquipmentImage(r.equipment_code);
-              const denda = petaDenda.get(r.id);
-              const tone = getRentalStatusTone(r.status);
-              const gaya = TONE_STYLE[tone] ?? TONE_STYLE.neutral;
 
-              return (
-                <tr key={r.id}>
-                  <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                    {r.rental_code}
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--color-primary)' }}>{r.company_name || r.customer_name}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>{r.customer_name}</div>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <img src={imgUrl} alt={r.equipment_name} style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover' }} />
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '13px' }}>{r.equipment_name}</div>
-                        <span className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{r.equipment_code}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
-                    <div>Mulai: <strong>{formatTanggal(r.start_date)}</strong></div>
-                    <div>Selesai: <strong>{formatTanggal(r.end_date)}</strong></div>
-                    {denda && denda.isLate && (
-                      <div style={{ marginTop: '4px', fontSize: '11.5px', color: 'var(--fg-danger-deep)', fontWeight: 600 }}>
-                        Terlambat {denda.lateDays} hari
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="serial-code" style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-strong)' }}>
-                      {formatRupiah(Number(r.subtotal))}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>
-                      {r.total_days} hari operasional
-                    </div>
-                    {denda && denda.isLate && (
-                      <div style={{ fontSize: '11px', color: 'var(--fg-danger-deep)', fontWeight: 600 }}>
-                        Denda {formatRupiah(denda.penalty)}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        padding: '3px 9px',
-                        borderRadius: '999px',
-                        border: `1px solid ${gaya.borderColor}`,
-                        backgroundColor: gaya.backgroundColor,
-                        color: gaya.color,
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        letterSpacing: '0.02em',
-                      }}
-                    >
-                      {r.status}
-                    </span>
-                    <div style={{ marginTop: '4px', fontSize: '10.5px', color: 'var(--color-secondary)' }}>
-                      {getRentalStatusLabel(r.status)}
-                    </div>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    {renderAksi(r)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <Paginator
-          total={filteredRentals.length}
-          page={rentalPage}
-          limit={PAGE_SIZE_RENTAL}
-          onPageChange={setRentalPage}
-        />
-
-        {filteredRentals.length === 0 && (
-          <EmptyState
-            pesan={searchTerm || filterStatus !== 'ALL'
-              ? 'Tidak ada transaksi yang cocok'
-              : 'Belum ada transaksi penyewaan'}
-            keterangan={searchTerm || filterStatus !== 'ALL'
-              ? 'Ubah kata kunci pencarian atau pilih status lain pada penyaring di atas.'
-              : 'Transaksi baru akan muncul di sini setelah pelanggan mengajukan sewa.'}
-            ariaLabel="Daftar transaksi penyewaan kosong"
-            ikon={ClipboardList}
-            aksi={searchTerm || filterStatus !== 'ALL' ? (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => { setSearchTerm(''); setFilterStatus('ALL'); }}
-                style={{ marginTop: '4px', padding: '7px 14px', fontSize: '12.5px' }}
-              >
-                Reset Penyaring
-              </button>
-            ) : undefined}
+          <StatusConfirmModal
+            pending={pendingConfirm}
+            onClose={() => setPendingConfirm(null)}
+            onConfirm={jalankanPerubahan}
+            submitting={false}
           />
-        )}
-        </>
-        )}
-      </div>
 
-      <StatusConfirmModal
-        pending={pendingConfirm}
-        onClose={() => setPendingConfirm(null)}
-        onConfirm={jalankanPerubahan}
-        submitting={false}
-      />
-
-      <AddRentalModal
-        open={isAddModalOpen}
-        customers={customers}
-        equipments={equipments}
-        availability={availability}
-        availabilitySummary={availabilitySummary}
-        selectedAvailability={selectedAvailability ?? null}
-        values={formData}
-        onChange={setFormData}
-        error={formError}
-        onSetError={setFormError}
-        submitting={false}
-        onSubmit={handleFormSubmit}
-        onClose={() => setIsAddModalOpen(false)}
-        describeBlockedReason={describeBlockedReason}
-      />
+          <AddRentalModal
+            open={isAddModalOpen}
+            customers={customers}
+            equipments={equipments}
+            availability={availability}
+            availabilitySummary={availabilitySummary}
+            selectedAvailability={selectedAvailability ?? null}
+            values={formData}
+            onChange={setFormData}
+            error={formError}
+            onSetError={setFormError}
+            submitting={false}
+            onSubmit={handleFormSubmit}
+            onClose={() => setIsAddModalOpen(false)}
+            describeBlockedReason={describeBlockedReason}
+          />
         </>
       )}
     </div>
