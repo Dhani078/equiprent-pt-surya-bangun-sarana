@@ -170,3 +170,9 @@
 - Build: vite manualChunks vendor-react (133.93kB) + vendor-icons (41.65kB) -> chunk index 620.86 -> 446.63kB (gzip 116.46). Peringatan >500kB hilang.
 - Smoke UI production via CDP (STATE/smoke_portal_90.py): login role Pelanggan (klik tab 'Pelanggan' dulu, user/user) -> 5 tab portal bersih desktop 1280 & mobile 375 (ovf=0, 0 target<44px di main, peta Leaflet render 3 marker).
 - Deploy 7fc50ed7-0b0f-4e4a-8541-de3e7609b71f. tsc 0; 30/30 suite; build 8.50s. Commit 001c628.
+
+## Siklus 90 — 2026-09-29 (part 2)
+- Refactor: RentalManagement.tsx 634 -> 339. Tabel transaksi + aksi status + paginasi + empty state pindah ke pages/admin/rental/RentalTable.tsx (252); bar cari/penyaring/ekspor ke RentalFilterBar.tsx (80); kartu denda berjalan ke LatePenaltySummaryBar.tsx (40). Konstanta TONE_STYLE/ACTION_META ikut ke RentalTable; logika form/availability/konfirmasi tetap di induk.
+- Smoke UI production via CDP (STATE/smoke_rental_90.py, admin/admin): 7 kolom, 20 baris/halaman, pencarian 'SBZ' -> 0 baris + EmptyState, penyaring status OK, tombol 'Selesai' ON_GOING -> modal konfirmasi tampil & Batal menutup (unmount riil), sub-tab Kontrak Digital render, mobile 375 ovf=0 target-kecil=0.
+- Build: vite 5.52s; index 447.02kB (gzip 116.47) — tidak berubah berarti (split hanya relokasi kode).
+- Deploy 14ada3b8-c216-4c88-9150-bc55d5a76fcf. tsc 0; 30/30 suite. Commit 5c9495b.
