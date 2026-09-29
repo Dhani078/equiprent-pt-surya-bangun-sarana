@@ -1,30 +1,32 @@
 {
-  "cycle": 88,
-  "last_run": "2026-09-26T21:30:00.000Z",
+  "cycle": 89,
+  "last_run": "2026-09-29T02:53:42Z",
   "current_task_id": null,
   "current_phase": "FASE 5: INOVASI",
   "completed_this_cycle": [
-    "T-0065",
-    "T-0066",
-    "T-0067",
-    "T-0068",
-    "T-0069"
+    "S89-01 refactor EquipmentManagement",
+    "S89-02 refactor AdminDashboard",
+    "S89-03 pecah rute server",
+    "S89-04 audit CDP responsif + fix overflow",
+    "S89-05 deploy e04d73f8 -> 2f0a46d7 (final)"
   ],
-  "session_summary": "T-0054 DONE: peningkatan kualitas design UI ke level premium enterprise. (1) Konsistensi Bahasa Indonesia: Login.tsx (Selamat Datang Kembali, Ingat saya di perangkat ini, Lupa Kata Sandi?, Daftar Akses Armada, kelas enterprise->kelas perusahaan, label field netral 'Username'), Sidebar menu 'Rental Orders'/'Transaksi Rental'->'Transaksi Penyewaan', AccountSettings (Runtime/Basis data/TIDB/IN_MEMORY_DEMO -> label netral Indonesia), seedGenerator jabatan PIC 'Procurement'->'Pengadaan', option filter status SCHEDULED (Terjadwal)->Dijadwalkan dkk. (2) Hapus dev artifact/infra branding dari UI: footer Login TiDB Cloud Serverless + Fleet Manager Terminal, badge 'SUMBER: PERHITUNGAN LOKAL', Versi Edge Worker 2026.1 + TiDB Cloud Serverless di Sidebar.tsx, subtitle TiDB di Navbar, pesan error 'koneksi basis data TiDB'->'koneksi jaringan'. (3) Semantic color: komponen baru StatusBadge.tsx sebagai satu sumber kebenaran label+tone (PENTING/merah, LUNAS/hijau, ON_GOING/Sedang Berjalan/biru, MENUNGGU/kuning); .badge-sem-* + alias .badge-success/info/warning/error/neutral di index.css (sebelumnya class badge-success TIDAK ada di CSS -> pill KPI jatuh ke abu); badgeType KPI OPERASIONAL info->success, NORMAL info->neutral; dipasang di EquipmentManagement, MaintenanceManagement, AdminDashboard. (4) TrendChart: dipindah ke atas dashboard setelah alert servis (sebelumnya top=2025 di bawah viewport -> audit baca 'NOL chart'); verifikasi CDP render bagus, sumbu X 12 bulan, badge puncak. (5) Spacing & radius: token var(--space-*) di Login, grid minmax 420->460px, padding tabel dirapatkan, overflow horizontal tabel recent rentals DIPERBAIKI (client 509 = scroll 509). (6) Compact currency: formatRupiahRingkas('Rp 1,38 M'/'Rp 334,3 jt') di 8 KPI AdminDashboard + CustomerPortal + EquipmentManagement + MaintenanceManagement, tooltip full formatRupiah. (7) Role switcher ADMIN/STAFF/CUSTOMER disembunyikan -> badge read-only 'Administrator' (pola dev impersonation tidak boleh tampil di produksi). (8) Typography: type-scale token var(--fs-*), textWrap balance headline login, mono font hanya di .serial-code. Aksesibilitas: role=tablist di pemilih peran, target sentuh checkbox 44px. Verifikasi visual CDP: login + dashboard (login via klik tombol MASUK) tidak ada error runtime, semua badge semantik. Gate: tsc 0 error, 28/28 suite lulus (1 test skeletonLoading diupdate: regex badge lawas -> badge-sem-* sesuai class CSS baru), build 704.6 kB.",
+  "session_summary": "SIKLUS 89 (2026-09-29): tiga next steps siklus 88 tuntas. (1) EquipmentManagement.tsx 730->472: pages/admin/equipment/{EquipmentBentoStats,EquipmentCardGrid,EquipmentTable}.tsx — tabel ringkas & kartu unit jadi komponen murni-props, state form tetap di induk. (2) AdminDashboard.tsx 693->236: dashboard/{ServiceAlertBanner,DashboardStatGrid,DashboardActivityFeeds}.tsx; gabungKode & LABEL_JENIS_SERVIS ikut pindah. (3) server/index.ts 1172->423: routes/{dashboard,equipments,rentals,maintenance}.ts baru + tracking.ts diisi (/api/tracking + /api/gps); index hanya memanggil 11 daftar*(). (4) Audit CDP viewport prod (STATE/viewport_cdp_89.py, chromium playwright headless via 9222): TEMUAN ovf=10px semua tab mobile — inline style Navbar (tombol bahasa display:flex) menang atas media query .navbar-lang{display:none}; fix !important. GPS ovf=147 — grid inline '360px 1fr'; fix .gps-layout{1fr !important}. Target sentuh Leaflet zoom/popup-close 24-30px di HP; fix min 44px. Setelah fix: 375x812 -> 0 overflow, 0 target<44px di 8 tab; 1280x800 -> 0 overflow (target kecil desktop = paginasi & Leaflet, di luar lantai sentuh — nyaman pointer). (5) Deploy final Version 2f0a46d7-854f-436a-8e63-ba796a3c217f; smoke API 11 endpoint 200 + PUT /api/equipments/:id 200 (admin). Koreksi laporan lama: db.ts sebenarnya jadi src/lib/db/index.ts (43 brs) + src/store/*; main lokal dulu tertinggal 77 commit — sudah ff-only; HEAD siklus ini c21d285 (fix/security-audit == main == origin).",
   "quality_gate": {
-    "type_check": "PASS",
-    "test": "PASS (28/28 suite)",
-    "build": "PASS (704.6 kB)",
-    "verified_at": "2026-09-24T11:55:00.000Z"
+    "type_check": "PASS (0 error)",
+    "test": "PASS (30/30 suite)",
+    "build": "PASS (vite 7.93s)",
+    "deploy_version": "2f0a46d7-854f-436a-8e63-ba796a3c217f",
+    "verified_at": "2026-09-29T02:53:42Z"
   },
-  "test_suites": 28,
-  "commits": 43,
+  "test_suites": 30,
+  "commits": 48,
   "deploy": {
-    "status": "READY",
-    "note": "npm run deploy = npm run build && npx wrangler deploy; deploy:dry untuk uji tanpa publish"
+    "status": "DEPLOYED",
+    "version": "2f0a46d7-854f-436a-8e63-ba796a3c217f",
+    "url": "https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev"
   },
-  "next_focus": "T-0054 (opsional): halaman admin manajemen settings + endpoint PUT /api/settings (RBAC ADMIN) agar tarif denda dapat diubah dari UI tanpa edit DB",
-  "updated": "2026-09-28T15:59:30",
-  "last_summary": "Siklus 88: contracts.ts 664 -> paket lib/contracts/ (6 modul). Deploy 225b5c26. Commit fb417be. tsc 0, 30/30. Doc sync: AGENT24T.md, PERUBAHAN_TERBARU.md, changelog.",
+  "next_focus": "Siklus 90 kandidat: (a) src/server/index.ts 423 brs — pisah auth+middleware ke server/auth.ts bila membengkak lagi; (b) regression guard: jalankan viewport_cdp_89.py tiap siklus UI; (c) chunk index 620kB — manualChunks untuk lucide/leaflet.",
+  "updated": "2026-09-29T02:53:42",
+  "last_summary": "Siklus 89: 3 refactor raksasa + audit CDP responsif (fix overflow navbar & GPS mobile). tsc 0, 30/30, deploy 2f0a46d7.",
   "updated_at": "2026-09-29"
 }
