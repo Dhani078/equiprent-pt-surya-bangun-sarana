@@ -73,7 +73,7 @@ export const Paginator: React.FC<PaginatorProps> = ({ total, page, limit, onPage
                 aria-label={`Halaman ${p}`}
                 aria-current={p === page ? 'page' : undefined}
                 className={p === page ? 'btn-primary' : 'btn-secondary'}
-                style={{ padding: '5px 10px', fontSize: '12px', minWidth: '32px' }}
+                style={{ padding: '5px 10px', fontSize: '12px', minWidth: '44px' }}
               >
                 {p}
               </button>
