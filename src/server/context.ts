@@ -51,7 +51,7 @@ export {
 } from '../lib/validators';
 export type { ValidatedEquipmentInput, ValidatedUserInput } from '../lib/validators';
 
-export { isContractActive, isContractSigned, buildContractPreview, renderContractHtml } from '../lib/contracts';
+export { isContractActive, isContractSigned, buildContractPreview, renderContractHtml } from '../lib/contracts/index';
 
 export {
   FIELD_BUKTI,
