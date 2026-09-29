@@ -205,3 +205,11 @@
 - Smoke UI production via CDP (STATE/smoke_user_91.py, admin): 20 baris tampil, cari 'admin'->3, cari palsu->EmptyState->Reset->20, penyaring STAFF 6 baris semua STAFF, modal Tambah: form render, submit kosong->3 field aria-invalid, Batal menutup riil; mobile 375 ovf=0 small=0; desktop ovf=0.
 - Build: vite 5.74s; index 448.19kB (gzip 117.78). Deploy d564968e-72f3-4962-8a65-b0f8655b5cb4 (percobaan pertama 7a4ee084 sebelum fix paginator). tsc 0; 30/30 suite. Commit 39d8607.
 - Sisa file >500: hanya src/App.tsx (678) — kandidat pamungkas (pecah ke hooks/layout).
+
+## Siklus 91 — hotfix gambar (berkat laporan user + audit CDP)
+- Keluhan user: Inventaris Alat Berat — 7/8 kartu thumbnail broken (alt text bocor).
+- Akar (audit CDP langsung, bukan terka): 49/50 baris equipment di TiDB menyimpan thumbnail_url basi 'assets/images/*.jpg' warisan seed demo; file tidak pernah ada di worker -> SPA fallback HTML -> img mati. Hanya 1 baris googleusercontent yang hidup (cocok dengan 1 kartu utuh di foto user).
+- Perbaikan data: bulk PUT /api/equipments/:id thumbnail_url='' (server auto-getEquipmentImage). 41 ok; 8 gagal VALIDATION (type 'Vibratory Roller' tidak ada di EQUIPMENT_TYPES) -> dinorm ke 'Vibro Roller' via payload PUT -> 49/49 pulih.
+- Perbaikan kode: onError guard (dataset.fb anti-loop) -> src=getEquipmentImage(code,type) di EquipmentCardGrid, EquipmentTable, CatalogTab, RentBookingModal.
+- Verifikasi: CDP re-count total 20 img dead=0; screenshot STATE/imgfix_equip_91.png (vision: semua thumbnail normal). tsc 0; 30/30; deploy 06d4546d-9416-4136-8682-1a891198b156. Commit e23c357.
+- Catatan sesi: kredensial admin/admin API login DITOLAK (BAD_PASSWORD) — harness CDP tetap jalan pakai sessionStorage sbs_session_token per-tab. Password seed berubah di beberapa siklus; jangan andalkan memory lama untuk creds.
