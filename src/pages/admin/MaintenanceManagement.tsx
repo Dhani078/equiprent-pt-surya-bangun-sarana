@@ -2,12 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { Maintenance, Equipment, User } from '../../types';
 import { MAINTENANCE_TYPES, MAINTENANCE_TYPE_LABEL } from '../../lib/validators';
 import { MaintenanceFormModal } from './maintenance/MaintenanceFormModal';
+import { ServiceDueAlertPanel } from './maintenance/ServiceDueAlertPanel';
+import { SparepartAlertPanel } from './maintenance/SparepartAlertPanel';
+import { MaintenanceFilterBar } from './maintenance/MaintenanceFilterBar';
 import { ServiceHistoryPanel } from './maintenance/ServiceHistoryPanel';
 import type { MaintenanceTypeValue } from '../../lib/validators';
-import { Plus, Search, Filter, Wrench, CheckCircle, Clock, Calendar, AlertTriangle } from 'lucide-react';
-import { Modal } from '../../components/Modal';
+import { Plus, Wrench } from 'lucide-react';
 import { getEquipmentImage } from '../../lib/stitchAssets';
-import { getUnitsDueForService, formatRupiah, formatRupiahRingkas, SERVICE_INTERVAL_HM, predictNextServiceDate } from '../../lib/businessRules';
+import { getUnitsDueForService, formatRupiah, formatRupiahRingkas } from '../../lib/businessRules';
 import { exportTable } from '../../lib/tableExport';
 import { EmptyState } from '../../components/EmptyState';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -122,14 +124,6 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
     return freq;
   }, [maintenance]);
 
-  /** Suku cadang yang frekuensinya >= threshold, diurutkan terbanyak dulu. */
-  const sparepartAlerts = useMemo(() =>
-    [...sparepartFreq.entries()]
-      .filter(([, count]) => count >= sparepartThreshold)
-      .sort((a, b) => b[1] - a[1]),
-    [sparepartFreq, sparepartThreshold]
-  );
-
   const handleThresholdChange = (val: number) => {
     const safe = Math.max(1, Math.round(val));
     setSparepartThreshold(safe);
@@ -211,205 +205,22 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
         </button>
       </div>
 
-      {/* Panel Peringatan Servis Berbasis 250 HM */}
-      {serviceAlerts.length > 0 && (
-        <div
-          className="card-premium animate-fade-in"
-          style={{
-            padding: '16px 18px',
-            borderLeft: `4px solid ${overdueCount > 0 ? 'var(--fg-danger)' : '#F59E0B'}`,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <AlertTriangle size={18} color={overdueCount > 0 ? 'var(--fg-danger)' : '#F59E0B'} />
-            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-              Peringatan Servis Preventif (interval {SERVICE_INTERVAL_HM} HM)
-            </h3>
-            <span
-              style={{
-                marginLeft: 'auto',
-                fontSize: '11.5px',
-                fontWeight: 700,
-                padding: '3px 10px',
-                borderRadius: '999px',
-                backgroundColor: overdueCount > 0 ? 'var(--bg-rose-soft)' : 'var(--bg-cream-soft)',
-                color: overdueCount > 0 ? 'var(--fg-danger-deep)' : 'var(--fg-warning-deep)',
-              }}
-            >
-              {overdueCount} unit jatuh tempo · {serviceAlerts.length - overdueCount} unit mendekati
-            </span>
-          </div>
+      <ServiceDueAlertPanel
+        alerts={serviceAlerts}
+        overdueCount={overdueCount}
+        maintenance={maintenance}
+        onSchedule={(equipment, currentHM) => {
+          setFormData(prev => ({ ...prev, equipment_id: equipment.id, hour_meter_at_maintenance: currentHM }));
+          setIsModalOpen(true);
+        }}
+        onHistory={setHistoryUnitId}
+      />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {serviceAlerts.slice(0, 5).map(({ equipment, status }) => (
-              <div
-                key={equipment.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '10px 12px',
-                  backgroundColor: 'var(--bg-raised)',
-                  borderRadius: '8px',
-                  border: '1px solid var(--color-border)',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)' }}>
-                    {equipment.name}
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)' }}>
-                    {equipment.equipment_code}
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
-                  HM saat ini: <strong>{status.currentHM.toFixed(2)}</strong>
-                </div>
-
-                <div style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>
-                  Servis berikutnya: <strong>{status.nextServiceTargetHM.toFixed(2)} HM</strong>
-                </div>
-
-                {/* Prediksi tanggal berbasis regresi linear tren HM */}
-                {(() => {
-                  const selesai = maintenance.filter(
-                    (m) => m.equipment_id === equipment.id && m.status === 'COMPLETED'
-                  );
-                  const tgl = predictNextServiceDate(status.currentHM, status.nextServiceTargetHM, selesai);
-                  return tgl ? (
-                    <div style={{ fontSize: '11.5px', color: 'var(--fg-teal)', fontWeight: 600 }}>
-                      ≈ {tgl.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </div>
-                  ) : null; /* data servis < 2 titik — jangan tampilkan placeholder kosong */
-                })()}
-
-                <span
-                  style={{
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    padding: '3px 10px',
-                    borderRadius: '6px',
-                    backgroundColor: status.isDue ? 'var(--fg-danger)' : '#F59E0B',
-                    color: '#FFFFFF',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {status.isDue
-                    ? `LEWAT ${Math.abs(Math.round(status.hmUntilNextService))} HM`
-                    : `SISA ${Math.round(status.hmUntilNextService)} HM`}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData(prev => ({
-                      ...prev,
-                      equipment_id: equipment.id,
-                      hour_meter_at_maintenance: status.currentHM,
-                    }));
-                    setIsModalOpen(true);
-                  }}
-                  className="btn-primary"
-                  style={{ padding: '5px 12px', fontSize: '11.5px' }}
-                >
-                  Jadwalkan
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setHistoryUnitId(equipment.id)}
-                  className="btn-secondary"
-                  style={{ padding: '5px 12px', fontSize: '11.5px' }}
-                  title={`Lihat riwayat servis ${equipment.equipment_code}`}
-                >
-                  Riwayat
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {serviceAlerts.length > 5 && (
-            <p style={{ fontSize: '11.5px', color: 'var(--color-secondary)', margin: '10px 0 0 0' }}>
-              Dan {serviceAlerts.length - 5} unit lainnya memerlukan perhatian.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Panel Notifikasi Suku Cadang Sering Dipakai */}
-      <div className="card-premium" style={{ padding: '16px 18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          <Wrench size={18} color="var(--fg-teal)" />
-          <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-            Notifikasi Suku Cadang
-          </h3>
-          <span style={{ fontSize: '12px', color: 'var(--color-secondary)', marginLeft: 'auto' }}>
-            Ambang pemakaian:
-          </span>
-          <input
-            type="number"
-            min={1}
-            max={99}
-            value={sparepartThreshold}
-            onChange={(e) => handleThresholdChange(Number(e.target.value))}
-            className="input-premium"
-            aria-label="Ambang frekuensi suku cadang"
-            style={{ width: '64px', height: '34px', padding: '4px 8px', fontSize: '13px', textAlign: 'center' }}
-          />
-          <span style={{ fontSize: '12px', color: 'var(--color-secondary)' }}>× pemakaian</span>
-        </div>
-
-        {sparepartAlerts.length === 0 ? (
-          <p style={{ fontSize: '12.5px', color: 'var(--color-secondary)', margin: 0 }}>
-            Tidak ada suku cadang yang mencapai ambang {sparepartThreshold}× pemakaian.
-            {sparepartFreq.size > 0 && ` (${sparepartFreq.size} jenis suku cadang tercatat)`}
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {sparepartAlerts.map(([nama, count]) => {
-              const persen = Math.min(100, Math.round((count / sparepartThreshold) * 50));
-              return (
-                <div
-                  key={nama}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 12px',
-                    backgroundColor: 'var(--bg-amber-soft)',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-amber-soft)',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <AlertTriangle size={15} color="var(--fg-amber)" style={{ flexShrink: 0 }} />
-                  <div style={{ flex: '1 1 180px', fontSize: '13px', fontWeight: 600, color: 'var(--text-strong)' }}>
-                    {nama}
-                  </div>
-                  <div style={{ flex: '1 1 120px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ flex: 1, height: '6px', borderRadius: '3px', backgroundColor: 'var(--bg-cream-soft)', overflow: 'hidden' }}>
-                      <div style={{ width: `${persen}%`, height: '100%', backgroundColor: '#F59E0B', borderRadius: '3px', transition: 'width 0.3s' }} />
-                    </div>
-                  </div>
-                  <span style={{
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    padding: '3px 10px',
-                    borderRadius: '999px',
-                    backgroundColor: 'var(--bg-cream-soft)',
-                    color: 'var(--fg-warning-deep)',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {count}× dipakai
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <SparepartAlertPanel
+        freq={sparepartFreq}
+        threshold={sparepartThreshold}
+        onThresholdChange={handleThresholdChange}
+      />
 
       <ServiceHistoryPanel
         equipments={equipments}
@@ -419,63 +230,13 @@ export const MaintenanceManagement: React.FC<MaintenanceManagementProps> = ({
         serviceHistory={serviceHistory}
         historySummary={historySummary}
       />
-      {/* Filter Bar */}
-      <div className="card-premium" style={{ padding: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ position: 'relative', flex: '1 1 300px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-secondary-light)' }} />
-          <input
-            type="text"
-            className="input-premium"
-            placeholder="Cari kode servis, nama alat berat, atau nama mekanik..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: '36px', height: '40px' }}
-          />
-        </div>
-
-        <select
-          className="input-premium"
-          style={{ width: 'auto', height: '40px', padding: '0 12px' }}
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="ALL">Semua Status Perawatan</option>
-          <option value="SCHEDULED">Dijadwalkan</option>
-          <option value="IN_PROGRESS">Sedang Dikerjakan</option>
-          <option value="COMPLETED">Selesai</option>
-        </select>
-
-        {/* Ekspor data sesuai filter aktif */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleExport('csv')}
-            title="Unduh CSV"
-            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-          >
-            <Download size={15} /> CSV
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleExport('excel')}
-            title="Unduh Excel"
-            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-          >
-            <FileSpreadsheet size={15} /> Excel
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleExport('pdf')}
-            title="Cetak / simpan PDF"
-            style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}
-          >
-            <FileText size={15} /> PDF
-          </button>
-        </div>
-      </div>
+      <MaintenanceFilterBar
+        searchTerm={searchTerm}
+        filterStatus={filterStatus}
+        onSearch={setSearchTerm}
+        onFilterStatus={setFilterStatus}
+        onExport={handleExport}
+      />
 
       {/* Table with Thumbnails */}
       <div className="table-container">
