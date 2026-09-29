@@ -1,32 +1,30 @@
 {
-  "cycle": 89,
-  "last_run": "2026-09-29T02:53:42Z",
+  "cycle": 90,
+  "last_run": "2026-09-29T03:25:00Z",
   "current_task_id": null,
   "current_phase": "FASE 5: INOVASI",
   "completed_this_cycle": [
-    "S89-01 refactor EquipmentManagement",
-    "S89-02 refactor AdminDashboard",
-    "S89-03 pecah rute server",
-    "S89-04 audit CDP responsif + fix overflow",
-    "S89-05 deploy e04d73f8 -> 2f0a46d7 (final)"
+    "S90-01 refactor CustomerPortal -> portal/4 tab",
+    "S90-02 manualChunks vendor react/icons",
+    "S90-03 smoke UI 5 tab portal (desktop+mobile), fix blok hilang saat splice"
   ],
-  "session_summary": "SIKLUS 89 (2026-09-29): tiga next steps siklus 88 tuntas. (1) EquipmentManagement.tsx 730->472: pages/admin/equipment/{EquipmentBentoStats,EquipmentCardGrid,EquipmentTable}.tsx — tabel ringkas & kartu unit jadi komponen murni-props, state form tetap di induk. (2) AdminDashboard.tsx 693->236: dashboard/{ServiceAlertBanner,DashboardStatGrid,DashboardActivityFeeds}.tsx; gabungKode & LABEL_JENIS_SERVIS ikut pindah. (3) server/index.ts 1172->423: routes/{dashboard,equipments,rentals,maintenance}.ts baru + tracking.ts diisi (/api/tracking + /api/gps); index hanya memanggil 11 daftar*(). (4) Audit CDP viewport prod (STATE/viewport_cdp_89.py, chromium playwright headless via 9222): TEMUAN ovf=10px semua tab mobile — inline style Navbar (tombol bahasa display:flex) menang atas media query .navbar-lang{display:none}; fix !important. GPS ovf=147 — grid inline '360px 1fr'; fix .gps-layout{1fr !important}. Target sentuh Leaflet zoom/popup-close 24-30px di HP; fix min 44px. Setelah fix: 375x812 -> 0 overflow, 0 target<44px di 8 tab; 1280x800 -> 0 overflow (target kecil desktop = paginasi & Leaflet, di luar lantai sentuh — nyaman pointer). (5) Deploy final Version 2f0a46d7-854f-436a-8e63-ba796a3c217f; smoke API 11 endpoint 200 + PUT /api/equipments/:id 200 (admin). Koreksi laporan lama: db.ts sebenarnya jadi src/lib/db/index.ts (43 brs) + src/store/*; main lokal dulu tertinggal 77 commit — sudah ff-only; HEAD siklus ini c21d285 (fix/security-audit == main == origin).",
+  "session_summary": "SIKLUS 90 (2026-09-29): (1) CustomerPortal.tsx 844->316: pages/customer/portal/{CatalogTab,MyRentalsTab,PaymentsTab,TrackingTab}.tsx — Leaflet lazy ikut pindah ke TrackingTab; state form tetap induk (pola sama siklus 84). (2) vite manualChunks vendor-react (134kB) + vendor-icons (42kB): index chunk 620->447kB (gzip 116), warning >500kB hilang. (3) Smoke UI production via CDP (STATE/smoke_portal_90.py, akun Pelanggan tab 'Pelanggan' user/user): 5 tab OK desktop & mobile 375px (ovf=0 semua, Leaflet render 3 marker). Bug Caught saat splice: blok my_rentals ikut terbuang -> dipasang ulang sebelum deploy final. (4) Catatan loop-safe: verifikasi via getAttribute DOM, bukan screenshot. Deploy final siklus 90 part-1: 7fc50ed7-0b0f-4e4a-8541-de3e7609b71f. Commit 001c628 (fix/security-audit==main==origin).",
   "quality_gate": {
     "type_check": "PASS (0 error)",
     "test": "PASS (30/30 suite)",
-    "build": "PASS (vite 7.93s)",
-    "deploy_version": "2f0a46d7-854f-436a-8e63-ba796a3c217f",
-    "verified_at": "2026-09-29T02:53:42Z"
+    "build": "PASS (vite 8.50s; index 446.63kB gzip 116)",
+    "deploy_version": "7fc50ed7-0b0f-4e4a-8541-de3e7609b71f",
+    "verified_at": "2026-09-29T03:25:00Z"
   },
   "test_suites": 30,
-  "commits": 48,
+  "commits": 49,
   "deploy": {
     "status": "DEPLOYED",
-    "version": "2f0a46d7-854f-436a-8e63-ba796a3c217f",
+    "version": "7fc50ed7-0b0f-4e4a-8541-de3e7609b71f",
     "url": "https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev"
   },
-  "next_focus": "Siklus 90 kandidat: (a) src/server/index.ts 423 brs — pisah auth+middleware ke server/auth.ts bila membengkak lagi; (b) regression guard: jalankan viewport_cdp_89.py tiap siklus UI; (c) chunk index 620kB — manualChunks untuk lucide/leaflet.",
-  "updated": "2026-09-29T02:53:42",
-  "last_summary": "Siklus 89: 3 refactor raksasa + audit CDP responsif (fix overflow navbar & GPS mobile). tsc 0, 30/30, deploy 2f0a46d7.",
+  "next_focus": "Siklus 90 part-2: RentalManagement.tsx (634) -> rental/ components; lalu ReportsPage.tsx (599). Kandidat lain: App.tsx 678 (pecah routing/layout).",
+  "updated": "2026-09-29T03:25:00",
+  "last_summary": "Siklus 90 p1: CustomerPortal split + bundle split vendor. tsc 0, 30/30, deploy 7fc50ed7, smoke 5 tab bersih 375/1280.",
   "updated_at": "2026-09-29"
 }

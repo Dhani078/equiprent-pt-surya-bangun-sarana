@@ -163,3 +163,10 @@
 - Audit CDP responsif (STATE/viewport_cdp_89.py): temuan overflow 10px SEMUA tab mobile — inline style tombol bahasa Navbar menang atas media query .navbar-lang{display:none}; overflow 147px halaman GPS — grid inline '360px 1fr' kaku. Fix di index.css @media 767px (navbar-lang !important, .gps-layout 1fr, lantai sentuh 44px untuk kontrol zoom/popup Leaflet). Hasil akhir: 375x812 -> 0 overflow & 0 target<44px di 8 tab; 1280x800 -> 0 overflow.
 - Smoke API production pasca-refactor: 11 endpoint GET 200 (equipments, rentals, maintenance, tracking, gps, dashboard/stats, dashboard/analytics, bookable, availability, payments, contracts) + PUT /api/equipments/:id 200.
 - Deploy Version e04d73f8 (refactor) -> 2f0a46d7-854f-436a-8e63-ba796a3c217f (final, fix responsif). tsc 0; 30/30 suite; vite build 7.93s. Commits e16ea19, 0f564df, d22f478, c21d285; main lokal ff-only + push origin/main (sebelumnya tertinggal 77 commit).
+
+## Siklus 90 — 2026-09-29 (part 1)
+- Refactor: CustomerPortal.tsx 844 -> 316. Katalog (filter+kartu unit), riwayat sewa, tagihan, dan lacak unit pindah ke pages/customer/portal/{CatalogTab,MyRentalsTab,PaymentsTab,TrackingTab}.tsx; lazy Leaflet ikut ke TrackingTab. State form tetap di induk.
+- Bug tertangkap saat splice: blok `my_rentals` ikut terbuang (lompat indeks i_rent..i_con) -> dipasang ulang; terverifikasi UI (tabel 3 transaksi muncul).
+- Build: vite manualChunks vendor-react (133.93kB) + vendor-icons (41.65kB) -> chunk index 620.86 -> 446.63kB (gzip 116.46). Peringatan >500kB hilang.
+- Smoke UI production via CDP (STATE/smoke_portal_90.py): login role Pelanggan (klik tab 'Pelanggan' dulu, user/user) -> 5 tab portal bersih desktop 1280 & mobile 375 (ovf=0, 0 target<44px di main, peta Leaflet render 3 marker).
+- Deploy 7fc50ed7-0b0f-4e4a-8541-de3e7609b71f. tsc 0; 30/30 suite; build 8.50s. Commit 001c628.
