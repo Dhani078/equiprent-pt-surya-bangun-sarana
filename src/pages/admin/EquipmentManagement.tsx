@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
 import { Equipment, Maintenance } from '../../types';
-import { Plus, Search, Filter, Edit, Trash2, Gauge, AlertCircle, MapPin, Eye, LayoutGrid, Rows3, Wrench, CalendarClock } from 'lucide-react';
-import { Modal } from '../../components/Modal';
+import { Plus, Search, LayoutGrid, Rows3 } from 'lucide-react';
 import { EquipmentFormModal } from './equipment/EquipmentFormModal';
+import { EquipmentBentoStats } from './equipment/EquipmentBentoStats';
+import { EquipmentCardGrid } from './equipment/EquipmentCardGrid';
+import { EquipmentTable } from './equipment/EquipmentTable';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { HmProgressBar } from '../../components/HmProgressBar';
-import { getEquipmentImage } from '../../lib/stitchAssets';
-import { formatRupiah, formatRupiahRingkas, formatTanggal, getServiceStatus, SERVICE_INTERVAL_HM } from '../../lib/businessRules';
-import { StatusBadge } from '../../components/StatusBadge';
 import { validateEquipmentInput, EQUIPMENT_TYPES } from '../../lib/validators';
 import type { ValidatedEquipmentInput } from '../../lib/validators';
-import { Paginator, usePagination } from '../../components/Paginator';
+import { usePagination } from '../../components/Paginator';
 import { Skeleton } from '../../components/Skeleton';
 import { exportTable } from '../../lib/tableExport';
 import type { ExportColumn, ExportFormat } from '../../lib/tableExport';
 import { FileSpreadsheet, FileText, Download } from 'lucide-react';
+import { getServiceStatus, SERVICE_INTERVAL_HM } from '../../lib/businessRules';
 
 const PAGE_SIZE_EQUIPMENT = 20;
 
@@ -179,11 +178,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   React.useEffect(() => setEquipPage(1), [searchTerm, filterType, filterStatus]);
   const pagedEquipments = usePagination(filteredEquipments, PAGE_SIZE_EQUIPMENT, equipPage);
 
-  // Mini Bento Stats
-  const totalUnit = equipments.length;
-  const availableUnit = equipments.filter(e => e.status === 'AVAILABLE').length;
-  const rentedUnit = equipments.filter(e => e.status === 'RENTED').length;
-  const maintenanceUnit = equipments.filter(e => e.status === 'MAINTENANCE').length;
+  // Mini Bento Stats dihitung sendiri oleh <EquipmentBentoStats />.
 
   /**
    * Unit yang tidak boleh dihapus: sedang disewa atau sedang dirawat.
@@ -211,9 +206,6 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
     });
     onNotify?.(hasil.message, hasil.ok ? 'success' : 'error');
   };
-
-  const isProtected = (status: Equipment['status']): boolean =>
-    status === 'RENTED' || status === 'MAINTENANCE';
 
   /**
    * Quick-action dari kartu unit: jadwalkan servis preventif untuk unit yang
@@ -342,47 +334,7 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
       </div>
 
       {/* Bento Mini Stats Bar */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '14px'
-      }}>
-        <div className="card-premium" style={{ padding: '16px' }}>
-          <p style={{ fontSize: '11px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
-            Total Unit
-          </p>
-          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-primary)' }}>
-            {totalUnit} Unit
-          </div>
-        </div>
-
-        <div className="card-premium" style={{ padding: '16px' }}>
-          <p style={{ fontSize: '11px', color: 'var(--fg-success-deep)', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
-            Tersedia
-          </p>
-          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: 'var(--fg-success-deep)' }}>
-            {availableUnit} Unit
-          </div>
-        </div>
-
-        <div className="card-premium" style={{ padding: '16px' }}>
-          <p style={{ fontSize: '11px', color: '#2563EB', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
-            Disewa (Aktif)
-          </p>
-          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: '#2563EB' }}>
-            {rentedUnit} Unit
-          </div>
-        </div>
-
-        <div className="card-premium" style={{ padding: '16px' }}>
-          <p style={{ fontSize: '11px', color: 'var(--fg-amber)', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px 0', fontFamily: 'monospace' }}>
-            Maintenance
-          </p>
-          <div className="serial-code" style={{ fontSize: '26px', fontWeight: 800, color: 'var(--fg-amber)' }}>
-            {maintenanceUnit} Unit
-          </div>
-        </div>
-      </div>
+      <EquipmentBentoStats equipments={equipments} />
 
       {/* Filter and Search Bar */}
       <div className="card-premium" style={{ padding: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -459,233 +411,23 @@ export const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
 
       {/* Daftar unit: kartu (T-0048) atau tabel ringkas */}
       {view === 'cards' ? (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '16px',
-          }}
-        >
-          {pagedEquipments.map((eq) => {
-            const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
-            const svc = getServiceStatus(eq, maintenance);
-            const needsService = svc.isDue || svc.isApproaching;
-            const busy = schedulingId === eq.id;
-            return (
-              <div
-                key={eq.id}
-                className="card-premium hover-lift"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                  padding: '14px',
-                  cursor: 'default',
-                  borderColor: svc.isDue ? 'var(--border-red-soft)' : undefined,
-                }}
-              >
-                {/* Header kartu: badge status + ringkasan identitas (T-0048) */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
-                  <img
-                    src={imgUrl}
-                    alt={eq.name}
-                    loading="lazy"
-                    style={{
-                      width: '72px',
-                      height: '72px',
-                      borderRadius: '10px',
-                      objectFit: 'cover',
-                      backgroundColor: 'var(--color-border)',
-                      border: '1px solid var(--color-border)',
-                      flexShrink: 0,
-                    }}
-                  />
-                  <StatusBadge kind="equipment" status={eq.status} fontSize={10} />
-                </div>
-
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-primary)', lineHeight: 1.3 }}>
-                    {eq.name}
-                  </div>
-                  <div className="serial-code" style={{ fontSize: '11.5px', color: 'var(--color-secondary)', marginTop: '2px' }}>
-                    {eq.equipment_code}
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)', marginTop: '2px' }}>
-                    {eq.brand} &bull; {eq.model} &bull; {eq.type}
-                  </div>
-                </div>
-
-                {/* Bar progress HM + tooltip (T-0047) */}
-                <HmProgressBar equipment={eq} maintenanceHistory={maintenance} />
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    borderTop: '1px dashed var(--color-border)',
-                    paddingTop: '10px',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
-                      Tarif / Hari
-                    </div>
-                    <div className="serial-code" style={{ fontWeight: 800, fontSize: '14px', color: 'var(--text-strong)' }}>
-                      {formatRupiah(Number(eq.rental_price_per_day))}
-                    </div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <CalendarClock size={11} />
-                      <span>Servis terakhir: {eq.last_maintenance_date ? formatTanggal(eq.last_maintenance_date) : 'belum ada'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick action: hanya untuk unit yang butuh servis (T-0048) */}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEdit(eq)}
-                    className="btn-secondary"
-                    style={{ flex: 1, padding: '8px 10px', fontSize: '12px', gap: '6px' }}
-                    title="Ubah Rincian Unit"
-                  >
-                    <Edit size={13} />
-                    <span>Ubah</span>
-                  </button>
-                  {needsService && eq.status !== 'MAINTENANCE' && (
-                    <button
-                      type="button"
-                      onClick={() => handleQuickSchedule(eq)}
-                      disabled={busy}
-                      className="btn-secondary"
-                      aria-label={`Jadwalkan servis ${eq.equipment_code}`}
-                      title={svc.isDue ? 'Sudah lewat jadwal servis — jadwalkan sekarang' : 'Mendekati ambang servis — jadwalkan'}
-                      style={{
-                        flex: 1,
-                        padding: '8px 10px',
-                        fontSize: '12px',
-                        gap: '6px',
-                        color: svc.isDue ? 'var(--fg-danger)' : 'var(--fg-warning-deep)',
-                        borderColor: svc.isDue ? 'var(--border-red-soft)' : 'var(--border-amber-soft)',
-                        opacity: busy ? 0.6 : 1,
-                        cursor: busy ? 'wait' : 'pointer',
-                      }}
-                    >
-                      <Wrench size={13} />
-                      <span>{busy ? 'Menjadwalkan…' : 'Jadwalkan Servis'}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Kode Alat</th>
-              <th>Nama & Visual Unit</th>
-              <th>Kategori</th>
-              <th>Hour Meter (HM)</th>
-              <th style={{ textAlign: 'right' }}>Harga Sewa / Hari</th>
-              <th style={{ textAlign: 'center' }}>Status</th>
-              <th style={{ textAlign: 'center' }}>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pagedEquipments.map((eq) => {
-              const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
-              return (
-                <tr key={eq.id} className="hover:bg-surface-container-low transition-colors">
-                  <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                    {eq.equipment_code}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <img
-                        src={imgUrl}
-                        alt={eq.name}
-                        style={{
-                          width: '44px',
-                          height: '44px',
-                          borderRadius: '8px',
-                          objectFit: 'cover',
-                          backgroundColor: 'var(--color-border)',
-                          border: '1px solid var(--color-border)',
-                          flexShrink: 0
-                        }}
-                      />
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-strong)' }}>{eq.name}</div>
-                        <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)' }}>
-                          {eq.brand} &bull; {eq.model}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-secondary)' }}>
-                    {eq.type}
-                  </td>
-                  <td className="hour-meter" style={{ fontSize: '13px', fontWeight: 600 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Gauge size={14} color="var(--color-primary)" />
-                      <span>{Number(eq.hour_meter).toFixed(2)} jam</span>
-                    </div>
-                  </td>
-                  <td className="serial-code" style={{ fontWeight: 700, color: 'var(--text-strong)', fontSize: '13.5px', textAlign: 'right' }} title={formatRupiah(Number(eq.rental_price_per_day))}>
-                    {formatRupiahRingkas(Number(eq.rental_price_per_day)).ringkas}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <StatusBadge kind="equipment" status={eq.status} />
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                      <button
-                        onClick={() => handleOpenEdit(eq)}
-                        className="btn-secondary"
-                        style={{ padding: '6px 10px', fontSize: '12px' }}
-                        title="Ubah Rincian Unit"
-                      >
-                        <Edit size={13} />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteItem(eq)}
-                        disabled={isProtected(eq.status)}
-                        className="btn-secondary"
-                        style={{
-                          padding: '6px 10px',
-                          fontSize: '12px',
-                          color: '#EF4444',
-                          opacity: isProtected(eq.status) ? 0.45 : 1,
-                          cursor: isProtected(eq.status) ? 'not-allowed' : 'pointer',
-                        }}
-                        title={
-                          isProtected(eq.status)
-                            ? 'Unit sedang disewa — selesaikan transaksinya dulu'
-                            : 'Hapus Unit'
-                        }
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <Paginator
-          total={filteredEquipments.length}
-          page={equipPage}
-          limit={PAGE_SIZE_EQUIPMENT}
-          onPageChange={setEquipPage}
+        <EquipmentCardGrid
+          items={pagedEquipments}
+          maintenance={maintenance}
+          schedulingId={schedulingId}
+          onEdit={handleOpenEdit}
+          onQuickSchedule={handleQuickSchedule}
         />
-      </div>
+      ) : (
+        <EquipmentTable
+          items={pagedEquipments}
+          totalFiltered={filteredEquipments.length}
+          page={equipPage}
+          pageSize={PAGE_SIZE_EQUIPMENT}
+          onPageChange={setEquipPage}
+          onEdit={handleOpenEdit}
+          onDelete={setConfirmDeleteItem}
+        />
       )}
 
       <EquipmentFormModal
