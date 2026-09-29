@@ -1,21 +1,13 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Rental, Contract, Payment, Maintenance, User, Equipment } from '../../types';
-import { ClipboardCheck, CreditCard, FileCheck, Check, Eye, Bell, X, Search } from 'lucide-react';
-import { getEquipmentImage, STITCH_IMAGES } from '../../lib/stitchAssets';
-import { Modal } from '../../components/Modal';
 import { ContractPanel } from '../../components/ContractPanel';
-import { formatRupiah, formatRupiahRingkas, getLatePenaltyPerDay, formatTanggal } from '../../lib/businessRules';
 import { DueNotificationPanel } from './components/DueNotificationPanel';
 import { PaymentProofViewerModal } from './components/PaymentProofViewerModal';
-import { Paginator, usePagination } from '../../components/Paginator';
-import { StatusBadge } from '../../components/StatusBadge';
-
-const PAGE_SIZE_PAYMENTS = 20;
-import {
-  getPaymentStatusLabel,
-  summarizePaymentQueue,
-  isPaymentFinal,
-} from '../../lib/paymentWorkflow';
+import { StaffActionBadges, type StaffSubTab } from './components/StaffActionBadges';
+import { PaymentVerificationTable } from './components/PaymentVerificationTable';
+import { RentalApprovalTable } from './components/RentalApprovalTable';
+import { getLatePenaltyPerDay } from '../../lib/businessRules';
+import { summarizePaymentQueue } from '../../lib/paymentWorkflow';
 
 interface StaffDashboardProps {
   rentals: Rental[];
@@ -42,11 +34,17 @@ interface StaffDashboardProps {
   activeMenu?: string;
 }
 
+/**
+ * Terminal Staf Operasional.
+ *
+ * Render dipecah ke staff/components/: StaffActionBadges (pemilih sub-tab +
+ * angka antrean), PaymentVerificationTable (verifikasi struk), RentalApprovalTable
+ * (persetujuan booking). State aksi & pencarian tetap di induk.
+ */
 export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   rentals,
   contracts,
   payments,
-  maintenance,
   equipments,
   users,
   currentUser,
@@ -59,7 +57,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   onNotify,
   activeMenu
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'payments' | 'contracts' | 'rentals'>('payments');
+  const [activeSubTab, setActiveSubTab] = useState<StaffSubTab>('payments');
 
   /* Sidebar "Kontrak Sewa Digital"/"Transaksi Penyewaan" kini menggerakkan sub-tab;
      sebelumnya highlight nav tidak cocok dgn konten (bug audit visual cycle 57). */
@@ -71,7 +69,6 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   const [viewingPaymentProof, setViewingPaymentProof] = useState<Payment | null>(null);
   /** Pencarian pada tabel pembayaran: kode bayar, klien, atau kode kontrak. */
   const [paymentSearch, setPaymentSearch] = useState('');
-  const [paymentPage, setPaymentPage] = useState(1);
   /** ID pembayaran yang sedang diproses — mencegah klik ganda. */
   const [processingId, setProcessingId] = useState<number | null>(null);
 
@@ -194,358 +191,34 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         jumlahTerlambat={jumlahTerlambat}
         onTindakLanjut={() => setActiveSubTab('rentals')}
       />
-      {/* Action Stat Badges */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('payments')}
-          style={{
-            padding: '16px',
-            borderRadius: 'var(--radius-eight)',
-            border: activeSubTab === 'payments' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeSubTab === 'payments' ? 'var(--bg-blue-soft)' : 'var(--color-surface)',
-            textAlign: 'left',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-secondary)' }}>
-              Verifikasi Pembayaran
-            </span>
-            <CreditCard size={18} color="var(--color-primary)" />
-          </div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-primary)' }}>
-            {pendingPayments.length} Menunggu
-          </div>
-          <div style={{ fontSize: '11.5px', color: 'var(--color-secondary)', marginTop: '2px' }}>
-            {antrean.readyToVerifyCount} siap · {antrean.awaitingProofCount} tanpa bukti
-          </div>
-        </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('rentals')}
-          style={{
-            padding: '16px',
-            borderRadius: 'var(--radius-eight)',
-            border: activeSubTab === 'rentals' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeSubTab === 'rentals' ? 'var(--bg-blue-soft)' : 'var(--color-surface)',
-            textAlign: 'left',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-secondary)' }}>
-              Permohonan Sewa Masuk
-            </span>
-            <ClipboardCheck size={18} color="var(--color-primary)" />
-          </div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-primary)' }}>
-            {pendingRentals.length} Order
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('contracts')}
-          style={{
-            padding: '16px',
-            borderRadius: 'var(--radius-eight)',
-            border: activeSubTab === 'contracts' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            backgroundColor: activeSubTab === 'contracts' ? 'var(--bg-blue-soft)' : 'var(--color-surface)',
-            textAlign: 'left',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-secondary)' }}>
-              Total Kontrak Aktif
-            </span>
-            <FileCheck size={18} color="var(--color-primary)" />
-          </div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-primary)' }}>
-            {contracts.length} Dokumen
-          </div>
-        </button>
-      </div>
+      <StaffActionBadges
+        activeSubTab={activeSubTab}
+        onSelect={setActiveSubTab}
+        pendingPayments={pendingPayments.length}
+        readyToVerify={antrean.readyToVerifyCount}
+        awaitingProof={antrean.awaitingProofCount}
+        pendingRentals={pendingRentals.length}
+        totalContracts={contracts.length}
+      />
 
       {/* Sub Tab: Payments Verification */}
       {activeSubTab === 'payments' && (
-        <div className="card-premium" style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 14px 0', flexWrap: 'wrap' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-              Daftar Pembayaran & Bukti Transfer Klien
-            </h3>
-
-            {/* Ringkasan antrean: memisahkan yang siap diverifikasi dari
-                yang masih menunggu bukti, agar staf tidak mengklik tombol
-                verifikasi yang pasti gagal. */}
-            <span style={{ fontSize: '11.5px', color: 'var(--color-secondary)' }}>
-              {antrean.pendingCount} menunggu · {antrean.readyToVerifyCount} siap verifikasi ·{' '}
-              {antrean.awaitingProofCount} menunggu bukti · {antrean.paidCount} lunas
-            </span>
-
-            <div style={{ marginLeft: 'auto', position: 'relative', minWidth: '220px' }}>
-              <Search
-                size={14}
-                aria-hidden="true"
-                style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-secondary)' }}
-              />
-              <input
-                type="search"
-                className="input-premium"
-                value={paymentSearch}
-                onChange={(e) => { setPaymentSearch(e.target.value); setPaymentPage(1); }}
-                placeholder="Cari kode bayar, klien, atau kontrak…"
-                aria-label="Cari pembayaran"
-                style={{ paddingLeft: '32px', fontSize: '12.5px' }}
-              />
-            </div>
-          </div>
-
-          {antrean.pendingAmount > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '10px',
-                flexWrap: 'wrap',
-                padding: '10px 14px',
-                marginBottom: '14px',
-                borderRadius: '8px',
-                backgroundColor: 'var(--bg-amber-soft)',
-                border: '1px solid var(--border-amber-soft)',
-                fontSize: '12.5px',
-              }}
-            >
-              <span style={{ color: 'var(--fg-warning-deep)', fontWeight: 600 }}>
-                Nilai tagihan menunggu verifikasi
-              </span>
-              <span className="serial-code" style={{ fontWeight: 800, color: 'var(--fg-warning-deep)' }} title={formatRupiah(antrean.pendingAmount)}>
-                {formatRupiahRingkas(antrean.pendingAmount).ringkas}
-              </span>
-            </div>
-          )}
-
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Kode Bayar</th>
-                  <th>Klien Pembayar</th>
-                  <th>Jumlah Tagihan</th>
-                  <th>Metode Bayar</th>
-                  <th>Bukti Struk</th>
-                  <th>Status</th>
-                  <th>Aksi Verifikasi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visiblePayments.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-secondary)' }}>
-                      {paymentSearch.trim() === ''
-                        ? 'Belum ada tagihan pembayaran yang tercatat.'
-                        : `Tidak ada pembayaran yang cocok dengan "${paymentSearch}".`}
-                    </td>
-                  </tr>
-                ) : (
-                  usePagination(visiblePayments, PAGE_SIZE_PAYMENTS, paymentPage).map((p) => {
-                    const adaBukti = typeof p.payment_proof_path === 'string' && p.payment_proof_path.trim() !== '';
-                    const siapVerifikasi = p.status === 'PENDING_VERIFICATION' && adaBukti;
-                    const sedangDiproses = processingId === p.id;
-
-                    return (
-                      <tr key={p.id}>
-                        <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                          {p.payment_code}
-                        </td>
-                        <td>
-                          <strong>{p.customer_name || 'Pelanggan SBS'}</strong>
-                          <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{p.contract_code}</div>
-                        </td>
-                        <td className="serial-code" style={{ fontWeight: 700, fontSize: '13.5px' }} title={formatRupiah(Number(p.amount))}>
-                          {formatRupiahRingkas(Number(p.amount)).ringkas}
-                        </td>
-                        <td style={{ fontSize: '12.5px' }}>
-                          {p.payment_method}
-                        </td>
-                        <td>
-                          {adaBukti ? (
-                            <button
-                              type="button"
-                              onClick={() => setViewingPaymentProof(p)}
-                              className="btn-secondary"
-                              style={{ padding: '4px 8px', fontSize: '11.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                              aria-label={`Lihat bukti transfer ${p.payment_code}`}
-                            >
-                              <Eye size={12} />
-                              <span>Lihat Bukti</span>
-                            </button>
-                          ) : (
-                            <span style={{ fontSize: '11.5px', color: 'var(--fg-warning-deep)', fontWeight: 600 }}>
-                              Belum dilampirkan
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          <StatusBadge kind="payment" status={p.status} />
-                          {/* Jejak peninjau: siapa & kapan tagihan ini disahkan/ditolak. */}
-                          {p.verified_at && (
-                            <div style={{ fontSize: '10.5px', color: 'var(--color-secondary)', marginTop: '3px' }}>
-                              {p.status === 'FAILED' ? 'Ditolak' : 'Diverifikasi'} {p.verified_by_name || 'Staf'} ·{' '}
-                              {formatTanggal(p.verified_at)}
-                            </div>
-                          )}
-                        </td>
-                        <td>
-                          {siapVerifikasi ? (
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                              <button
-                                type="button"
-                                disabled={sedangDiproses}
-                                onClick={() =>
-                                  jalankanAksi(p, 'verify', () =>
-                                    onVerifyPayment(p.id, currentUser.id, currentUser.full_name)
-                                  )
-                                }
-                                className="btn-primary"
-                                style={{ padding: '5px 12px', fontSize: '12px', backgroundColor: '#10B981', opacity: sedangDiproses ? 0.6 : 1 }}
-                                aria-label={`Verifikasi lunas ${p.payment_code}`}
-                              >
-                                <Check size={13} />
-                                <span>{sedangDiproses ? 'Memproses…' : 'Verifikasi Lunas'}</span>
-                              </button>
-                              <button
-                                type="button"
-                                disabled={sedangDiproses}
-                                onClick={() =>
-                                  jalankanAksi(p, 'reject', () =>
-                                    onRejectPayment(p.id, currentUser.id, currentUser.full_name)
-                                  )
-                                }
-                                className="btn-secondary"
-                                style={{ padding: '5px 12px', fontSize: '12px', color: 'var(--fg-danger)' }}
-                                aria-label={`Tolak bukti transfer ${p.payment_code}`}
-                              >
-                                <X size={13} />
-                                <span>Tolak</span>
-                              </button>
-                            </div>
-                          ) : p.status === 'PENDING_VERIFICATION' ? (
-                            <span style={{ fontSize: '11.5px', color: 'var(--fg-warning-deep)', fontWeight: 600 }}>
-                              Menunggu bukti klien
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: '11.5px', color: 'var(--color-secondary)', fontWeight: 600 }}>
-                              {isPaymentFinal(p.status) ? 'Status final' : getPaymentStatusLabel(p.status)}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-            <Paginator
-              total={visiblePayments.length}
-              page={paymentPage}
-              limit={PAGE_SIZE_PAYMENTS}
-              onPageChange={setPaymentPage}
-            />
-          </div>
-        </div>
+        <PaymentVerificationTable
+          payments={visiblePayments}
+          antrean={antrean}
+          paymentSearch={paymentSearch}
+          onSearchChange={setPaymentSearch}
+          processingId={processingId}
+          onViewProof={setViewingPaymentProof}
+          onVerify={(p) => void jalankanAksi(p, 'verify', () => onVerifyPayment(p.id, currentUser.id, currentUser.full_name))}
+          onReject={(p) => void jalankanAksi(p, 'reject', () => onRejectPayment(p.id, currentUser.id, currentUser.full_name))}
+        />
       )}
 
       {/* Sub Tab: Rentals Approval with Thumbnails */}
       {activeSubTab === 'rentals' && (
-        <div className="card-premium" style={{ padding: '20px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 14px 0' }}>
-            Permohonan Booking Masuk dari Pelanggan
-          </h3>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Kode Sewa</th>
-                  <th>Pelanggan</th>
-                  <th>Alat Berat</th>
-                  <th>Tanggal Sewa</th>
-                  <th style={{ textAlign: 'right' }}>Total Biaya</th>
-                  <th style={{ textAlign: 'center' }}>Status</th>
-                  <th style={{ textAlign: 'center' }}>Aksi Staf</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rentals.map((r) => {
-                  const imgUrl = getEquipmentImage(r.equipment_code);
-                  return (
-                    <tr key={r.id}>
-                      <td className="serial-code" style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '13px' }}>
-                        {r.rental_code}
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{r.customer_name}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{r.company_name}</div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <img src={imgUrl} alt={r.equipment_name} style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover' }} />
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: '13px' }}>{r.equipment_name}</div>
-                            <span className="serial-code" style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>{r.equipment_code}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ fontSize: '12px' }}>
-                        {formatTanggal(r.start_date)} s/d {formatTanggal(r.end_date)} ({r.total_days} hari)
-                      </td>
-                      <td className="serial-code" style={{ textAlign: 'right', fontWeight: 700 }} title={formatRupiah(Number(r.subtotal))}>
-                        {formatRupiahRingkas(Number(r.subtotal)).ringkas}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <StatusBadge kind="rental" status={r.status} />
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {r.status === 'PENDING' ? (
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                            <button
-                              type="button"
-                              onClick={() => onUpdateRentalStatus(r.id, 'APPROVED')}
-                              className="btn-primary"
-                              style={{ padding: '4px 8px', fontSize: '11.5px', backgroundColor: '#10B981' }}
-                              aria-label={`Setujui pengajuan ${r.rental_code}`}
-                            >
-                              Setujui
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onUpdateRentalStatus(r.id, 'REJECTED')}
-                              className="btn-secondary"
-                              style={{ padding: '4px 8px', fontSize: '11.5px', color: '#EF4444' }}
-                              aria-label={`Tolak pengajuan ${r.rental_code}`}
-                            >
-                              Tolak
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '12px', color: 'var(--fg-success-deep)', fontWeight: 600 }}>
-                            {r.status} ✓
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <RentalApprovalTable rentals={rentals} onUpdateStatus={(id, status) => void onUpdateRentalStatus(id, status)} />
       )}
 
       {/* Sub Tab: Contracts */}
