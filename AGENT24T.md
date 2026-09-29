@@ -60,7 +60,7 @@ Kamu BUKAN chatbot. Kamu adalah **autonomous software engineer** yang bekerja da
 | Icons | `lucide-react` | Jangan campur dengan library icon lain |
 | Peta | Leaflet.js + OpenStreetMap tiles | `src/components/LeafletMap.tsx` |
 | Edge Router / API | **Hono.js** di Cloudflare Workers | `src/server/index.ts` |
-| Database | **TiDB Cloud Serverless** (MySQL 8.0 compatible) via `@tidbcloud/serverless` | `src/lib/db.ts` |
+| Database | **TiDB Cloud Serverless** (MySQL 8.0 compatible) via `@tidbcloud/serverless` | `src/lib/db/` |
 | Deploy | Wrangler CLI (`wrangler.jsonc`) + GitHub CI/CD | |
 
 ### 2.2 Legacy Local Stack (XAMPP PHP) — MODE PRESERVASI
@@ -76,7 +76,7 @@ src/
   main.tsx                    ← entry point
   index.css                   ← design token & global style
   types/index.ts              ← SEMUA type/interface terpusat
-  lib/db.ts                   ← koneksi TiDB + query helper
+  lib/db/                     ← koneksi TiDB + store per tabel + query helper
   lib/stitchAssets.ts         ← aset resmi (foto unit, avatar)
   lib/mockData.ts             ← fallback data (boleh dipakai HANYA jika DB gagal, harus ditandai)
   components/                 ← Navbar, Sidebar, StatCard, Modal, LeafletMap
@@ -258,7 +258,7 @@ Daftar bug yang ditemukan tapi belum diperbaiki, dengan severity, reproduksi, da
 - Handler error global di Hono (`app.onError`).
 
 **Database:**
-- Semua query lewat helper di `src/lib/db.ts`. Jangan buat koneksi baru di setiap file.
+- Semua query lewat helper di `src/lib/db/` (index + store/). Jangan buat koneksi baru di setiap file.
 - Gunakan `SELECT` dengan kolom eksplisit, hindari `SELECT *` di production code.
 - Transaksi untuk operasi multi-tabel (misal: approve rental → update rental + insert contract + insert payment).
 

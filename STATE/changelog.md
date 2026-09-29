@@ -150,3 +150,8 @@
 
 ## Siklus 87 — 2026-09-28
 - Refactor: Login.tsx -> login/RegisterModal.tsx. Terverifikasi production (alur daftar penuh).
+
+## Siklus 88 — 2026-09-29
+- Refactor: contracts.ts 664 -> paket lib/contracts/ (constants, numbering, status, preview, render, index). Consumer (ContractPanel, ContractViewer, server/context, run-tests) dialihkan; tidak ada tanda tangan publik berubah.
+- Deploy Version 225b5c26-49ab-43b7-b740-515267a44ae7. tsc 0; npm test 30/30; build 5.48s. Commit fb417be (fix/security-audit + main).
+- Dokumentasi disinkronkan: AGENT24T.md (rujukan lib/db -> paket lib/db/), PERUBAHAN_TERBARU.md (bagian 5: tabel split siklus 73-88, endpoint renew, verifikasi CDP).
