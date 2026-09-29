@@ -61,6 +61,7 @@ export const EquipmentTable: React.FC<Props> = ({
                   <img
                     src={imgUrl}
                     alt={eq.name}
+                    onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = '1'; t.src = getEquipmentImage(eq.equipment_code, eq.type); }}
                     style={{
                       width: '44px',
                       height: '44px',

@@ -48,6 +48,7 @@ export const RentBookingModal: React.FC<Props> = ({
         <img
           src={eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type)}
           alt={eq.name}
+          onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = '1'; t.src = getEquipmentImage(eq.equipment_code, eq.type); }}
           style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }}
         />
         <div style={{ fontSize: '13px' }}>

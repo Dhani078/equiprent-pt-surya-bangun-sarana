@@ -52,6 +52,7 @@ export const EquipmentCardGrid: React.FC<Props> = ({ items, maintenance, schedul
             <img
               src={imgUrl}
               alt={eq.name}
+              onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = '1'; t.src = getEquipmentImage(eq.equipment_code, eq.type); }}
               loading="lazy"
               style={{
                 width: '72px',
