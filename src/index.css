@@ -568,6 +568,7 @@ table.data-table tbody tr:hover {
   header button,
   main button,
   [role="dialog"] button,
+  [role="tab"],
   .app-sidebar nav button {
     min-height: 44px;
     min-width: 44px;
