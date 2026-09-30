@@ -19,7 +19,7 @@ export const STITCH_IMAGES = {
   PAYMENT_PROOF: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBGKxVw5XN1Y9Fp1aR5L5tPzC0wT_J-B0F7T5U8y1a9G2c3d4e5f6g7h8i9j'
 };
 
-export const getEquipmentImage = (code: string = '', type: string = '') => {
+export const getEquipmentCategoryFallback = (code: string = '', type: string = '') => {
   const c = (code || '').toUpperCase();
   const t = (type || '').toUpperCase();
 
@@ -39,6 +39,25 @@ export const getEquipmentImage = (code: string = '', type: string = '') => {
     return STITCH_IMAGES.CRANE;
   }
   return STITCH_IMAGES.EXCAVATOR;
+};
+
+export const getEquipmentImage = (code: string = '', type: string = '') => {
+  const c = (code || '').trim();
+  if (c) {
+    return `/images/units/${c}.webp`;
+  }
+  return getEquipmentCategoryFallback(code, type);
+};
+
+export const resolveEquipmentThumbnail = (thumbnailUrl?: string, code: string = '', type: string = '') => {
+  const c = (code || '').trim();
+  if (c) {
+    return `/images/units/${c}.webp`;
+  }
+  if (thumbnailUrl && !thumbnailUrl.includes('unsplash.com')) {
+    return thumbnailUrl;
+  }
+  return getEquipmentCategoryFallback(code, type);
 };
 
 export const getUserAvatar = (roleName?: string) => {

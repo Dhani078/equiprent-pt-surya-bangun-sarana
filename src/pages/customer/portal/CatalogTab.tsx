@@ -3,7 +3,7 @@
  * + grid kartu unit. Murni tampilan — seluruh state penyaring dimiliki induk
  * karena periode sewa juga menentukan isi modal pengajuan.
  */
-import { getEquipmentImage } from '../../../lib/stitchAssets';
+import { getEquipmentImage, resolveEquipmentThumbnail, getEquipmentCategoryFallback } from '../../../lib/stitchAssets';
 import { formatRupiah } from '../../../lib/businessRules';
 import {
   CATALOG_AVAILABILITY_LABEL,
@@ -147,12 +147,23 @@ export const CatalogTab: React.FC<Props> = ({
     ) : (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         {katalog.items.map(({ equipment: eq, isBookable, availability, blockedMessage }) => {
-          const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
+          const imgUrl = resolveEquipmentThumbnail(eq.thumbnail_url, eq.equipment_code, eq.type);
           const nada = CATALOG_AVAILABILITY_TONE[availability];
           return (
             <div key={eq.id} className="card-premium" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ height: '175px', width: '100%', overflow: 'hidden', position: 'relative', backgroundColor: 'var(--color-border)' }}>
-                <img src={imgUrl} alt={eq.name} onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = "1"; t.src = getEquipmentImage(eq.equipment_code, eq.type); }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img
+                  src={imgUrl}
+                  alt={eq.name}
+                  loading="lazy"
+                  onError={(e) => {
+                    const t = e.currentTarget;
+                    if (t.dataset.fb) return;
+                    t.dataset.fb = "1";
+                    t.src = getEquipmentCategoryFallback(eq.equipment_code, eq.type);
+                  }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
                 <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
                   <span className={`badge badge-${nada}`}>{CATALOG_AVAILABILITY_LABEL[availability]}</span>
                 </div>

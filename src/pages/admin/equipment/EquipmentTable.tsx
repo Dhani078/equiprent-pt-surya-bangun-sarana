@@ -6,7 +6,7 @@
 import { Edit, Gauge, Trash2 } from 'lucide-react';
 import { Paginator } from '../../../components/Paginator';
 import { StatusBadge } from '../../../components/StatusBadge';
-import { getEquipmentImage } from '../../../lib/stitchAssets';
+import { getEquipmentImage, resolveEquipmentThumbnail, getEquipmentCategoryFallback } from '../../../lib/stitchAssets';
 import { formatRupiah, formatRupiahRingkas } from '../../../lib/businessRules';
 import type { Equipment } from '../../../types';
 
@@ -49,7 +49,7 @@ export const EquipmentTable: React.FC<Props> = ({
       </thead>
       <tbody>
         {items.map((eq) => {
-          const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
+          const imgUrl = resolveEquipmentThumbnail(eq.thumbnail_url, eq.equipment_code, eq.type);
           const protectedUnit = isProtected(eq.status);
           return (
             <tr key={eq.id} className="hover:bg-surface-container-low transition-colors">
@@ -61,7 +61,8 @@ export const EquipmentTable: React.FC<Props> = ({
                   <img
                     src={imgUrl}
                     alt={eq.name}
-                    onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = '1'; t.src = getEquipmentImage(eq.equipment_code, eq.type); }}
+                    loading="lazy"
+                    onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = '1'; t.src = getEquipmentCategoryFallback(eq.equipment_code, eq.type); }}
                     style={{
                       width: '44px',
                       height: '44px',

@@ -7,7 +7,7 @@
 import { CalendarClock, Edit, Wrench } from 'lucide-react';
 import { HmProgressBar } from '../../../components/HmProgressBar';
 import { StatusBadge } from '../../../components/StatusBadge';
-import { getEquipmentImage } from '../../../lib/stitchAssets';
+import { getEquipmentImage, resolveEquipmentThumbnail, getEquipmentCategoryFallback } from '../../../lib/stitchAssets';
 import { formatRupiah, formatTanggal, getServiceStatus } from '../../../lib/businessRules';
 import type { Equipment, Maintenance } from '../../../types';
 
@@ -30,7 +30,7 @@ export const EquipmentCardGrid: React.FC<Props> = ({ items, maintenance, schedul
     }}
   >
     {items.map((eq) => {
-      const imgUrl = eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type);
+      const imgUrl = resolveEquipmentThumbnail(eq.thumbnail_url, eq.equipment_code, eq.type);
       const svc = getServiceStatus(eq, maintenance);
       const needsService = svc.isDue || svc.isApproaching;
       const busy = schedulingId === eq.id;
@@ -52,7 +52,7 @@ export const EquipmentCardGrid: React.FC<Props> = ({ items, maintenance, schedul
             <img
               src={imgUrl}
               alt={eq.name}
-              onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = '1'; t.src = getEquipmentImage(eq.equipment_code, eq.type); }}
+              onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = '1'; t.src = getEquipmentCategoryFallback(eq.equipment_code, eq.type); }}
               loading="lazy"
               style={{
                 width: '72px',

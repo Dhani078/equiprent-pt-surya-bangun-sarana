@@ -7,7 +7,7 @@
 import React from 'react';
 import { Modal } from '../../components/Modal';
 import { formatRupiah } from '../../lib/businessRules';
-import { getEquipmentImage } from '../../lib/stitchAssets';
+import { getEquipmentImage, resolveEquipmentThumbnail, getEquipmentCategoryFallback } from '../../lib/stitchAssets';
 import type { RentalRequestCheck } from '../../lib/portal';
 import type { Equipment } from '../../types';
 
@@ -46,9 +46,10 @@ export const RentBookingModal: React.FC<Props> = ({
     <form onSubmit={handleConfirmRent} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ display: 'flex', gap: '14px', padding: '12px', backgroundColor: 'var(--bg-raised)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
         <img
-          src={eq.thumbnail_url || getEquipmentImage(eq.equipment_code, eq.type)}
+          src={resolveEquipmentThumbnail(eq.thumbnail_url, eq.equipment_code, eq.type)}
           alt={eq.name}
-          onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = '1'; t.src = getEquipmentImage(eq.equipment_code, eq.type); }}
+          loading="lazy"
+          onError={(e) => { const t = e.currentTarget; if (t.dataset.fb) return; t.dataset.fb = '1'; t.src = getEquipmentCategoryFallback(eq.equipment_code, eq.type); }}
           style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }}
         />
         <div style={{ fontSize: '13px' }}>
