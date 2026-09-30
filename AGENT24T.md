@@ -370,12 +370,12 @@ Lihat juga `DESIGN.md`. Ringkasan eksekusi:
 - [ ] `F4.6` Seed data realistis untuk demo sidang (minimal 50 unit, 50 rental, 55 titik GPS)
 
 ### FASE 5 — INOVASI (kerjakan jika Fase 1–4 stabil)
-- [ ] `F5.1` Prediksi kebutuhan servis berbasis tren HM (sederhana: regresi linear)
-- [ ] `F5.2` Heatmap sebaran lokasi armada di Leaflet
-- [ ] `F5.3` Geofencing: alert jika unit keluar dari area site
-- [ ] `F5.4` Dashboard analytics: utilisasi armada per bulan, revenue trend, top customer
-- [ ] `F5.5` PWA: installable, offline shell
-- [ ] `F5.6` Multi-bahasa (ID/EN) — P3
+- [x] `F5.1` Prediksi kebutuhan servis berbasis tren HM (sederhana: regresi linear) — DONE (businessRules.ts predictNextServiceDate, least-squares + ServiceDueAlertPanel)
+- [x] `F5.2` Heatmap sebaran lokasi armada di Leaflet — DONE siklus 91 p1 (LeafletMap heatmapData + toggle; smoke 46 marker + heatmap OK)
+- [x] `F5.3` Geofencing: alert jika unit keluar dari area site — DONE (geofencing.ts haversineMeter + detectGeofenceBreaches + GeofenceAlertBanner + DEFAULT_SITE_ZONES)
+- [x] `F5.4` Dashboard analytics: utilisasi armada per bulan, revenue trend, top customer — DONE (analytics.ts buildOperationalAnalytics + PanelUtilisasiBulanan/PanelTopCustomer + SVG tren pendapatan)
+- [x] `F5.5` PWA: installable, offline shell — DONE (public/manifest.json + sw.js vanilla app-shell precache, ikon 192/512)
+- [x] `F5.6` Multi-bahasa (ID/EN) — DONE (src/lib/i18n.tsx useTerjemahan)
 
 ---
 

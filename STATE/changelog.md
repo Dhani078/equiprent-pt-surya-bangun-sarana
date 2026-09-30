@@ -253,3 +253,10 @@
   - 0 konsol exception di seluruh alur.
   - Catatan: 26/50 baris laporan memang belum berdokumen resmi (perilaku benar — pesan jelas, bukan bug).
 - Housekeeping: blockers.md B001/B002 ditutup (DB TiDB live mode=TIDB; tarif via tabel settings); known_issues.md ISSUE-I002 (foto unit, ditunda user).
+## Siklus 91 — 2026-09-30 — FASE 5 LENGKAP
+- Audit roadmap AGENT24T.md: ternyata F5.1–F5.6 sudah diimplementasi di siklus-siklus sebelumnya, hanya belum ditandai.
+- Tandai selesai: F5.1 (predictNextServiceDate regresi linear), F5.2 (LeafletMap heatmap), F5.3 (geofencing.ts + GeofenceAlertBanner), F5.4 (PanelUtilisasiBulanan + PanelTopCustomer + SVG tren), F5.5 (manifest.json + sw.js vanilla), F5.6 (i18n.tsx toggle ID/EN).
+- Verifikasi CDP production (STATE/verify_91_fase5.py):
+  - PWA: link manifest 1, name "EquipRent MS — PT. Surya Bangun Sarana", serviceWorker AKTIF (sw.js), ikon 192/512 HTTP 200.
+  - Toggle bahasa ID->EN jalan (tombol navbar-lang), dark mode aktif (dataset.theme=dark), 0 overflow, 0 konsol exception.
+  - Vision check dashboard gelap: kontras baik, alert "3 unit perlu perhatian", stat cards (Rp 2.64 M / 50 Units / 42 Contracts) rapi.
