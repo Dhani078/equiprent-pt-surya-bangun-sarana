@@ -245,3 +245,11 @@
 - Deploy Version 4f82a24f-3d1d-4eeb-9fa7-a2377527c4af. tsc 0; npm test 30/30; build 5.47s.
 - verify_89_server.py production: health online db=True mode=TIDB; login admin 200; login salah 401 BAD_PASSWORD (anti enumeration); tanpa token 401 MALFORMED; customer -> /api/users 403 FORBIDDEN (RBAC ketat); admin /api/equipments 200 (50 unit); change-password: pw lama salah 401, password pendek 400 VALIDATION_ERROR.- Verifikasi tambahan: /api/reports/analytics 200 (Laporan Rental Bulanan, 50 baris, 8 kolom, ringkasan); /api/dashboard/stats 200 (revenue 2.644.950.000, 6 payment pending, 50 unit, 8 tersedia).
 - Tes verify payment 38 -> PAID (endpoint jalan, staffId dari session). State machine satu arah: tidak ada endpoint kembali ke PENDING_VERIFICATION; seed dipulihkan langsung via TiDB UPDATE (status, verified_by, verified_at) -> 50 payments, 6 pending, terverifikasi via production API.
+## Siklus 90 — 2026-09-30
+- Audit UI production via CDP (chrome headless :9222, suppress_origin untuk websocket handshake 403):
+  - Login form admin jalan (token sessionStorage dapat); 0 overflow horizontal di dashboard/laporan/unit/BAST.
+  - 50 baris laporan + 50 tombol drill-down RNT (aria-label "Buka dokumen BAST transaksi ...").
+  - Drill-down terverifikasi dua cabang: (a) baris tanpa dokumen -> alert "Transaksi RNT-... belum memiliki dokumen resmi (BAST/Surat Jalan) di arsip."; (b) baris berdokumen -> modal DocumentPreview terbuka, "Dokumen Resmi: REP-BASTOUT-20260911-001" (1605 char isi, kop PT SBS, BAST + RNT).
+  - 0 konsol exception di seluruh alur.
+  - Catatan: 26/50 baris laporan memang belum berdokumen resmi (perilaku benar — pesan jelas, bukan bug).
+- Housekeeping: blockers.md B001/B002 ditutup (DB TiDB live mode=TIDB; tarif via tabel settings); known_issues.md ISSUE-I002 (foto unit, ditunda user).
