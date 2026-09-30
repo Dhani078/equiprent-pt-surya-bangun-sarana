@@ -102,3 +102,33 @@ Seluruh berkas >600 baris dipecah menjadi paket modul terfokus. **Tidak ada tand
 - `npm run type-check` → 0 error, `npm test` → **30/30 suite** lulus.
 - Audit visual CDP production (chrome `--remote-debugging-port=9222`) tiap siklus: 0 overflow horizontal, konsol bersih, tiap modal & alur dibuka lewat UI asli.
 - `bundle()` di `tests/run-tests.mjs` kini menunjuk `validators/index.ts`, `portal/index.ts`, `contracts/index.ts`.
+---
+
+## Siklus 91–92 (2026-09-29/30) — Refactor Besar seluruh kode
+
+### Ringkasan
+Semua file `src/` kini **< 500 baris**. Pemecahan konsisten: panel presentasional keluar, state/logika/fetch tetap di induk.
+
+### Fix bug nyata (bukan kosmetik)
+| # | Masalah | Perbaikan |
+|---|---------|-----------|
+| 1 | 49/50 `thumbnail_url` seed mati (`assets/images/*.jpg` → SPA fallback HTML) | Bulk PUT `thumbnail_url:''` → auto `getEquipmentImage`; guard `onError` anti-loop di 4 komponen |
+| 2 | Grid inventaris `repeat(3,1fr)` overflow 13px mobile | Ganti `auto-fit minmax(...)` |
+| 3 | Tombol paginator `minWidth:32px` inline kalahkan CSS 44px | Inline `min-width:44px` (semua halaman berpaginasi) |
+| 4 | Tab role login 90×37 / 31×37 / 68×37 < 44px (lubang `[role=tab]`) | Tambah `[role="tab"]` ke lantai sentuh 44px di `src/index.css` |
+| 5 | Unit 18 punya rental AKTIF **dan** servis IN_PROGRESS → status konflik | Prioritas `sinkronkanStatusUnit` dibalik: RENTED > MAINTENANCE |
+| 6 | Pembayaran PENDING_VERIFICATION tanpa bukti transfer (~1/4) | Bukti wajib (antrean verifikasi staf harus bisa diverifikasi) |
+
+### Struktur baru
+- `src/hooks/useAppData.ts` — 8 koleksi reaktif + 4 efek + 17 handler CRUD (dari App.tsx).
+- `src/components/layout/` — OfflineBanner, ToastNotif, DataErrorBanner.
+- `src/pages/login/` — LoginBrandPanel, RoleTabPicker, LoginForm, LoginErrorBox, RegisterLinkFooter.
+- `src/pages/admin/maintenance/`, `src/pages/admin/user/`, `src/pages/admin/equipment/`, `src/pages/staff/`.
+- `src/lib/seed/` — 8 generator domain + shared + index (dari seedGenerator.ts 639→140).
+- `src/lib/auth/` — password, session, rbac (dari auth.ts 525→41).
+- `src/lib/documentHtml.ts` — render HTML A4 (dari documents.ts 575→362).
+
+### Verifikasi
+- `npm run type-check` → 0 error, `npm test` → **30/30 suite** lulus.
+- Smoke CDP tiap siklus: 0 overflow horizontal di 375×812 dan 1280×800, touch target ≥44px, semua modal dibuka via UI asli.
+- Bundle: index 453.46 kB (gzip 119.04 kB).

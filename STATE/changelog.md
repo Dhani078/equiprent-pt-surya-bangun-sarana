@@ -222,3 +222,20 @@
 - p5b refactor: ContractPanel.tsx 538 -> 392. contract/ContractFilterBar.tsx (49), contract/ContractTable.tsx (154; bawa TONE_STYLE badge + logika kosongTotal; props onPreview/onRenew/onSign + canRenew). Modal preview/renew/sign/issue tetap di panel. Smoke STATE/smoke_contract_92.py: ADMIN 50 rows, 50 Tinjau, 13 Perpanjang (kedaluwarsa), saring EXPIRED->13, modal tinjau OPEN->Tutup, cari->0->reset, mobile 375 ovf=0 small=0; CUSTOMER panel 3 rows read-only (tanpa Terbitkan), modal OK. Deploy 890e6302-564b-4eb7-a961-2aceecf7dca6. Commit b98f2be.
 - Bug tooling dicatat: guard terminal menolak && dalam heredoc (placeholder @@AND@@ + decode python), payload write_file >~6KB terpotong — pecah patch bertahap.
 - Catatan sesi: kredensial admin/admin API login DITOLAK (BAD_PASSWORD) — harness CDP tetap jalan pakai sessionStorage sbs_session_token per-tab. Password seed berubah di beberapa siklus; jangan andalkan memory lama untuk creds.
+
+## Siklus 92 — 2026-09-30 (lib split & bug konsistensi)
+
+- p1 refactor: Login.tsx 533 -> 246. login/{LoginBrandPanel 127, RoleTabPicker 58, LoginForm 147, LoginErrorBox 28, RegisterLinkFooter 35}. String i18n & alur login (Edge API -> fallback lokal -> verifikasi role) tetap di induk. Smoke STATE/smoke_login_92.py: desktop ovf=0, 3 tab role, form + toggle password + tautan daftar; mobile 375 ketemu tab role 90x37 (ADMIN), 31x37 (Staf), 68x37 (Pelanggan) — lubang lantai sentuh 44px: [role=tab] tidak tercakup media query mobile. Fix src/index.css: tambah [role="tab"] ke lantai 44px. Commit f89952c. Build vite 5.65s; index 450.65 kB (gzip 118.62). Deploy bfbcfba7-cc47-4928-8bcb-ef6972d962d7.
+
+- p2 refactor: seedGenerator.ts 639 -> 140. Pecah ke src/lib/seed/: users (193), equipments (179), maintenance (179), rentals (247), contracts (157), payments (201), gps (177), reports (163), shared (33: TEKNISI_IDS, SPAREPARTS, CATATAN, SYARAT_KONTRAK), index (92: rakit dataset + sinkronkanStatusUnit). Konsumen tunggal src/lib/store/internal.ts kini import dari '../seed'; tests/run-tests.mjs bundle entry diganti src/lib/seed/index.ts.
+
+- p2 fix data seed: 2 asersi consistency + 1 seedData gagal (pre-existing sejak seed random, bukan efek split):
+  1. unit 18 punya rental aktif DAN maintenance IN_PROGRESS -> sinkronkanStatusUnit RAISE ke MAINTENANCE melanggar "rental aktif harus menempati unit RENTED". Prioritas dibalik: RENTED > MAINTENANCE > AVAILABLE (unit sedang disewa tidak bisa simultaneously diservis).
+  2. pembayaran PENDING_VERIFICATION idx%4===1 dibuat tanpa payment_proof_path -> asersi "PENDING_VERIFICATION wajib bukti transfer" gagal. Bukti kini wajib (antrean verifikasi staf harus bisa diverifikasi).
+  Setelah fix: equipment distribution RENTED 18 / MAINTENANCE 6 / AVAILABLE 25 / UNAVAILABLE 1 (sebelumnya RENTED 17 / MAINTENANCE 7). tsc 0; 30/30. Build index 453.46 kB (gzip 119.02). Deploy 019e3d3e-d313-4077-9476-49066ea26f83.
+
+- p3 refactor: documents.ts 575 -> 362. Blok render HTML A4 mandiri + escapeHtml dipindah ke src/lib/documentHtml.ts (231). COMPANY kini diexport (dipakai documentHtml). Konsumen: DocumentPreview, DocumentPrintPanel, ReportsPage tidak berubah (re-export transparan).
+
+- p3 refactor: auth.ts 525 -> 41. Pecah ke src/lib/auth/: password (334: PBKDF2 + akun demo + util encoding), session (299: HMAC token + konfigurasi secret), rbac (86: matriks default-deny). auth.ts jadi re-export barrel; konsumen (store/internal, store/users, server/context) tidak diubah. tsc 0; 30/30. Build index 453.46 kB (gzip 119.04). Deploy 3447d853-fc50-4d67-a787-5a4fa85b35e4. Smoke STATE/smoke_auth_92.py: login admin/admin via UI -> masuk aplikasi, ovf=0.
+
+- Status target: SELURUH file src < 500 baris. Terbesar: ReportAnalyticsPanel 497, fleetTelemetry 484, EquipmentManagement 472, server/routes/rentals 464. Total src 32.021 baris.
