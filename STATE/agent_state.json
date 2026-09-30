@@ -28,6 +28,6 @@
   },
   "next_focus": "Siklus 92: Login.tsx 533, lib/seedGenerator.ts 639, lib/documents.ts 575, lib/auth.ts 525.",
   "updated": "2026-09-29T09:00:00",
-  "last_summary": "Siklus 89: server/index.ts 423 -> 70 + middleware.ts + rateLimit.ts + authRoutes.ts. Deploy 4f82a24f. tsc 0, 30/30. CDP/API: login+RBAC+change-password hijau.",
+  "last_summary": "Siklus 89: server/index.ts 423->70 (middleware+rateLimit+authRoutes). Deploy 4f82a24f. tsc 0, 30/30. API: login/RBAC/change-password/reports/dashboard hijau. Payment 38 verify test dipulihkan ke seed. Foto per unit: kuota ag/gemini-3.1-flash-image habis, reset ~4j.",
   "updated_at": "2026-09-30"
 }
