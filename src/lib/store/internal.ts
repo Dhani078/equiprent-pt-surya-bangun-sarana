@@ -24,7 +24,7 @@ import {
   GENERATED_MAINTENANCE,
   GENERATED_GPS,
   GENERATED_REPORTS,
-} from '../seedGenerator';
+} from '../seed';
 
 /**
  * Data demo cadangan (dipakai bila TiDB belum terhubung). Dihasilkan
