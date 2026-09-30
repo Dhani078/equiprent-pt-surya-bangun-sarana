@@ -18,7 +18,7 @@
 import type {
   User, Equipment, Rental, Contract, Payment,
   Maintenance, GpsTracking, ReportItem,
-} from '../types';
+} from '../../types';
 
 // ---------------------------------------------------------------------------
 // PRNG Deterministik (Mulberry32)
@@ -133,8 +133,47 @@ const JALAN_BANJARMASIN: readonly string[] = [
 // Generator: Users (50 akun)
 // ---------------------------------------------------------------------------
 
+export function generateEquipments(): Equipment[] {
+  const equipments: Equipment[] = [];
+  const counter: Record<string, number> = {};
+
+  for (let i = 1; i <= 50; i += 1) {
+    const spec = UNIT_SPECS[(i - 1) % UNIT_SPECS.length];
+    counter[spec.prefix] = (counter[spec.prefix] ?? 0) + 1;
+
+    const code = `${spec.prefix}-${String(counter[spec.prefix]).padStart(2, '0')}`;
+
+    // Distribusi status: mayoritas tersedia, sebagian disewa/dalam servis.
+    const roll = rng();
+    let status: Equipment['status'];
+    if (roll < 0.50) status = 'AVAILABLE';
+    else if (roll < 0.78) status = 'RENTED';
+    else if (roll < 0.94) status = 'MAINTENANCE';
+    else status = 'UNAVAILABLE';
+
+    equipments.push({
+      id: i,
+      equipment_code: code,
+      name: `${spec.type} ${spec.brand} ${spec.model}`,
+      type: spec.type,
+      model: spec.model,
+      brand: spec.brand,
+      hour_meter: Number(between(250, 4200).toFixed(2)),
+      rental_price_per_day: spec.rate,
+      status,
+      last_maintenance_date: isoDate(addDays(new Date('2026-01-05'), intBetween(0, 200))),
+      thumbnail_url: THUMBNAILS[spec.type] ?? THUMBNAILS.Excavator,
+      created_at: isoDate(addDays(new Date('2024-06-01'), intBetween(0, 500))),
+    });
+  }
+
+  return equipments;
+}
 
 // ---------------------------------------------------------------------------
-// Ekspor Data Final (dirakit oleh seed/index.ts)
+// Generator: Maintenance (25 log) — dihasilkan sebelum rental agar
+// perhitungan Hour Meter memiliki riwayat servis yang realistis.
 // ---------------------------------------------------------------------------
+
+
 

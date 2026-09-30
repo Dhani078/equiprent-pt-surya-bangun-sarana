@@ -18,7 +18,8 @@
 import type {
   User, Equipment, Rental, Contract, Payment,
   Maintenance, GpsTracking, ReportItem,
-} from '../types';
+} from '../../types';
+import { CATATAN, SYARAT_KONTRAK } from './shared';
 
 // ---------------------------------------------------------------------------
 // PRNG Deterministik (Mulberry32)
@@ -133,8 +134,114 @@ const JALAN_BANJARMASIN: readonly string[] = [
 // Generator: Users (50 akun)
 // ---------------------------------------------------------------------------
 
+export function generateRentals(equipments: readonly Equipment[], customerIds: readonly number[]): Rental[] {
+  const rentals: Rental[] = [];
+  const today = HARI_INI;
+
+  /**
+   * Alokasi status ditentukan di awal agar setiap halaman punya data saat demo:
+   *   PENDING   → antrean persetujuan staf
+   *   APPROVED  → menunggu berjalan
+   *   ON_GOING  → sedang beroperasi (tracking GPS)
+   *   COMPLETED → riwayat & laporan pendapatan
+   *   REJECTED  → riwayat penolakan
+   */
+  const STATUS_ALOKASI: readonly Rental['status'][] = [
+    ...Array<Rental['status']>(7).fill('PENDING'),
+    ...Array<Rental['status']>(8).fill('APPROVED'),
+    ...Array<Rental['status']>(10).fill('ON_GOING'),
+    ...Array<Rental['status']>(21).fill('COMPLETED'),
+    ...Array<Rental['status']>(4).fill('REJECTED'),
+  ];
+
+  /**
+   * Unit yang sedang disewa dilacak agar TIDAK terjadi double-booking.
+   * Setiap unit hanya boleh punya SATU rental aktif (APPROVED / ON_GOING).
+   */
+  const unitTerpakai = new Set<number>();
+
+  // Unit yang boleh dipakai untuk rental AKTIF: tidak dalam perawatan.
+  const kandidatAktif = equipments.filter(e => e.status !== 'MAINTENANCE');
+
+  // Antrian unit dialokasikan bergilir agar penyebaran merata.
+  let putaranAktif = 0;
+
+  for (let i = 1; i <= 50; i += 1) {
+    const customerId = pick(customerIds);
+    const status: Rental['status'] = STATUS_ALOKASI[i - 1] ?? 'COMPLETED';
+    const butuhUnitAktif = status === 'ON_GOING' || status === 'APPROVED';
+
+    let eq: Equipment;
+
+    if (butuhUnitAktif) {
+      // Cari unit yang belum dipakai rental aktif lain.
+      let ditemukan: Equipment | undefined;
+      for (let percobaan = 0; percobaan < kandidatAktif.length; percobaan += 1) {
+        const calon = kandidatAktif[(putaranAktif + percobaan) % kandidatAktif.length];
+        if (calon && !unitTerpakai.has(calon.id)) {
+          ditemukan = calon;
+          putaranAktif = (putaranAktif + percobaan + 1) % kandidatAktif.length;
+          break;
+        }
+      }
+      // Bila semua unit sudah terpakai, pakai kandidat berikutnya apa adanya
+      // (sangat jarang; hanya bila rental aktif melebihi jumlah unit).
+      eq = ditemukan ?? kandidatAktif[putaranAktif % kandidatAktif.length];
+      unitTerpakai.add(eq.id);
+    } else {
+      // Riwayat / pengajuan: bebas memilih unit apa pun.
+      eq = pick(equipments);
+    }
+
+    const durasi = intBetween(3, 30);
+
+    // Tanggal disesuaikan agar konsisten dengan status.
+    const today = HARI_INI;
+    let start: Date;
+    let end: Date;
+
+    if (status === 'COMPLETED' || status === 'REJECTED') {
+      // Riwayat masa lalu
+      start = addDays(today, -intBetween(40, 240));
+      end = addDays(start, durasi);
+    } else if (status === 'ON_GOING') {
+      // Sedang berjalan: mulai sebelum hari ini, selesai setelahnya
+      start = addDays(today, -intBetween(1, Math.max(1, durasi - 1)));
+      end = addDays(start, durasi);
+    } else if (status === 'APPROVED') {
+      // Disetujui, akan berjalan: mulai hari ini atau besok
+      start = addDays(today, intBetween(0, 3));
+      end = addDays(start, durasi);
+    } else {
+      // PENDING: pengajuan baru, mulai beberapa hari ke depan
+      start = addDays(today, intBetween(3, 21));
+      end = addDays(start, durasi);
+    }
+
+    const booking = status === 'PENDING' ? addDays(today, -intBetween(0, 3)) : addDays(start, -intBetween(3, 14));
+
+    rentals.push({
+      id: i,
+      rental_code: `RNT-SBS-${isoDate(booking).replace(/-/g, '')}-${String(i).padStart(3, '0')}`,
+      customer_id: customerId,
+      equipment_id: eq.id,
+      equipment_name: eq.name,
+      equipment_code: eq.equipment_code,
+      booking_date: isoDateTime(booking),
+      start_date: isoDate(start),
+      end_date: isoDate(end),
+      total_days: durasi,
+      subtotal: durasi * eq.rental_price_per_day,
+      status,
+      notes: rng() < 0.4 ? pick(CATATAN) : undefined,
+    });
+  }
+
+  return rentals;
+}
 
 // ---------------------------------------------------------------------------
-// Ekspor Data Final (dirakit oleh seed/index.ts)
+// Generator: Contracts (50) & Payments (50) — mengikuti rental
 // ---------------------------------------------------------------------------
+
 

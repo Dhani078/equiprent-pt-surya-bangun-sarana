@@ -18,7 +18,8 @@
 import type {
   User, Equipment, Rental, Contract, Payment,
   Maintenance, GpsTracking, ReportItem,
-} from '../types';
+} from '../../types';
+import { TEKNISI_IDS, SPAREPARTS, CATATAN } from './shared';
 
 // ---------------------------------------------------------------------------
 // PRNG Deterministik (Mulberry32)
@@ -133,8 +134,46 @@ const JALAN_BANJARMASIN: readonly string[] = [
 // Generator: Users (50 akun)
 // ---------------------------------------------------------------------------
 
+export function generateMaintenance(equipments: readonly Equipment[]): Maintenance[] {
+  const logs: Maintenance[] = [];
+
+  for (let i = 1; i <= 25; i += 1) {
+    const eq = equipments[intBetween(0, equipments.length - 1)];
+    const isPreventive = rng() < 0.7;
+    const status: Maintenance['status'] = rng() < 0.65 ? 'COMPLETED' : (rng() < 0.6 ? 'SCHEDULED' : 'IN_PROGRESS');
+
+    const scheduled = addDays(new Date('2026-02-01'), intBetween(0, 180));
+    const completed = status === 'COMPLETED' ? addDays(scheduled, intBetween(0, 3)) : null;
+
+    // HM saat servis sedikit di bawah HM unit sekarang (masuk akal).
+    const hmAtService = Number(Math.max(0, eq.hour_meter - between(0, 400)).toFixed(2));
+
+    logs.push({
+      id: i,
+      maintenance_code: `MNT-SBS-${isoDate(scheduled).replace(/-/g, '')}-${String(i).padStart(3, '0')}`,
+      equipment_id: eq.id,
+      equipment_name: eq.name,
+      equipment_code: eq.equipment_code,
+      scheduled_date: isoDate(scheduled),
+      completion_date: completed ? isoDate(completed) : null,
+      maintenance_type: isPreventive ? 'PREVENTIVE' : (rng() < 0.7 ? 'CORRECTIVE' : 'OVERHAUL'),
+      hour_meter_at_maintenance: hmAtService,
+      description: isPreventive
+        ? 'Servis preventif berkala sesuai interval 250 Hour Meter.'
+        : 'Perbaikan kerusakan komponen yang ditemukan saat inspeksi lapangan.',
+      spareparts_replaced: pick(SPAREPARTS),
+      cost: isPreventive ? intBetween(2_500_000, 6_000_000) : intBetween(5_000_000, 18_000_000),
+      technician_id: pick(TEKNISI_IDS),
+      technician_name: pick(['Ahmad Ridwan', 'Dwi Haryono', 'Rudi Hartono']),
+      status,
+    });
+  }
+
+  return logs;
+}
 
 // ---------------------------------------------------------------------------
-// Ekspor Data Final (dirakit oleh seed/index.ts)
+// Generator: Rentals (50 transaksi) — konsisten dengan status unit
 // ---------------------------------------------------------------------------
+
 

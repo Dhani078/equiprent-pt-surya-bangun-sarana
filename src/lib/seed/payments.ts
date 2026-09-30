@@ -18,7 +18,8 @@
 import type {
   User, Equipment, Rental, Contract, Payment,
   Maintenance, GpsTracking, ReportItem,
-} from '../types';
+} from '../../types';
+import { TEKNISI_IDS } from './shared';
 
 // ---------------------------------------------------------------------------
 // PRNG Deterministik (Mulberry32)
@@ -133,8 +134,66 @@ const JALAN_BANJARMASIN: readonly string[] = [
 // Generator: Users (50 akun)
 // ---------------------------------------------------------------------------
 
+export function generatePayments(contracts: readonly Contract[], rentals: readonly Rental[]): Payment[] {
+  return contracts.map((c, idx) => {
+    const rental = rentals.find(r => r.id === c.rental_id);
+    const amount = rental?.subtotal ?? 0;
+
+    /**
+     * Status pembayaran mengikuti status rental, DENGAN variasi agar fitur
+     * verifikasi pembayaran staf bisa didemonstrasikan.
+     */
+    let status: Payment['status'];
+    if (rental?.status === 'COMPLETED') status = 'PAID';
+    // Sewa yang SEDANG BEROPERASI pasti sudah lunas: gerbang pembayaran
+    // (§4.3 poin 4) tidak mengizinkan unit beroperasi sebelum uang
+    // diterima. `rng()` tetap dipanggil agar aliran angka acak — dan
+    // karenanya seluruh data turunan berikutnya — tidak bergeser.
+    else if (rental?.status === 'ON_GOING') {
+      rng();
+      status = 'PAID';
+    }
+    else if (rental?.status === 'APPROVED') status = rng() < 0.5 ? 'PAID' : 'PENDING_VERIFICATION';
+    else if (rental?.status === 'REJECTED') status = 'FAILED';
+    else status = 'UNPAID';
+
+    // Paksa sebagian menjadi PENDING_VERIFICATION supaya antrean verifikasi
+    // staf selalu terisi saat demonstrasi sidang. Sewa yang sudah berjalan
+    // dikecualikan — statusnya tidak boleh turun dari PAID.
+    if (idx % 9 === 3 && status !== 'FAILED' && rental?.status !== 'ON_GOING') {
+      status = 'PENDING_VERIFICATION';
+    }
+
+    const paid = status === 'PAID';
+    const verified = paid && rng() < 0.9;
+
+    return {
+      id: idx + 1,
+      payment_code: `PAY-SBS-${c.contract_date.replace(/-/g, '')}-${String(idx + 1).padStart(3, '0')}`,
+      contract_id: c.id,
+      contract_code: c.contract_code,
+      customer_id: c.customer_id,
+      customer_name: c.customer_name,
+      amount,
+      payment_method: rng() < 0.7 ? 'BANK_TRANSFER' : 'QRIS',
+      status,
+      // Bukti transfer dilampirkan pelanggan untuk pembayaran yang sudah atau
+      // sedang diproses. Test(seedData) mewajibkan PENDING_VERIFICATION punya
+      // bukti (audit konsistensi 2026-09-30: antrean verifikasi harus bisa
+      // diverifikasi staf — bukti wajib, bukan opsional realistis).
+      payment_proof_path:
+        status === 'PAID' || status === 'PENDING_VERIFICATION'
+          ? `uploads/proofs/bukti_${c.contract_code}.png`
+          : undefined,
+      payment_date: paid ? isoDate(addDays(new Date(c.contract_date), intBetween(0, 5))) : isoDate(new Date(c.contract_date)),
+      verified_by: verified ? pick(TEKNISI_IDS) : null,
+      verified_by_name: verified ? pick(['Hendra Wijaya', 'Siska Amanda']) : undefined,
+      verified_at: verified ? isoDateTime(addDays(new Date(c.contract_date), intBetween(1, 6))) : null,
+    };
+  });
+}
 
 // ---------------------------------------------------------------------------
-// Ekspor Data Final (dirakit oleh seed/index.ts)
+// Generator: GPS Tracking (55 titik di sekitar Banjarmasin & site tambang)
 // ---------------------------------------------------------------------------
 

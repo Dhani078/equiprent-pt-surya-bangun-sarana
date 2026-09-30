@@ -18,7 +18,8 @@
 import type {
   User, Equipment, Rental, Contract, Payment,
   Maintenance, GpsTracking, ReportItem,
-} from '../types';
+} from '../../types';
+import { SYARAT_KONTRAK } from './shared';
 
 // ---------------------------------------------------------------------------
 // PRNG Deterministik (Mulberry32)
@@ -133,8 +134,24 @@ const JALAN_BANJARMASIN: readonly string[] = [
 // Generator: Users (50 akun)
 // ---------------------------------------------------------------------------
 
-
-// ---------------------------------------------------------------------------
-// Ekspor Data Final (dirakit oleh seed/index.ts)
-// ---------------------------------------------------------------------------
+export function generateContracts(rentals: readonly Rental[], users: readonly User[]): Contract[] {
+  return rentals.map((r, idx) => {
+    const customer = users.find(u => u.id === r.customer_id);
+    const start = new Date(r.start_date);
+    return {
+      id: idx + 1,
+      contract_code: `SBS/CONTRACT/${start.getUTCFullYear()}/${String(start.getUTCMonth() + 1).padStart(2, '0')}/${String(idx + 1).padStart(4, '0')}`,
+      rental_id: r.id,
+      rental_code: r.rental_code,
+      customer_id: r.customer_id,
+      customer_name: customer?.full_name,
+      contract_date: isoDate(addDays(start, -2)),
+      valid_until: r.end_date,
+      terms_conditions: SYARAT_KONTRAK,
+      // Kontrak rental yang sudah berjalan cenderung sudah ditandatangani.
+      is_signed_customer: r.status === 'PENDING' ? 0 : (rng() < 0.85 ? 1 : 0),
+      signed_at: r.status === 'PENDING' ? null : isoDateTime(addDays(start, -1)),
+    };
+  });
+}
 

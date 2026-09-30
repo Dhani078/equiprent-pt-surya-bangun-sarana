@@ -104,7 +104,7 @@ bundle('src/lib/notifications.ts', '.tmp_notifications.mjs');
 bundle('src/lib/auditLog.ts', '.tmp_audit.mjs');
 
 // Generator data demo (T-0050) — diverifikasi terhadap acceptance criteria.
-bundle('src/lib/seedGenerator.ts', '.tmp_seed.mjs');
+bundle('src/lib/seed/index.ts', '.tmp_seed.mjs');
 
 const suites = [
   'businessRules.test.mjs',

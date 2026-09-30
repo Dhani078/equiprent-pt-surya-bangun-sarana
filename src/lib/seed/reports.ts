@@ -18,7 +18,7 @@
 import type {
   User, Equipment, Rental, Contract, Payment,
   Maintenance, GpsTracking, ReportItem,
-} from '../types';
+} from '../../types';
 
 // ---------------------------------------------------------------------------
 // PRNG Deterministik (Mulberry32)
@@ -133,8 +133,31 @@ const JALAN_BANJARMASIN: readonly string[] = [
 // Generator: Users (50 akun)
 // ---------------------------------------------------------------------------
 
+export function generateReports(rentals: readonly Rental[]): ReportItem[] {
+  const types: ReadonlyArray<ReportItem['report_type']> = ['BAST_OUT', 'BAST_IN', 'SURAT_JALAN', 'FINANCIAL_SUMMARY'];
+  const rows: ReportItem[] = [];
+
+  for (let i = 1; i <= 20; i += 1) {
+    const r = rentals[(i - 1) % rentals.length];
+    const generated = addDays(new Date(r.start_date), intBetween(0, 5));
+
+    rows.push({
+      id: i,
+      report_code: `DOC-SBS-${isoDate(generated).replace(/-/g, '')}-${String(i).padStart(3, '0')}`,
+      rental_id: r.id,
+      rental_code: r.rental_code,
+      report_type: types[(i - 1) % types.length],
+      generated_by: pick([3, 5]),
+      generated_by_name: pick(['Hendra Wijaya', 'Siska Amanda']),
+      file_path: `/dokumen/SBS/${isoDate(generated)}-${String(i).padStart(3, '0')}.pdf`,
+      generated_at: isoDateTime(generated),
+    });
+  }
+
+  return rows;
+}
 
 // ---------------------------------------------------------------------------
-// Ekspor Data Final (dirakit oleh seed/index.ts)
+// Ekspor Data Final
 // ---------------------------------------------------------------------------
 

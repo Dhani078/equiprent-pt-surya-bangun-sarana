@@ -18,7 +18,7 @@
 import type {
   User, Equipment, Rental, Contract, Payment,
   Maintenance, GpsTracking, ReportItem,
-} from '../types';
+} from '../../types';
 
 // ---------------------------------------------------------------------------
 // PRNG Deterministik (Mulberry32)
@@ -134,7 +134,60 @@ const JALAN_BANJARMASIN: readonly string[] = [
 // ---------------------------------------------------------------------------
 
 
+export function generateUsers(): User[] {
+  const users: User[] = [];
+
+  // Akun inti untuk demo (password: admin / staff / user)
+  users.push(
+    { id: 1, role_id: 1, role_name: 'ADMIN', username: 'admin', email: 'admin@suryabangun.co.id', full_name: 'Muhammad Rizki Ramadhani, S.Kom (Admin)', phone: '081254321098', address: 'Jl. Ahmad Yani KM 5, Banjarmasin', company_name: 'PT. Surya Bangun Sarana', status: 'ACTIVE' },
+    { id: 2, role_id: 1, role_name: 'ADMIN', username: 'admin2', email: 'lisa.indriani@suryabangun.co.id', full_name: 'Lisa Indriani, S.E. (Head of Finance)', phone: '081255556666', address: 'Jl. Sultan Adam Blok C, Banjarmasin', company_name: 'PT. Surya Bangun Sarana', status: 'ACTIVE' },
+    { id: 3, role_id: 2, role_name: 'STAFF', username: 'staff', email: 'hendra@suryabangun.co.id', full_name: 'Hendra Wijaya (Staf Administrasi & Logistik)', phone: '082198765432', address: 'Jl. Belitung Darat No. 45, Banjarmasin', company_name: 'PT. Surya Bangun Sarana', status: 'ACTIVE' },
+    { id: 4, role_id: 2, role_name: 'STAFF', username: 'ahmad', email: 'ahmad_mekanik@suryabangun.co.id', full_name: 'Ahmad Ridwan (Mekanik Senior)', phone: '085345678901', address: 'Jl. Liang Anggang KM 18, Banjarbaru', company_name: 'PT. Surya Bangun Sarana', status: 'ACTIVE' },
+    { id: 5, role_id: 2, role_name: 'STAFF', username: 'siska', email: 'siska.amanda@suryabangun.co.id', full_name: 'Siska Amanda (Account Manager Executive)', phone: '082148564979', address: 'Jl. Gatot Subroto No. 12, Banjarmasin', company_name: 'PT. Surya Bangun Sarana', status: 'ACTIVE' },
+    { id: 6, role_id: 2, role_name: 'STAFF', username: 'eko', email: 'eko.purwanto@suryabangun.co.id', full_name: 'Eko Purwanto (Staf Lapangan & Surveyor)', phone: '085299990001', address: 'Jl. Landasan Ulin Utara, Banjarbaru', company_name: 'PT. Surya Bangun Sarana', status: 'ACTIVE' },
+    { id: 7, role_id: 2, role_name: 'STAFF', username: 'dwi', email: 'dwi.haryono@suryabangun.co.id', full_name: 'Dwi Haryono (Mekanik Junior)', phone: '081387654321', address: 'Jl. Trans Kalimantan, Alalak, Batola', company_name: 'PT. Surya Bangun Sarana', status: 'ACTIVE' },
+    { id: 8, role_id: 2, role_name: 'STAFF', username: 'rudi', email: 'rudi.hartono@suryabangun.co.id', full_name: 'Rudi Hartono (Operator Senior)', phone: '087822334455', address: 'Jl. Handil Bakti, Batola', company_name: 'PT. Surya Bangun Sarana', status: 'ACTIVE' },
+    { id: 9, role_id: 3, role_name: 'CUSTOMER', username: 'user', email: 'logistik@anekatambang.com', full_name: 'Budi Santoso (Logistik)', phone: '081122334455', address: 'Jl. Trisakti Pelabuhan, Banjarmasin', company_name: 'PT. Aneka Tambang Kalimantan', status: 'ACTIVE' },
+    { id: 10, role_id: 3, role_name: 'CUSTOMER', username: 'user2', email: 'siti.aminah@baritoputera.co.id', full_name: 'Siti Aminah, M.B.A (Direktur)', phone: '087855667788', address: 'Jl. Sultan Adam No. 88, Banjarmasin', company_name: 'CV. Barito Putera Konstruksi', status: 'ACTIVE' },
+    { id: 11, role_id: 3, role_name: 'CUSTOMER', username: 'adaro', email: 'procurement@adaro.com', full_name: 'Ir. H. Gunawan Wibisono', phone: '08115009001', address: 'Kawasan Industri Tabalong, Kalsel', company_name: 'PT. Adaro Indonesia', status: 'ACTIVE' },
+    { id: 12, role_id: 3, role_name: 'CUSTOMER', username: 'banjar_indah', email: 'info@banjarindah.co.id', full_name: 'H. Akhmad Zaini (Manajer Konstruksi)', phone: '085100112233', address: 'Jl. Banjar Indah Permai No. 10, Banjarmasin', company_name: 'PT. Banjar Indah Pembangunan', status: 'ACTIVE' },
+    { id: 13, role_id: 3, role_name: 'CUSTOMER', username: 'meratus_coal', email: 'tomas.salim@meratuscoal.com', full_name: 'Tomas Salim', phone: '081399887766', address: 'Kawasan Tambang Sebamban, Tanah Bumbu', company_name: 'PT. Meratus Coal Energy', status: 'ACTIVE' },
+    { id: 14, role_id: 3, role_name: 'CUSTOMER', username: 'wasaka_jaya', email: 'dian.saputra@wasakajaya.com', full_name: 'Dian Saputra', phone: '087712345678', address: 'Jl. H. Hasan Basri, Kayutangi, Banjarmasin', company_name: 'CV. Wasaka Jaya Mandiri', status: 'ACTIVE' },
+    { id: 15, role_id: 3, role_name: 'CUSTOMER', username: 'hasnur_group', email: 'logistik@hasnurgroup.com', full_name: 'H. Syamsul Bahri (Kasi Logistik)', phone: '0811998877', address: 'Kawasan Pelabuhan Hasnur, Tapin', company_name: 'PT. Hasnur Riung Sinergi', status: 'ACTIVE' },
+  );
+
+  // 35 pelanggan tambahan (id 16–50)
+  const dipakai = new Set(users.map(u => u.username));
+  for (let i = 16; i <= 50; i += 1) {
+    const namaIdx = (i - 16) % NAMA_CUSTOMER.length;
+    const nama = NAMA_CUSTOMER[namaIdx];
+    const perusahaan = PERUSAHAAN[(i - 16) % PERUSAHAAN.length];
+
+    // Username unik: nama depan kecil + angka
+    let username = nama.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '');
+    if (dipakai.has(username)) username = `${username}${i}`;
+    dipakai.add(username);
+
+    users.push({
+      id: i,
+      role_id: 3,
+      role_name: 'CUSTOMER',
+      username,
+      email: `${username}@${perusahaan.toLowerCase().replace(/[^a-z]/g, '')}.co.id`,
+      full_name: `${nama} (${pick(['Logistik', 'Direktur', 'Manajer Proyek', 'Kasi Operasional', 'Pengadaan'])})`,
+      phone: `0812${String(10000000 + intBetween(0, 89999999)).slice(0, 10)}`,
+      address: `${pick(JALAN_BANJARMASIN)} No. ${intBetween(1, 120)}, Banjarmasin`,
+      company_name: perusahaan,
+      // 1 dari 12 pelanggan disuspend agar halaman manajemen user punya variasi
+      status: i % 12 === 0 ? 'SUSPENDED' : 'ACTIVE',
+      created_at: isoDate(addDays(new Date('2025-01-15'), intBetween(0, 400))),
+    });
+  }
+
+  return users;
+}
+
 // ---------------------------------------------------------------------------
-// Ekspor Data Final (dirakit oleh seed/index.ts)
+// Generator: Equipments (50 unit)
 // ---------------------------------------------------------------------------
 
