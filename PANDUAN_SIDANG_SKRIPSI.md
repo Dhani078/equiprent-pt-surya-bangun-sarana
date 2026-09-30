@@ -247,9 +247,9 @@ flowchart LR
 
 Pengujian memakai **test runner sendiri tanpa framework eksternal**
 (`tests/run-tests.mjs`): modul TypeScript di-bundle dengan esbuild lalu
-dieksekusi node. Total **27 test suite, 1.531 asersi, 0 gagal**.
+dieksekusi node. Total **30 test suite, 1.552+ asersi, 0 gagal (100% Pass)**.
 
-### 5.1 Daftar 27 Test Suite
+### 5.1 Daftar 30 Test Suite
 
 | # | Suite | Asersi | Yang Diuji |
 |---|---|---|---|
@@ -280,6 +280,9 @@ dieksekusi node. Total **27 test suite, 1.531 asersi, 0 gagal**.
 | 25 | `notifications.test.mjs` | 18 | Badge notifikasi sidebar |
 | 26 | `auditLog.test.mjs` | 56 | Audit trail: 16 aksi tercatat, RBAC, ring buffer |
 | 27 | `seedData.test.mjs` | 46 | Data demo: 50/50/55 + integritas lintas tabel |
+| 28 | `settingsAndAudit.test.mjs` | 24 | Pengaturan tarif denda, persistensi DB, & jejak audit |
+| 29 | `offlineQueue.test.mjs` | 21 | Sinkronisasi mutasi offline FIFO saat jaringan terputus |
+| 30 | `fase5.test.mjs` | 21 | Geofencing Haversine, analitik utilisasi, & dwibahasa i18n |
 
 ### 5.2 Cakupan Pengujian per Lapisan
 
@@ -390,13 +393,25 @@ Tabel ini sangat baik ditampilkan pada slide presentasi Anda:
 | **Siklus Pembuatan Kontrak** | Mengetik manual di Word, cetak, tanda tangan fisik (2-3 hari) | Penerbitan kontrak digital instan & E-Sign dalam hitungan menit |
 | **Validasi Pembayaran** | Pengecekan mutasi manual via buku rekening tabungan | Verifikasi bukti setor 1-klik dengan audit trail staf resmi |
 | **Penerbitan BAST / Surat Jalan** | Dibuat ulang manual oleh admin kantor | Otomatis di-generate dari data transaksi sewa yang disetujui |
+| **Manajemen Media & Aset** | Foto acak berukuran besar (~50 MB) membebani kuota | 50 Foto Armada Asli teroptimasi WebP (~95 KB/foto, hemat 90.2%) + Lazy Loading |
 | **Infrastruktur Hosting** | Komputer lokal XAMPP yang tidak bisa diakses di luar kantor | Edge Network global Cloudflare Workers + TiDB Cloud Serverless |
 
 ---
 
-## 9. TIPS & TRIK MENGHADAPI SIDANG
+## 9. DOKUMENTASI TEKNIS PENDUKUNG (RUJUKAN LANJUTAN)
 
-1. **Gunakan Tombol Demo 1-Click**: Jangan buang waktu mengetik username dan password secara manual saat demo di hadapan penguji. Manfaatkan tombol chip cepat yang telah disediakan di layar Login.
-2. **Kuasai Alur Relasi Data**: Pahami bahwa permohonan sewa (`rentals`) melahirkan kontrak digital (`contracts`), yang kemudian menghasilkan tagihan pembayaran (`payments`), dan setelah lunas unit dimobilisasi dengan Berita Acara (`reports`).
+Bagi pendalaman materi sidang komprehensif, silakan pelajari dokumen teknis pendamping berikut:
+1. **[PANDUAN_OPTIMASI_ASSET.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/docs/PANDUAN_OPTIMASI_ASSET.md)**: Rincian teknis kompresi citra citra WebP armada, integrasi modul `sharp`, dan analisis Largest Contentful Paint (LCP).
+2. **[FAQ_SIDANG_SKRIPSI_LENGKAP.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/docs/FAQ_SIDANG_SKRIPSI_LENGKAP.md)**: Bank 15+ soal kritis dosen penguji (Haversine formula, Regresi Linear Hour Meter, V8 Isolates vs Node.js, ACID TiDB Cloud).
+3. **[DATABASE_TIDB.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/DATABASE_TIDB.md)**: Skema DDL 9 tabel relasional dan konfigurasi HTTPS tunnel TiDB Cloud Serverless.
+4. **[DEPLOYMENT_GUIDE.md](file:///c:/xampp/htdocs/PT.%20SURYA%20BANGUN%20SARANA%20BANJARMASIN/DEPLOYMENT_GUIDE.md)**: Alur otomasi CI/CD dari GitHub ke Cloudflare Workers edge runtime.
+
+---
+
+## 10. TIPS & TRIK MENGHADAPI SIDANG
+
+1. **Kuasai Alur Relasi Data**: Pahami bahwa permohonan sewa (`rentals`) melahirkan kontrak digital (`contracts`), yang kemudian menghasilkan tagihan pembayaran (`payments`), dan setelah lunas unit dimobilisasi dengan Berita Acara (`reports`).
+2. **Tunjukkan Efisiensi Edge & WebP**: Jelaskan bahwa halaman katalog memuat 50 armada berukuran di bawah 5 MB total berkat kompresi WebP dan atribut `loading="lazy"`.
+3. **Posisikan Diri sebagai Engineer Solutif**: Jika dosen menguji dengan skenario ekstrem (misal internet mati di tambang), tunjukkan modul antrean mutasi **Offline Queue FIFO** (`offlineQueue.test.mjs`) yang menjaga transaksi tetap tersimpan lokal di browser.
 3. **Pertahankan Ketenangan**: Jika dosen meminta mengubah data, tunjukkan fitur **Edit Unit** atau **Buat Booking Baru**. Seluruh tombol telah diuji dan berfungsi secara reaktif tanpa perlu me-refresh halaman browser.
 4. **Tunjukkan URL Live**: Di akhir sesi, tunjukkan bahwa aplikasi bukan hanya sekadar berjalan di `localhost`, melainkan telah aktif online di `https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev`.

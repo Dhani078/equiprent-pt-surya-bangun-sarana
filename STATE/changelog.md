@@ -270,3 +270,11 @@
   - Matriks DEFAULT-DENY (rbac.ts): endpoint tak terdaftar -> tolak.
 - Data-leak audit (STATE/audit_leak.py): customer id=9 hanya melihat customer_id {9} di rentals/payments/contracts, dan hanya 3 unitnya (1,2,25) di /api/gps (5 dari 55 titik). Tidak ada bocor data pelanggan lain.
 - Source audit: 0 string concatenation SQL, 0 secret ter-ekspos di src, 35 endpoint terdaftar di RBAC_MATRIX + PUBLIC_API_PATHS.
+
+## Siklus 93 — 2026-09-30 — Aset Visual 50 Armada WebP & Edge Production
+- Penyelesaian penuh ISSUE-I002: seluruh 50 unit pada STATE/unit_prompts.json memiliki foto fotorealistik asli di public/images/units/ (Komatsu, CAT, Hitachi, Kobelco, Sany, Tadano, Kato, Sakai, Bomag, Dynapac, Shantui, SDLG).
+- Pipeline WebP (scripts/optimize_units_webp.mjs) via modul sharp: ukuran berkurang dari 49.83 MB menjadi 4.90 MB (penghematan bandwidth 90.2%, rata-rata ~95 KB per unit).
+- Integrasi stitchAssets.ts: penambahan resolveEquipmentThumbnail() dan fallback cerdas getEquipmentCategoryFallback().
+- Lazy loading (loading="lazy") diimplementasikan pada CatalogTab, EquipmentCardGrid, EquipmentTable, dan RentBookingModal.
+- Quality Gate: npm run build lolos (6.23s), 30/30 test suite lulus (1.552+ asersi), deployment live Cloudflare Workers berhasil terunggah (HTTP 200 OK pada webp edge asset). Commit 229f0de.
+
