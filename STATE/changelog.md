@@ -260,3 +260,13 @@
   - PWA: link manifest 1, name "EquipRent MS — PT. Surya Bangun Sarana", serviceWorker AKTIF (sw.js), ikon 192/512 HTTP 200.
   - Toggle bahasa ID->EN jalan (tombol navbar-lang), dark mode aktif (dataset.theme=dark), 0 overflow, 0 konsol exception.
   - Vision check dashboard gelap: kontras baik, alert "3 unit perlu perhatian", stat cards (Rp 2.64 M / 50 Units / 42 Contracts) rapi.
+## Siklus 92 — 2026-09-30 — Ideation: Bug Hunt + Security Audit + Data-Leak
+- Bug hunt API (STATE/bug_hunt_api.py), 18 kasus input ekstrem: 0 BUG.
+  - login kosong/tanpa password -> 400 VALIDATION_ERROR; password 5000 char -> 401 BAD_PASSWORD.
+  - SQLi (`admin' OR 1=1--`) -> 401; XSS `<script>` di type -> 400; HM/harga negatif -> 400; tanggal invalid -> abaikan filter (aman).
+  - `/api/equipments/abc` & `/api/users/me` -> 200 HTML index (SPA catch-all; bukan kebocoran karena tidak ada data API, hanya shell React).
+- Security audit RBAC (STATE/audit_rbac.py): 14 endpoint x 3 role.
+  - 6x 403 terverifikasi: customer di-blok /api/reports, /api/reports/analytics, /api/maintenance, /api/audit-log, /api/dashboard/*, /api/users. staff diblok /api/users & /api/audit-log.
+  - Matriks DEFAULT-DENY (rbac.ts): endpoint tak terdaftar -> tolak.
+- Data-leak audit (STATE/audit_leak.py): customer id=9 hanya melihat customer_id {9} di rentals/payments/contracts, dan hanya 3 unitnya (1,2,25) di /api/gps (5 dari 55 titik). Tidak ada bocor data pelanggan lain.
+- Source audit: 0 string concatenation SQL, 0 secret ter-ekspos di src, 35 endpoint terdaftar di RBAC_MATRIX + PUBLIC_API_PATHS.
