@@ -92,6 +92,7 @@ Seluruh berkas >600 baris dipecah menjadi paket modul terfokus. **Tidak ada tand
 | `staff/StaffDashboard.tsx` | 761 → 587 | `staff/components/DueNotificationPanel.tsx`, `staff/components/PaymentProofViewerModal.tsx` |
 | `components/ContractPanel.tsx` | 760 → 538 | `contract/ContractSignModal.tsx`, `contract/ContractIssueModal.tsx`, `contract/ContractRenewModal.tsx` |
 | `pages/Login.tsx` | 696 → 533 | `login/RegisterModal.tsx` |
+| `server/index.ts` | 423 → 70 | `server/middleware.ts` (CORS+security+auth/RBAC+health+error), `server/rateLimit.ts`, `server/authRoutes.ts` (login+change-password) |
 
 ### c. Fitur baru terkait kontrak
 - `POST /api/contracts/:id/renew` — perpanjang kontrak kedaluwarsa (ADMIN/STAFF saja; tolak `409` bila kontrak sudah ditandatangani, `400` bila tanggal tidak nyata).
