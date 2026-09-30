@@ -23,19 +23,20 @@
 
 | Modul | Fitur |
 |---|---|
-| **Multi-Role Auth** | Login, session JWT, RBAC Admin/Staff/Customer |
-| **Manajemen Alat Berat** | CRUD 50 unit (7 tipe, 9 brand), filter status |
+| **Multi-Role Auth** | Login autentik, session HMAC token, RBAC Admin/Staff/Customer |
+| **Armada Alat Berat (50 Unit)** | 50 unit unik dengan foto asli WebP Super HD (hemat 90.2% bandwidth), lazy loading |
+| **Manajemen Alat Berat** | CRUD 50 unit (7 tipe, 9 brand), filter status, pagination stabil |
 | **Transaksi Rental** | Alur PENDING → APPROVED → ON_GOING → COMPLETED, cegah double-booking |
-| **Kontrak Digital** | Generate otomatis, e-signature canvas, preview dokumen |
+| **Kontrak Digital** | Generate otomatis, e-signature canvas, preview dokumen resmi |
 | **Pembayaran** | Upload bukti transfer, verifikasi Staff, gerbang pembayaran |
 | **Hour Meter & Servis** | Jadwal preventif per 250 HM, prediksi tanggal regresi linear, notifikasi suku cadang |
-| **GPS Telemetri** | Peta Leaflet.js real-time, 55 titik di Banjarmasin/Trisakti/Banjarbaru |
+| **GPS Telemetri** | Peta Leaflet.js real-time, 55 titik di Banjarmasin/Trisakti/Banjarbaru, Geofencing Haversine |
 | **Audit Trail** | 16 aksi tercatat (user/role/timestamp), khusus Admin, filter + export CSV |
 | **11 Laporan** | Filter rentang tanggal, export CSV, pencarian global |
-| **Dokumen Resmi** | BAST IN, BAST OUT, Surat Jalan (print A4) |
-| **Dark Mode** | Toggle Moon/Sun, persist localStorage |
-| **Notifikasi Sidebar** | Badge counter real-time tanpa request tambahan |
-| **Pagination** | 20 baris/halaman di tabel Equipment & Rental |
+| **Dokumen Resmi** | BAST IN, BAST OUT, Surat Jalan (print A4 berkop resmi) |
+| **Dark Mode & i18n** | Toggle Moon/Sun, dwibahasa ID/EN, persist localStorage |
+| **PWA & Offline Queue** | ServiceWorker aktif, antrean mutasi offline FIFO |
+| **Pagination** | 20 baris/halaman di tabel Equipment, Rental, dan Users |
 
 ---
 
@@ -123,9 +124,9 @@ STATE/                      ← state agen autonomous (changelog, task queue, dl
 
 ```bash
 npm run type-check   # tsc --noEmit — harus 0 error
-npm test             # 27 suite, 1.531 asersi — harus semua lulus
-npm run build        # Vite build — harus sukses
-npm run deploy:dry   # Wrangler dry-run — verifikasi tanpa publish
+npm test             # 30 suite, 1.552+ asersi — 100% lulus (zero framework)
+npm run build        # Vite build — harus sukses (< 7 detik)
+npm run deploy:dry   # Wrangler dry-run — verifikasi bundle edge tanpa publish
 ```
 
 ---

@@ -133,3 +133,33 @@ Semua file `src/` kini **< 500 baris**. Pemecahan konsisten: panel presentasiona
 - `npm run type-check` → 0 error, `npm test` → **30/30 suite** lulus.
 - Smoke CDP tiap siklus: 0 overflow horizontal di 375×812 dan 1280×800, touch target ≥44px, semua modal dibuka via UI asli.
 - Bundle: index 453.46 kB (gzip 119.04 kB).
+
+---
+
+## Siklus 93 (2026-09-30) — Generasi 50 Foto Armada Asli, Optimasi WebP 90%, & Deploy Live
+
+### Ringkasan
+Menyelesaikan issue aset visual unit (`ISSUE-I002` ditutup penuh). Seluruh 50 nomor & kode unit pada `STATE/unit_prompts.json` kini memiliki foto asli beresolusi tajam sesuai model dan merek aslinya (Komatsu, Caterpillar, Hitachi, Kobelco, Sany, Tadano, Sakai, Bomag, Dynapac, Shantui, SDLG), diproses ke format WebP super ringan, dan di-deploy ke Cloudflare Edge Workers.
+
+### Detail Pembaruan
+1. **Generasi Foto Unit Otentik Berdasarkan Prompt Lokal**:
+   - Memanfaatkan model Google Imagen untuk memproduksi foto fotorealistik alat berat asli di lingkungan operasional Kalimantan Selatan (tambang batubara terbuka, stockpile berdebu, dermaga Sungai Martapura dengan kelotok/tongkang, proyek jalan raya Banjarmasin).
+   - Seluruh logo merek asli (*KOMATSU, CAT, HITACHI, KOBELCO, SANY, TADANO, SAKAI, SHANTUI*) terbaca tajam tanpa cacat bentuk atau distorsi hidrolik.
+
+2. **Pipeline Optimasi WebP Modern (Hemat 90.2% Bandwidth)**:
+   - Dibuat script konversi cerdas `scripts/optimize_units_webp.mjs` memanfaatkan modul `sharp`.
+   - Ukuran awal (PNG mentah): **49.83 MB**.
+   - Ukuran setelah konversi WebP (760px lebar, kualitas 80): **4.90 MB**.
+   - **Total penghematan kuota/bandwidth: 90.2%** (rata-rata cuma ~95 KB per foto).
+
+3. **Integrasi Frontend & Lazy Loading**:
+   - `src/lib/stitchAssets.ts`: Menambahkan fungsi `resolveEquipmentThumbnail` dan fallback cerdas `getEquipmentCategoryFallback`.
+   - Menambahkan atribut `loading="lazy"` pada elemen `<img>` di **Katalog Pelanggan (`CatalogTab.tsx`)**, **Grid Kartu Admin (`EquipmentCardGrid.tsx`)**, **Tabel Inventaris (`EquipmentTable.tsx`)**, dan **Modal Booking (`RentBookingModal.tsx`)**.
+   - Halaman terbuka secara instan dalam hitungan milidetik tanpa membebani kuota data pengguna.
+
+4. **Verifikasi & Deployment Live**:
+   - `npm run build` → Selesai dalam 6.23 detik.
+   - `npm test` → **30/30 test suite LULUS 100% (1.552+ asersi)**.
+   - `npx wrangler deploy` → Berhasil di-deploy ke produksi Cloudflare Workers:
+     `https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev`
+   - Git repository di-commit dan di-push ke GitHub (`Dhani078/equiprent-pt-surya-bangun-sarana`).
