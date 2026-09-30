@@ -239,3 +239,8 @@
 - p3 refactor: auth.ts 525 -> 41. Pecah ke src/lib/auth/: password (334: PBKDF2 + akun demo + util encoding), session (299: HMAC token + konfigurasi secret), rbac (86: matriks default-deny). auth.ts jadi re-export barrel; konsumen (store/internal, store/users, server/context) tidak diubah. tsc 0; 30/30. Build index 453.46 kB (gzip 119.04). Deploy 3447d853-fc50-4d67-a787-5a4fa85b35e4. Smoke STATE/smoke_auth_92.py: login admin/admin via UI -> masuk aplikasi, ovf=0.
 
 - Status target: SELURUH file src < 500 baris. Terbesar: ReportAnalyticsPanel 497, fleetTelemetry 484, EquipmentManagement 472, server/routes/rentals 464. Total src 32.021 baris.
+## Siklus 89 — 2026-09-30
+- Refactor: src/server/index.ts 423 -> 70 baris. Middleware (CORS, security headers, auth+RBAC, health, error handler) -> middleware.ts (184); rate limit login -> rateLimit.ts (31); route login+change-password -> authRoutes.ts (169).
+- Import context yang tak terpakai dibersihkan; urutan pipeline tetap (error handler -> CORS -> security -> auth/RBAC).
+- Deploy Version 4f82a24f-3d1d-4eeb-9fa7-a2377527c4af. tsc 0; npm test 30/30; build 5.47s.
+- verify_89_server.py production: health online db=True mode=TIDB; login admin 200; login salah 401 BAD_PASSWORD (anti enumeration); tanpa token 401 MALFORMED; customer -> /api/users 403 FORBIDDEN (RBAC ketat); admin /api/equipments 200 (50 unit); change-password: pw lama salah 401, password pendek 400 VALIDATION_ERROR.
