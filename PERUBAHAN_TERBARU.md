@@ -163,3 +163,43 @@ Menyelesaikan issue aset visual unit (`ISSUE-I002` ditutup penuh). Seluruh 50 no
    - `npx wrangler deploy` → Berhasil di-deploy ke produksi Cloudflare Workers:
      `https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev`
    - Git repository di-commit dan di-push ke GitHub (`Dhani078/equiprent-pt-surya-bangun-sarana`).
+
+
+---
+
+## 6. Siklus 94 (2026-10-05) — Audit Final Tata Letak, Desain, Tombol & Filter
+
+Audit CDP production penuh (chrome headless) terhadap aplikasi live: **3 role (admin/staff/customer) × 20 halaman × 2 viewport (1280px PC, 390px HP)**.
+
+### Bug ditemukan & diperbaiki
+
+1. **Kelas CSS mati `.form-input`** — 5 input pada Katalog portal pelanggan (kolom cari, filter kategori, urutkan, tanggal mulai/selesai sewa) memakai kelas yang tidak pernah didefinisikan di `src/index.css`. Akibat: input render polos setinggi ~20px, jauh di bawah lantai sentuh 44px.
+   - Fix: definisi `.form-input` lengkap (padding, border, radius, focus ring) + override dark mode.
+   - Verified DOM: seluruh 5 input sekarang **44px** di mobile.
+
+2. **StatCard: subtitle terjepit badge** — baris subtitle+badge memakai `justify-content: space-between` tanpa wrap. Badge 115px menggerus subtitle menjadi hanya **66px** sehingga teks "8 siap sewa, 40 tersewa, 2 dalam servis" terpotong vertikal menjadi 4-5 baris pecahan.
+   - Fix: `flexWrap: wrap` + subtitle `flex: 1 1 auto; minWidth: 0` pada `src/components/StatCard.tsx`.
+   - Verified DOM: subtitle **189px** penuh, tinggi 8 kartu statistik seragam (197/197/…).
+
+3. **Lantai sentuh input/select** — media query mobile hanya mencakup `button` dan `[role=tab]`; semua kolom pencarian & dropdown filter berukuran 35-40px di HP.
+   - Fix: `header input, main input, header select, main select { min-height: 44px }`.
+
+### Verifikasi production (0 masalah tersisa)
+
+| Aspek | Hasil |
+|---|---|
+| Overflow horizontal | **0 px** di 20 halaman (PC & HP) |
+| Filter pencarian | Transaksi 20→0→reset 20; Pengguna 20→0→20; Inventaris 26→6→26; Laporan 100→50→100; Audit 5→0→5 |
+| Filter select | Nilai bebas dipakai, reset kembali ke jumlah semula |
+| Tombol aksi | 28 tombol (Selesai/Mobilisasi/Tolak) render & fungsional |
+| Modal | Jadwalkan Servis, Tambah Pengguna, Register Pelanggan — buka/tutup riil, layout bersih |
+| GPS | Peta Leaflet 40 marker + popup; 0 line-through, 0 overlap daftar armada |
+| Dark mode | 0 kontras gagal, 0 elemen putih mentah (9 halaman admin) |
+| Gambar unit | 0 broken image di seluruh halaman |
+| Paginator | 44px di mobile |
+
+### Gate & deploy
+- `tsc` → **0 error**
+- `npm run build` → 5.87 dtk (index 453.77 kB, gzip 119.18)
+- `npm test` → **30/30 suite lulus** (1.552+ asersi, 0 FAIL)
+- `wrangler deploy` → **Version `6a24e75c-4cc5-4976-b962-8990612c3805`** di https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev

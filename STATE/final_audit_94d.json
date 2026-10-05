@@ -1,0 +1,356 @@
+{
+ "interactions": [
+  {
+   "page": "Dashboard Utama",
+   "vp": "1280x800",
+   "search": {
+    "found": 1,
+    "before": 3,
+    "after": 3,
+    "empty": false,
+    "reset_back": 3
+   },
+   "select": {
+    "found": 1,
+    "before": 3,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Dashboard Utama",
+   "vp": "390x844",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Dashboard Utama",
+   "vp": "1280x800",
+   "buttons": {
+    "candidates": 5,
+    "clicked": null
+   }
+  },
+  {
+   "page": "Inventaris Alat Berat",
+   "vp": "1280x800",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Inventaris Alat Berat",
+   "vp": "390x844",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Inventaris Alat Berat",
+   "vp": "1280x800",
+   "buttons": {
+    "candidates": 5,
+    "clicked": null
+   }
+  },
+  {
+   "page": "Transaksi Penyewaan",
+   "vp": "1280x800",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Transaksi Penyewaan",
+   "vp": "390x844",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Transaksi Penyewaan",
+   "vp": "1280x800",
+   "buttons": {
+    "candidates": 5,
+    "clicked": null
+   }
+  },
+  {
+   "page": "Perawatan & Servis",
+   "vp": "1280x800",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Perawatan & Servis",
+   "vp": "390x844",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Perawatan & Servis",
+   "vp": "1280x800",
+   "buttons": {
+    "candidates": 5,
+    "clicked": null
+   }
+  },
+  {
+   "page": "Pelacakan GPS",
+   "vp": "1280x800",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Pelacakan GPS",
+   "vp": "390x844",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Pelacakan GPS",
+   "vp": "1280x800",
+   "buttons": {
+    "candidates": 5,
+    "clicked": null
+   }
+  },
+  {
+   "page": "Laporan & Dokumen",
+   "vp": "1280x800",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Laporan & Dokumen",
+   "vp": "390x844",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Laporan & Dokumen",
+   "vp": "1280x800",
+   "buttons": {
+    "candidates": 5,
+    "clicked": null
+   }
+  },
+  {
+   "page": "Manajemen Pengguna",
+   "vp": "1280x800",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Manajemen Pengguna",
+   "vp": "390x844",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Manajemen Pengguna",
+   "vp": "1280x800",
+   "buttons": {
+    "candidates": 5,
+    "clicked": null
+   }
+  },
+  {
+   "page": "Audit Trail",
+   "vp": "1280x800",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Audit Trail",
+   "vp": "390x844",
+   "search": {
+    "found": 1,
+    "before": 0,
+    "after": 0,
+    "empty": false,
+    "reset_back": 0
+   },
+   "select": {
+    "found": 1,
+    "before": 0,
+    "after": 3,
+    "opts": 4,
+    "reset_back": 0
+   }
+  },
+  {
+   "page": "Audit Trail",
+   "vp": "1280x800",
+   "buttons": {
+    "candidates": 5,
+    "clicked": null
+   }
+  }
+ ]
+}
