@@ -102,14 +102,14 @@ export const StatCard: React.FC<StatCardProps> = ({
         {value}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)', marginTop: '2px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)', marginTop: '2px', flexWrap: 'wrap' }}>
         {subtitle && (
-          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-secondary)' }}>
+          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-secondary)', flex: '1 1 auto', minWidth: 0 }}>
             {t(subtitle)}
           </span>
         )}
         {badgeText && (
-          <span className={`badge badge-${badgeType}`} style={{ fontSize: '11px', padding: '2px 8px', flexShrink: 0 }}>
+          <span className={`badge badge-${badgeType}`} style={{ fontSize: '11px', padding: '2px 8px', flexShrink: 0, flex: '0 0 auto' }}>
             {t(badgeText)}
           </span>
         )}

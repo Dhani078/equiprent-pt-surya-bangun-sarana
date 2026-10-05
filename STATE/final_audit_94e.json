@@ -1,0 +1,151 @@
+{
+ "interactions": [
+  {
+   "page": "Dashboard Utama",
+   "vp": "1280x800",
+   "nav": "MISSING",
+   "probe": {
+    "search_found": 1,
+    "rows_before": 0,
+    "rows_after_fake": 0,
+    "empty_state_shown": false,
+    "rows_after_reset": 0,
+    "selects": 2,
+    "sel_changed": 6,
+    "rows_after_select": 0,
+    "rows_after_sel_reset": 0,
+    "buttons": 5
+   }
+  },
+  {
+   "page": "Inventaris Alat Berat",
+   "vp": "1280x800",
+   "nav": "MISSING",
+   "probe": {
+    "search_found": 1,
+    "rows_before": 0,
+    "rows_after_fake": 0,
+    "empty_state_shown": false,
+    "rows_after_reset": 0,
+    "selects": 2,
+    "sel_changed": 6,
+    "rows_after_select": 0,
+    "rows_after_sel_reset": 0,
+    "buttons": 5
+   }
+  },
+  {
+   "page": "Transaksi Penyewaan",
+   "vp": "1280x800",
+   "nav": "MISSING",
+   "probe": {
+    "search_found": 1,
+    "rows_before": 0,
+    "rows_after_fake": 0,
+    "empty_state_shown": false,
+    "rows_after_reset": 0,
+    "selects": 2,
+    "sel_changed": 6,
+    "rows_after_select": 0,
+    "rows_after_sel_reset": 0,
+    "buttons": 5
+   }
+  },
+  {
+   "page": "Perawatan & Servis",
+   "vp": "1280x800",
+   "nav": "MISSING",
+   "probe": {
+    "search_found": 1,
+    "rows_before": 0,
+    "rows_after_fake": 0,
+    "empty_state_shown": false,
+    "rows_after_reset": 0,
+    "selects": 2,
+    "sel_changed": 6,
+    "rows_after_select": 0,
+    "rows_after_sel_reset": 0,
+    "buttons": 5
+   }
+  },
+  {
+   "page": "Laporan & Dokumen",
+   "vp": "1280x800",
+   "nav": "MISSING",
+   "probe": {
+    "search_found": 1,
+    "rows_before": 0,
+    "rows_after_fake": 0,
+    "empty_state_shown": false,
+    "rows_after_reset": 0,
+    "selects": 2,
+    "sel_changed": 6,
+    "rows_after_select": 0,
+    "rows_after_sel_reset": 0,
+    "buttons": 5
+   }
+  },
+  {
+   "page": "Manajemen Pengguna",
+   "vp": "1280x800",
+   "nav": "MISSING",
+   "probe": {
+    "search_found": 1,
+    "rows_before": 0,
+    "rows_after_fake": 0,
+    "empty_state_shown": false,
+    "rows_after_reset": 0,
+    "selects": 2,
+    "sel_changed": 6,
+    "rows_after_select": 0,
+    "rows_after_sel_reset": 0,
+    "buttons": 5
+   }
+  },
+  {
+   "page": "Audit Trail",
+   "vp": "1280x800",
+   "nav": "MISSING",
+   "probe": {
+    "search_found": 1,
+    "rows_before": 0,
+    "rows_after_fake": 0,
+    "empty_state_shown": false,
+    "rows_after_reset": 0,
+    "selects": 2,
+    "sel_changed": 6,
+    "rows_after_select": 0,
+    "rows_after_sel_reset": 0,
+    "buttons": 5
+   }
+  },
+  {
+   "page": "Transaksi",
+   "modal_test": {
+    "clicked": null,
+    "total": 5
+   }
+  },
+  {
+   "page": "Laporan",
+   "modal_test": {
+    "clicked": null,
+    "total": 5
+   }
+  },
+  {
+   "page": "Users",
+   "modal_test": {
+    "clicked": null,
+    "total": 5
+   }
+  },
+  {
+   "page": "Servis",
+   "modal_test": {
+    "clicked": null,
+    "total": 5
+   }
+  }
+ ]
+}

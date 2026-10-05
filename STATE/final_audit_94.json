@@ -1,0 +1,106 @@
+{
+ "start": "2026-10-05 12:50:51",
+ "pages": [
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Dashboard",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Dashboard",
+   "vp": "390x844"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Inventaris",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Inventaris",
+   "vp": "390x844"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Transaksi",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Transaksi",
+   "vp": "390x844"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Kontrak",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Kontrak",
+   "vp": "390x844"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Servis",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Servis",
+   "vp": "390x844"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:GPS",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:GPS",
+   "vp": "390x844"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Pengguna",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Pengguna",
+   "vp": "390x844"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Laporan",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Laporan",
+   "vp": "390x844"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Pengaturan",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Pengaturan",
+   "vp": "390x844"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Audit",
+   "vp": "1280x800"
+  },
+  {
+   "__err__": "Uncaught SyntaxError: missing ) after argument list",
+   "name": "ADMIN:Audit",
+   "vp": "390x844"
+  }
+ ],
+ "end": "2026-10-05 12:51:39"
+}

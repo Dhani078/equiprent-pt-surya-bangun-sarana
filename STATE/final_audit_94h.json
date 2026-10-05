@@ -1,0 +1,27 @@
+{
+ "staff_login": true,
+ "staff_navs": [
+  "Dashboard Utama",
+  "Inventaris Alat Berat",
+  "Transaksi Penyewaan",
+  "Perawatan & Servis14",
+  "Pelacakan GPS Telemetri",
+  "Laporan & Dokumen",
+  "Manajemen Pengguna",
+  "Audit Trail",
+  "Pengaturan Sistem"
+ ],
+ "staff_ovf": 0,
+ "staff_rows": 5,
+ "staff_Approval_rows": 5,
+ "staff_Approval_ovf": 0,
+ "staff_Kontrak_rows": 5,
+ "staff_Kontrak_ovf": 0,
+ "register_open": "Daftar Akun Pelangga",
+ "register_modal": "no-dialog",
+ "register_ovf": 0,
+ "dark_persist": {
+  "after_toggle": "light",
+  "after_reload": "light"
+ }
+}

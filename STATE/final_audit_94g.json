@@ -1,0 +1,83 @@
+{
+ "Dashboard Utama": {
+  "contrast": {
+   "theme": "dark",
+   "contrast_fail": [],
+   "raw_white": []
+  },
+  "shot": "audit_94_dark_dashboard.jpg",
+  "ovf": 0
+ },
+ "Inventaris Alat Berat": {
+  "contrast": {
+   "theme": "dark",
+   "contrast_fail": [],
+   "raw_white": []
+  },
+  "shot": "audit_94_dark_inventaris.jpg",
+  "ovf": 0
+ },
+ "Transaksi Penyewaan": {
+  "contrast": {
+   "theme": "dark",
+   "contrast_fail": [],
+   "raw_white": []
+  },
+  "shot": "audit_94_dark_transaksi.jpg",
+  "ovf": 0
+ },
+ "Perawatan & Servis": {
+  "contrast": {
+   "theme": "dark",
+   "contrast_fail": [],
+   "raw_white": []
+  },
+  "shot": "audit_94_dark_perawatan.jpg",
+  "ovf": 0
+ },
+ "Pelacakan GPS": {
+  "contrast": {
+   "theme": "dark",
+   "contrast_fail": [],
+   "raw_white": []
+  },
+  "shot": "audit_94_dark_pelacakan.jpg",
+  "ovf": 0
+ },
+ "Laporan & Dokumen": {
+  "contrast": {
+   "theme": "dark",
+   "contrast_fail": [],
+   "raw_white": []
+  },
+  "shot": "audit_94_dark_laporan.jpg",
+  "ovf": 0
+ },
+ "Manajemen Pengguna": {
+  "contrast": {
+   "theme": "dark",
+   "contrast_fail": [],
+   "raw_white": []
+  },
+  "shot": "audit_94_dark_manajemen.jpg",
+  "ovf": 0
+ },
+ "Pengaturan Sistem": {
+  "contrast": {
+   "theme": "dark",
+   "contrast_fail": [],
+   "raw_white": []
+  },
+  "shot": "audit_94_dark_pengaturan.jpg",
+  "ovf": 0
+ },
+ "Audit Trail": {
+  "contrast": {
+   "theme": "dark",
+   "contrast_fail": [],
+   "raw_white": []
+  },
+  "shot": "audit_94_dark_audit.jpg",
+  "ovf": 0
+ }
+}

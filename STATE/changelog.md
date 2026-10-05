@@ -278,3 +278,30 @@
 - Lazy loading (loading="lazy") diimplementasikan pada CatalogTab, EquipmentCardGrid, EquipmentTable, dan RentBookingModal.
 - Quality Gate: npm run build lolos (6.23s), 30/30 test suite lulus (1.552+ asersi), deployment live Cloudflare Workers berhasil terunggah (HTTP 200 OK pada webp edge asset). Commit 229f0de.
 
+## Siklus 94 — 2026-10-05 — Audit Final Tata Letak, Desain, Tombol & Filter (3 role, mobile+desktop)
+
+Audit CDP production penuh via chrome headless :9222 pada app live (TiDB mode=TIDB).
+
+### Bug ditemukan & diperbaiki
+1. **Kelas CSS mati `.form-input`** — 5 input Katalog portal pelanggan (cari, kategori, urutkan, mulai/selesai sewa) memakai kelas yang TIDAK PERNAH didefinisikan di index.css → render polos tinggi ~20px, menembus lantai sentuh 44px. Fix: tambah definisi `.form-input` (+ override dark mode) di src/index.css. Verified DOM: tinggi 44px semua.
+2. **StatCard subtitle terjepit** — baris subtitle+badge pakai `justify-content: space-between` tanpa wrap, sehingga badge 115px menggerus subtitle jadi 66px ("8 siap sewa, 40 tersewa, 2 dal…"). Fix: `flexWrap: wrap` + subtitle `flex: 1 1 auto; minWidth: 0` di StatCard.tsx. Verified DOM: subtitle 189px penuh, tinggi kartu seragam (197/197/…).
+3. **Lantai sentuh input/select** — media query mobile hanya mencakup button/[role=tab]; semua kolom cari & penyaring 35–40px di HP. Fix: `header input, main input, header select, main select { min-height: 44px }` di index.css.
+
+### Verifikasi production (0 masalah tersisa)
+- **Overflow horizontal 0** di 20 halaman: 9 nav admin + sub-tab Kontrak Digital + 3 sub-tab staff + 5 tab portal pelanggan, desktop 1280x800 & mobile 390x844.
+- **Filter cari** (kata kunci fake ZZZZ): Transaksi 20→0→reset 20; Pengguna 20→0→reset 20; Inventaris (kartu) 26→6→reset 26; Laporan 100→50→reset 100; Audit 5→0→reset 5. Select filter: nilai bebas, reset kembali.
+- **Tombol & modal**: 28 tombol aksi (Selesai/Mobilisasi/Tolak) render; modal Jadwalkan Perawatan & Pendaftaran Pengguna Baru buka/tutup riil; modal Register pelanggan lengkap (nama, perusahaan, WhatsApp, hak akses, Ajukan Akses) — vision konfirmasi layout bersih.
+- **GPS**: Leaflet map render 40 marker + popup detail unit; 0 line-through, 0 overlap daftar armada (klaim vision JPEG tak terbukti di DOM — bounding box presisi).
+- **Dark mode**: 0 kontras gagal, 0 elemen putih mentah di 9 halaman admin; katalog pelanggan dark bersih (input/select/date tertema).
+- **Gambar**: deadimg=0 di seluruh halaman (perbaikan siklus 93 bertahan).
+- **Paginator** 44px di mobile (fix siklus 91 bertahan).
+
+### Gate
+- tsc 0 error; build 5.87s (index 453.77 kB, gzip 119.18); 30/30 suite lulus (37+105+62+41+5+29+21 PASS, 0 FAIL).
+- Deploy: `76e5db1a` (fix .form-input) → `6a24e75c` (fix StatCard). Production https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev.
+
+### Catatan tooling
+- Endpoint `/json/new` Chrome modern = 405; pakai `/json/list` target pertama + Page.navigate.
+- React controlled input: `el.value=` mentah tidak memicu state — wajib native setter `Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set` + dispatchEvent.
+- `node tests/run-tests.mjs` melalui terminal tool terbatas pada stdout sesi; redirect ke file dulu untuk baca hasil.
+- Notifikasi background lama (proc_140554e7f33f = final_audit_94.py versi bermasalah) sudah usang — diganti final_audit_94b..94h.

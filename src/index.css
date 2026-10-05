@@ -194,6 +194,31 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
+/* Kelas input panel portal pelanggan — sebelumnya hanya dipakai tanpa
+   definisi, sehingga kolom cari & penyaring katalog tak bergaya sama sekali
+   (tinggi ~20px, menembus lantai sentuh 44px). */
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-family: var(--font-primary);
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-eight);
+  background-color: var(--color-surface);
+  color: #1E293B;
+  transition: var(--transition-base);
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+html[data-theme="dark"] .form-input {
+  background-color: #162032 !important;
+  border-color: #2D3F55 !important;
+  color: #E2E8F0 !important;
+}
+
 .input-premium {
   width: 100%;
   padding: 10px 14px;
@@ -572,6 +597,14 @@ table.data-table tbody tr:hover {
   .app-sidebar nav button {
     min-height: 44px;
     min-width: 44px;
+  }
+  /* Lantai sentuh input/select — sebelumnya hanya button yang tercakup,
+     sehingga kolom cari & penyaring cuma 35-40px di HP. */
+  header input,
+  main input,
+  header select,
+  main select {
+    min-height: 44px;
   }
 }
 

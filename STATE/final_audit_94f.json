@@ -1,0 +1,145 @@
+[
+ {
+  "page": "Dashboard Utama",
+  "nav": "ok",
+  "probe": {
+   "before": 5,
+   "after_fake": 5,
+   "empty": false,
+   "back": 5,
+   "selects": 0,
+   "buttons": 8
+  }
+ },
+ {
+  "page": "Inventaris Alat Berat",
+  "nav": "ok",
+  "probe": {
+   "before": 0,
+   "after_fake": 0,
+   "empty": false,
+   "back": 0,
+   "selects": 2,
+   "sel_opts": 8,
+   "rows_after_sel": 0,
+   "rows_after_sel_reset": 0,
+   "buttons": 29
+  },
+  "modal_tambah unit": {
+   "clicked": null,
+   "total": 6
+  }
+ },
+ {
+  "page": "Transaksi Penyewaan",
+  "nav": "ok",
+  "probe": {
+   "before": 20,
+   "after_fake": 0,
+   "empty": false,
+   "back": 0,
+   "selects": 1,
+   "sel_opts": 6,
+   "rows_after_sel": 20,
+   "rows_after_sel_reset": 0,
+   "buttons": 39
+  },
+  "modal_selesai": {
+   "clicked": null,
+   "total": 7
+  }
+ },
+ {
+  "page": "Perawatan & Servis",
+  "nav": "ok",
+  "probe": {
+   "before": 51,
+   "after_fake": 51,
+   "empty": false,
+   "back": 51,
+   "selects": 2,
+   "sel_opts": 49,
+   "rows_after_sel": 51,
+   "rows_after_sel_reset": 51,
+   "buttons": 10
+  },
+  "modal_jadwalkan": {
+   "clicked": "Jadwalkan Perawatan",
+   "total": 10,
+   "modal": true,
+   "title": "Jadwalkan Perawatan Alat Berat"
+  }
+ },
+ {
+  "page": "Laporan & Dokumen",
+  "nav": "ok",
+  "probe": {
+   "before": 100,
+   "after_fake": 100,
+   "empty": false,
+   "back": 100,
+   "selects": 3,
+   "sel_opts": 11,
+   "rows_after_sel": 100,
+   "rows_after_sel_reset": 100,
+   "buttons": 163
+  },
+  "modal_buka dokumen": {
+   "clicked": "RNT-SBS-20260526-020",
+   "total": 163,
+   "modal": false,
+   "title": null
+  }
+ },
+ {
+  "page": "Manajemen Pengguna",
+  "nav": "ok",
+  "probe": {
+   "before": 20,
+   "after_fake": 0,
+   "empty": false,
+   "back": 0,
+   "selects": 1,
+   "sel_opts": 4,
+   "rows_after_sel": 20,
+   "rows_after_sel_reset": 0,
+   "buttons": 29
+  },
+  "modal_tambah pengguna": {
+   "clicked": "Tambah Pengguna Baru",
+   "total": 5,
+   "modal": true,
+   "title": "Pendaftaran Pengguna Baru"
+  }
+ },
+ {
+  "page": "Audit Trail",
+  "nav": "ok",
+  "probe": {
+   "before": 5,
+   "after_fake": 5,
+   "empty": false,
+   "back": 5,
+   "selects": 1,
+   "sel_opts": 6,
+   "rows_after_sel": 4,
+   "rows_after_sel_reset": 5,
+   "buttons": 1
+  }
+ },
+ {
+  "page": "Pelacakan GPS",
+  "nav": "ok",
+  "probe": {
+   "before": 0,
+   "after_fake": 0,
+   "empty": false,
+   "back": 0,
+   "selects": 3,
+   "sel_opts": 3,
+   "rows_after_sel": 0,
+   "rows_after_sel_reset": 0,
+   "buttons": 42
+  }
+ }
+]

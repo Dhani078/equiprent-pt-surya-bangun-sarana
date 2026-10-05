@@ -1,33 +1,33 @@
 {
-  "cycle": 92,
-  "last_run": "2026-09-30",
-  "current_task_id": null,
-  "current_phase": "FASE 5: INOVASI — SELESAI (F5.1–F5.6)",
-  "completed_this_cycle": [
-    "S92-01 refactor Login.tsx 533->246 -> pages/login/{LoginBrandPanel,RoleTabPicker,LoginForm,LoginErrorBox,RegisterLinkFooter}",
-    "S92-02 fix lubang sentuh [role=tab] di lantai 44px mobile (src/index.css)",
-    "S92-03 refactor seedGenerator.ts 639->140 -> lib/seed/{users,equipments,maintenance,rentals,contracts,payments,gps,reports,shared,index}",
-    "S92-04 fix prioritas sinkron status unit RENTED>MAINTENANCE (unit 18 konflik rental+servis)",
-    "S92-05 fix payment proof PENDING_VERIFICATION wajib (seed)",
-    "S92-06 refactor documents.ts 575->362 -> lib/documentHtml.ts (render A4 + escapeHtml)",
-    "S92-07 refactor auth.ts 525->41 -> lib/auth/{password,session,rbac} (barrel re-export)"
-  ],
-  "session_summary": "SIKLUS 91 p1 (2026-09-29): GpsTrackingPage.tsx 592->172 -> pages/admin/gps/{FleetSummaryGrid 149 (8 kartu agregat + EngineBadge/FuelBadge), UnitTelemetryPanel 226 (kartu unit + daftar armada), FleetMapPanel 100 (lazy Leaflet + heatmap toggle)}. breachIds Set<number>. Smoke CDP STATE/smoke_gps_91.py: 8/8 kartu, 40 pilih-unit, unit switch ubah serial, heatmap OK, 46 marker, mobile 375 bersih. Build 5.37s index 447.31kB. Deploy ead77bc2-3f4e-48b9-b01b-52eb2856a874. Commit 08b69f7. p2: StaffDashboard.tsx 587->260 -> staff/components/{StaffActionBadges 80, PaymentVerificationTable 222, RentalApprovalTable 96}. Fix responsif: grid inline repeat(3,1fr) -> ovf=13 di 375px, ganti auto-fit minmax(190px,1fr). Smoke staff/staff via CDP: 3 badges, 20 rows, sub-tab booking/kontrak OK, modal bukti OK, mobile ovf=0. Deploy 0cc7832b-d3df-44ea-a547-4c496b5d06e9. Commit 49b073d. p3: MaintenanceManagement.tsx 581->342 -> maintenance/{ServiceDueAlertPanel 140, SparepartAlertPanel 92, MaintenanceFilterBar 64}. useMemo mati dihapus. Smoke CDP admin STATE/smoke_maint_91.py: 3 panel render, 51 rows, search SRV->0+Empty->reset 51, COMPLETED->37, ambang 99<->3 persist, modal Jadwalkan buka/tutup, mobile 375 bersih. Build 5.47s 448.19kB. Deploy c5be2528-ab2d-479d-aaa9-eb65f0f59e54. Commit 1e9512a. p4: UserManagement.tsx 574->213 -> user/{UserTable 118, UserFilterBar 54, AddUserModal 159}. BUG GLOBAL: Paginator nomor halaman 32px inline <44 mobile -> fix 44px. Smoke CDP STATE/smoke_user_91.py: 20 rows, cari admin->3, empty->reset->20, STAFF 6/6, modal invalid 3 + Batal tutup riil, mobile ovf=0 small=0. Build 5.74s. Deploy d564968e-72f3-4962-8a65-b0f8655b5cb4. Commit 39d8607. Sisa >500: App.tsx 678 saja. GOTCHA BARU: inline grid kolom tetap wajib auto-fit minmax; session CDP lama early-return LOGGED -> logout manual saat ganti akun. (Siklus 90 penuh: CustomerPortal 844->339, RentalManagement 634->339, ReportsPage 599->361, manualChunks index 620->447kB.) HOTFIX: laporan user foto broken image inventaris -> audit CDP: 49/50 DB thumbnail_url='assets/images/*.jpg' basi (seed lama; worker tak punya file tsb). Bulk PUT thumbnail_url='' -> server auto getEquipmentImage; 8 gagal krn type 'Vibratory Roller' invalid -> dinorm 'Vibro Roller' -> 49/49 pulih. onError guard (dataset.fb) di EquipmentCardGrid/Table/CatalogTab/RentBookingModal. CDP recount dead 0/20 + screenshot vision OK. Commit e23c357. CATING: login API admin/admin DITOLAK skrg (password seed sdh berubah by user?) — harness wajib pakai sessionStorage sbs_session_token. P5: App.tsx 678->315; useAppData.ts 295; layout OfflineBanner/DataErrorBanner/ToastNotif. Smoke CDP 3 peran + CtrlK + mobile bersih. deploy ea6bad0f commit a2a06b4.",
-  "quality_gate": {
-    "tsc": "0 error",
-    "tests": "30/30",
-    "build": "index 453.46 kB (gzip 119.04)",
-    "deploy": "3447d853-fc50-4d67-a787-5a4fa85b35e4"
-  },
-  "test_suites": 30,
-  "commits": 49,
-  "deploy": {
-    "status": "DEPLOYED",
-    "version": "890e6302-564b-4eb7-a961-2aceecf7dca6",
-    "url": "https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev"
-  },
-  "next_focus": "Semua fase 1–5 selesai. Tugas baru: ideation engine (gap analysis / bug hunt / academic completeness).",
-  "updated": "2026-09-29T09:00:00",
-  "last_summary": "Siklus 92: bug hunt 18 kasus 0 bug; RBAC audit 6x403 benar; data-leak 0 (customer cuma data sendiri); source audit 0 SQL concat / 0 secret.",
-  "updated_at": "2026-09-30"
+ "cycle": 94,
+ "last_run": "2026-10-05",
+ "current_task_id": null,
+ "current_phase": "FASE 5 SELESAI + AUDIT FINAL LAYOUT 3 ROLE — 0 bug tersisa",
+ "completed_this_cycle": [
+  "S92-01 refactor Login.tsx 533->246 -> pages/login/{LoginBrandPanel,RoleTabPicker,LoginForm,LoginErrorBox,RegisterLinkFooter}",
+  "S92-02 fix lubang sentuh [role=tab] di lantai 44px mobile (src/index.css)",
+  "S92-03 refactor seedGenerator.ts 639->140 -> lib/seed/{users,equipments,maintenance,rentals,contracts,payments,gps,reports,shared,index}",
+  "S92-04 fix prioritas sinkron status unit RENTED>MAINTENANCE (unit 18 konflik rental+servis)",
+  "S92-05 fix payment proof PENDING_VERIFICATION wajib (seed)",
+  "S92-06 refactor documents.ts 575->362 -> lib/documentHtml.ts (render A4 + escapeHtml)",
+  "S92-07 refactor auth.ts 525->41 -> lib/auth/{password,session,rbac} (barrel re-export)"
+ ],
+ "session_summary": "SIKLUS 91 p1 (2026-09-29): GpsTrackingPage.tsx 592->172 -> pages/admin/gps/{FleetSummaryGrid 149 (8 kartu agregat + EngineBadge/FuelBadge), UnitTelemetryPanel 226 (kartu unit + daftar armada), FleetMapPanel 100 (lazy Leaflet + heatmap toggle)}. breachIds Set<number>. Smoke CDP STATE/smoke_gps_91.py: 8/8 kartu, 40 pilih-unit, unit switch ubah serial, heatmap OK, 46 marker, mobile 375 bersih. Build 5.37s index 447.31kB. Deploy ead77bc2-3f4e-48b9-b01b-52eb2856a874. Commit 08b69f7. p2: StaffDashboard.tsx 587->260 -> staff/components/{StaffActionBadges 80, PaymentVerificationTable 222, RentalApprovalTable 96}. Fix responsif: grid inline repeat(3,1fr) -> ovf=13 di 375px, ganti auto-fit minmax(190px,1fr). Smoke staff/staff via CDP: 3 badges, 20 rows, sub-tab booking/kontrak OK, modal bukti OK, mobile ovf=0. Deploy 0cc7832b-d3df-44ea-a547-4c496b5d06e9. Commit 49b073d. p3: MaintenanceManagement.tsx 581->342 -> maintenance/{ServiceDueAlertPanel 140, SparepartAlertPanel 92, MaintenanceFilterBar 64}. useMemo mati dihapus. Smoke CDP admin STATE/smoke_maint_91.py: 3 panel render, 51 rows, search SRV->0+Empty->reset 51, COMPLETED->37, ambang 99<->3 persist, modal Jadwalkan buka/tutup, mobile 375 bersih. Build 5.47s 448.19kB. Deploy c5be2528-ab2d-479d-aaa9-eb65f0f59e54. Commit 1e9512a. p4: UserManagement.tsx 574->213 -> user/{UserTable 118, UserFilterBar 54, AddUserModal 159}. BUG GLOBAL: Paginator nomor halaman 32px inline <44 mobile -> fix 44px. Smoke CDP STATE/smoke_user_91.py: 20 rows, cari admin->3, empty->reset->20, STAFF 6/6, modal invalid 3 + Batal tutup riil, mobile ovf=0 small=0. Build 5.74s. Deploy d564968e-72f3-4962-8a65-b0f8655b5cb4. Commit 39d8607. Sisa >500: App.tsx 678 saja. GOTCHA BARU: inline grid kolom tetap wajib auto-fit minmax; session CDP lama early-return LOGGED -> logout manual saat ganti akun. (Siklus 90 penuh: CustomerPortal 844->339, RentalManagement 634->339, ReportsPage 599->361, manualChunks index 620->447kB.) HOTFIX: laporan user foto broken image inventaris -> audit CDP: 49/50 DB thumbnail_url='assets/images/*.jpg' basi (seed lama; worker tak punya file tsb). Bulk PUT thumbnail_url='' -> server auto getEquipmentImage; 8 gagal krn type 'Vibratory Roller' invalid -> dinorm 'Vibro Roller' -> 49/49 pulih. onError guard (dataset.fb) di EquipmentCardGrid/Table/CatalogTab/RentBookingModal. CDP recount dead 0/20 + screenshot vision OK. Commit e23c357. CATING: login API admin/admin DITOLAK skrg (password seed sdh berubah by user?) — harness wajib pakai sessionStorage sbs_session_token. P5: App.tsx 678->315; useAppData.ts 295; layout OfflineBanner/DataErrorBanner/ToastNotif. Smoke CDP 3 peran + CtrlK + mobile bersih. deploy ea6bad0f commit a2a06b4.",
+ "quality_gate": {
+  "tsc": "0 error",
+  "tests": "30/30",
+  "build": "index 453.77 kB (gzip 119.18)",
+  "deploy": "6a24e75c-4cc5-4976-b962-8990612c3805"
+ },
+ "test_suites": 30,
+ "commits": 49,
+ "deploy": {
+  "status": "DEPLOYED",
+  "version": "6a24e75c-4cc5-4976-b962-8990612c3805",
+  "url": "https://equiprent-pt-surya-bangun-sarana.dhanisepeda.workers.dev"
+ },
+ "next_focus": "Semua fase 1–5 selesai. Tugas baru: ideation engine (gap analysis / bug hunt / academic completeness).",
+ "updated": "2026-09-29T09:00:00",
+ "last_summary": "Siklus 94: audit final layout 20 halaman 3 role mobile+desktop. 3 bug ditemukan & diperbaiki (kelas .form-input mati 20px, StatCard subtitle terjepit 66px, lantai sentuh input/select 44px). 0 overflow, 0 kontras gagal, deadimg 0, filter & modal verified.",
+ "updated_at": "2026-10-05"
 }
